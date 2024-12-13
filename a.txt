@@ -1,0 +1,10 @@
+init
+help
+g 50 50 20 20 200
+generate
+gnuplot
+bmp_write
+bin 127
+k_means 2
+k_means_kern 3
+end
