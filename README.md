@@ -123,8 +123,8 @@ make
 | init               | -                      | Инициализация поля                                                      |
 | g                  | x y sx sy h            | Создает гаусс                                                           |
 | generate           | -                      | Складывает гауссы                                                       |
-| gnuplot            | -                      | Рисует картинку в gnuplot                                               |
-| bmp_write          | -                      | Создает черно-белую серую картинку BMP                                  |
+| gnuplot            | filename.png           | Рисует картинку в gnuplot                                               |
+| bmp_write          | filename.bmp           | Создает черно-белую серую картинку BMP                                  |
 | bmp_read           | filename.bmp           | Чтение BMP файла и инициализация поля новыми размерами                  |
 | bin                | integer_number         | Срез: все, что выше или ниже integer_number - черное, остальное - белое |
 | k_means            | k                      | Выделение k кластеров                                                   |
