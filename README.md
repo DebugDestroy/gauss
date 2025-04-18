@@ -87,28 +87,29 @@ make
 
 ## 📂 Файлы проекта
 ```
-~/Gauss/                                  # Корневая папка проекта
-├── config.txt                            # Основные параметры системы
-├── commands.txt                          # Пример командного файла
-├── main.cpp                              # Исходный код программы
-├── auto.sh                               # Скрипт, запускающий main.cpp и читающий файл commands.txt
-│
-└── Result/                               # Все результаты работы (внутри Gauss)
+~/Gauss/                                # Корневая папка проекта
+├── LICENSE                             # Лицензия
+├── README.md                           # Документация
+├── src/
+│   ├── config.txt                      # Основные параметры системы
+│   ├── commands.txt                    # Пример командного файла
+│   ├── main.cpp                        # Исходный код программы
+│   └── auto.sh                         # Скрипт, запускающий main.cpp и читающий файл commands.txt
+└── results/                            # Все результаты работы (внутри Gauss)
     ├── docs/
-    │   ├── README.md                     # Документация
-    │   ├── log_control.txt               # Логи Control
-    │   └── log_interface.txt             # Логи Interface
-    │
-    └── visualizations/                   # Все визуализации
-        ├── binary_with_components.png    # Факторы компонент
-        ├── delaunay_triangulation.png    # Триангуляция Делоне
-        ├── voronoi_diagram.png           # Диаграмма Вороного
-        ├── landscape.png                 # 3D-вид поля (GNUPLOT)
-        ├── path_plot.png                 # Маршрут
-        ├── output_kmeans.bmp             # K-means
-        ├── output_kmeans_kern.bmp        # K-means с ядрами
-        ├── slice.bmp                     # Бинаризированная карта
-        └── output.bmp                    # Сгенерированная карта
+    │   ├── help.txt                    # Справочник
+    │   ├── log_control.txt             # Логи Control
+    │   └── log_interface.txt           # Логи Interface
+    └── visualizations/                 # Все визуализации
+        ├── binary_with_components.png  # Факторы компонент
+        ├── delaunay_triangulation.png  # Триангуляция Делоне
+        ├── voronoi_diagram.png         # Диаграмма Вороного
+        ├── landscape.png               # 3D-вид поля (GNUPLOT)
+        ├── path_plot.png               # Маршрут
+        ├── output_kmeans.bmp           # K-means
+        ├── output_kmeans_kern.bmp      # K-means с ядрами
+        ├── slice.bmp                   # Бинаризированная карта
+        └── output.bmp                  # Сгенерированная карта
 ```
 
 
