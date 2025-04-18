@@ -1,0 +1,16 @@
+init
+help
+g 99 50 25 25 -50
+g 50 50 20 20 50
+g 200 50 20 20 -50
+g 50 200 20 20 50
+g 189 180 20 20 -50
+g 130 130 20 20 50
+generate
+gnuplot
+bmp_write
+bin 20
+k_means 5
+triangulate
+find_path
+end
