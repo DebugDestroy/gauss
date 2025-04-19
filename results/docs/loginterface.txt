@@ -1,37 +1,84 @@
-[2025-04-14 19:55:37] Logging Interface is enabled.
-[2025-04-14 19:55:39] User chose input method: 0
-[2025-04-14 19:55:42] Reading commands from file: a.txt
-[2025-04-14 19:55:42] Received command: init
-[2025-04-14 19:55:42] Initializing field with size: 250 x 250
-[2025-04-14 19:55:42] Field initialized.
-[2025-04-14 19:55:42] Received command: help
-[2025-04-14 19:55:42] Help file created successfully.
-[2025-04-14 19:55:42] Received command: g
-[2025-04-14 19:55:42] Adding Gaussian: x=99.000000, y=50.000000, sx=25.000000, sy=25.000000, h=-50.000000
-[2025-04-14 19:55:42] Received command: g
-[2025-04-14 19:55:42] Adding Gaussian: x=50.000000, y=50.000000, sx=20.000000, sy=20.000000, h=50.000000
-[2025-04-14 19:55:42] Received command: g
-[2025-04-14 19:55:42] Adding Gaussian: x=200.000000, y=50.000000, sx=20.000000, sy=20.000000, h=-50.000000
-[2025-04-14 19:55:42] Received command: g
-[2025-04-14 19:55:42] Adding Gaussian: x=50.000000, y=200.000000, sx=20.000000, sy=20.000000, h=50.000000
-[2025-04-14 19:55:42] Received command: g
-[2025-04-14 19:55:42] Adding Gaussian: x=189.000000, y=180.000000, sx=20.000000, sy=20.000000, h=-50.000000
-[2025-04-14 19:55:42] Received command: g
-[2025-04-14 19:55:42] Adding Gaussian: x=130.000000, y=130.000000, sx=20.000000, sy=20.000000, h=50.000000
-[2025-04-14 19:55:42] Received command: generate
-[2025-04-14 19:55:42] Generated values in the field.
-[2025-04-14 19:55:42] Received command: gnuplot
-[2025-04-14 19:55:42] Called gnuplot: landscape.png
-[2025-04-14 19:55:42] Received command: bmp_write
-[2025-04-14 19:55:42] Created BMP file: output.bmp
-[2025-04-14 19:55:42] Received command: bin
-[2025-04-14 19:55:43] Slice applied: slice=20
-[2025-04-14 19:55:43] Wave will be used
-[2025-04-14 19:55:43] Component amount = 6
-[2025-04-14 19:55:43] Received command: k_means
-[2025-04-14 19:55:43] Cluster count
-[2025-04-14 19:55:43] Received command: triangulate
-[2025-04-14 19:55:43] triangulate worke
-[2025-04-14 19:55:43] Received command: find_path
-[2025-04-14 19:55:43] find_path worke
-[2025-04-14 19:55:43] Received command: end
+[2025-04-19 06:54:41] Logging Interface is enabled.
+[2025-04-19 06:54:43] User chose input method: 0
+[2025-04-19 06:54:54] Reading commands from file: commands.txt
+[2025-04-19 06:54:54] Received command: init
+[2025-04-19 06:54:54] Initializing field with size: 250 x 250
+[2025-04-19 06:54:54] Field initialized.
+[2025-04-19 06:54:54] Received command: help
+[2025-04-19 06:54:54] Help file created successfully.
+[2025-04-19 06:54:54] Received command: g
+[2025-04-19 06:54:54] Adding Gaussian: x=99.000000, y=50.000000, sx=25.000000, sy=25.000000, h=-50.000000
+[2025-04-19 06:54:54] Received command: g
+[2025-04-19 06:54:54] Adding Gaussian: x=50.000000, y=50.000000, sx=20.000000, sy=20.000000, h=50.000000
+[2025-04-19 06:54:54] Received command: g
+[2025-04-19 06:54:54] Adding Gaussian: x=200.000000, y=50.000000, sx=20.000000, sy=20.000000, h=-50.000000
+[2025-04-19 06:54:54] Received command: g
+[2025-04-19 06:54:54] Adding Gaussian: x=50.000000, y=200.000000, sx=20.000000, sy=20.000000, h=50.000000
+[2025-04-19 06:54:54] Received command: g
+[2025-04-19 06:54:54] Adding Gaussian: x=189.000000, y=180.000000, sx=20.000000, sy=20.000000, h=-50.000000
+[2025-04-19 06:54:54] Received command: g
+[2025-04-19 06:54:54] Adding Gaussian: x=130.000000, y=130.000000, sx=20.000000, sy=20.000000, h=50.000000
+[2025-04-19 06:54:54] Received command: generate
+[2025-04-19 06:54:54] Generated values in the field.
+[2025-04-19 06:54:54] Received command: gnuplot
+[2025-04-19 06:54:55] Called gnuplot:/home/log/Gauss/results/visualizations/gnuplot.png
+[2025-04-19 06:54:55] Received command: bmp_write
+[2025-04-19 06:54:55] Created BMP file:/home/log/Gauss/results/visualizations/Pole.bmp
+[2025-04-19 06:54:55] Received command: bin
+[2025-04-19 06:54:55] Slice applied: slice=20
+[2025-04-19 06:54:55] Received command: bmp_write
+[2025-04-19 06:54:55] Created BMP file:/home/log/Gauss/results/visualizations/Slice.bmp
+[2025-04-19 06:54:55] Received command: wave
+[2025-04-19 06:54:55] Wave will be used
+[2025-04-19 06:54:55] Component amount = 6
+[2025-04-19 06:54:55] Received command: k_means
+[2025-04-19 06:54:55] Cluster count
+[2025-04-19 06:54:55] Received command: bmp_write
+[2025-04-19 06:54:55] Created BMP file:/home/log/Gauss/results/visualizations/kmeans.bmp
+[2025-04-19 06:54:55] Received command: triangulate
+[2025-04-19 06:54:55] triangulate worke
+[2025-04-19 06:54:57] Received command: find_path
+[2025-04-19 06:54:57] find_path worke
+[2025-04-19 06:54:57] Received command: end
+[2025-04-19 06:59:19] Logging Interface is enabled.
+[2025-04-19 06:59:19] User chose input method: 0
+[2025-04-19 06:59:19] Reading commands from file: commands.txt
+[2025-04-19 06:59:19] Received command: init
+[2025-04-19 06:59:19] Initializing field with size: 250 x 250
+[2025-04-19 06:59:19] Field initialized.
+[2025-04-19 06:59:19] Received command: help
+[2025-04-19 06:59:19] Help file created successfully.
+[2025-04-19 06:59:19] Received command: g
+[2025-04-19 06:59:19] Adding Gaussian: x=99.000000, y=50.000000, sx=25.000000, sy=25.000000, h=-50.000000
+[2025-04-19 06:59:19] Received command: g
+[2025-04-19 06:59:19] Adding Gaussian: x=50.000000, y=50.000000, sx=20.000000, sy=20.000000, h=50.000000
+[2025-04-19 06:59:19] Received command: g
+[2025-04-19 06:59:19] Adding Gaussian: x=200.000000, y=50.000000, sx=20.000000, sy=20.000000, h=-50.000000
+[2025-04-19 06:59:19] Received command: g
+[2025-04-19 06:59:19] Adding Gaussian: x=50.000000, y=200.000000, sx=20.000000, sy=20.000000, h=50.000000
+[2025-04-19 06:59:19] Received command: g
+[2025-04-19 06:59:19] Adding Gaussian: x=189.000000, y=180.000000, sx=20.000000, sy=20.000000, h=-50.000000
+[2025-04-19 06:59:19] Received command: g
+[2025-04-19 06:59:19] Adding Gaussian: x=130.000000, y=130.000000, sx=20.000000, sy=20.000000, h=50.000000
+[2025-04-19 06:59:19] Received command: generate
+[2025-04-19 06:59:19] Generated values in the field.
+[2025-04-19 06:59:19] Received command: gnuplot
+[2025-04-19 06:59:20] Called gnuplot:/home/log/Gauss/results/visualizations/gnuplot.png
+[2025-04-19 06:59:20] Received command: bmp_write
+[2025-04-19 06:59:20] Created BMP file:/home/log/Gauss/results/visualizations/Pole.bmp
+[2025-04-19 06:59:20] Received command: bin
+[2025-04-19 06:59:20] Slice applied: slice=20
+[2025-04-19 06:59:20] Received command: bmp_write
+[2025-04-19 06:59:20] Created BMP file:/home/log/Gauss/results/visualizations/Slice.bmp
+[2025-04-19 06:59:20] Received command: wave
+[2025-04-19 06:59:21] Wave will be used
+[2025-04-19 06:59:21] Component amount = 6
+[2025-04-19 06:59:21] Received command: k_means
+[2025-04-19 06:59:21] Cluster count
+[2025-04-19 06:59:21] Received command: bmp_write
+[2025-04-19 06:59:21] Created BMP file:/home/log/Gauss/results/visualizations/kmeans.bmp
+[2025-04-19 06:59:21] Received command: triangulate
+[2025-04-19 06:59:21] triangulate worke
+[2025-04-19 06:59:22] Received command: find_path
+[2025-04-19 06:59:22] find_path worke
+[2025-04-19 06:59:23] Received command: end

@@ -7,10 +7,13 @@ g 50 200 20 20 50
 g 189 180 20 20 -50
 g 130 130 20 20 50
 generate
-gnuplot
-bmp_write
+gnuplot /home/log/Gauss/results/visualizations/gnuplot.png
+bmp_write /home/log/Gauss/results/visualizations/Pole.bmp 1
 bin 20
+bmp_write /home/log/Gauss/results/visualizations/Slice.bmp 0
+wave 10
 k_means 5
+bmp_write /home/log/Gauss/results/visualizations/kmeans.bmp 0
 triangulate
 find_path
 end
