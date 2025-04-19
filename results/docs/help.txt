@@ -1,3 +1,4 @@
+
 # Terrain Navigation System
 
 Программа для анализа рельефа местности, построения триангуляции Делоне, диаграмм Вороного и поиска оптимальных маршрутов с учетом препятствий.
@@ -177,52 +178,33 @@ find_path
 end
 ```
 
-# ======================
-# 🔄 SAFE WORKFLOW v1.0
-# ======================
-# Цель: Обновить main своими изменениями БЕЗ потерь
+## 🔄 Development Workflow
 
-# 1️⃣ [НЕ ДЕЛАТЬ git pull!] Переключиться на main и создать ветку
+### 1. Создаем ветку от актуального main
 git checkout main
-git checkout -b feature/my-feature  # Создаем ветку ОТ ЛОКАЛЬНОГО main (без pull)
+git pull origin main
+git checkout -b feature/my-feature
 
-# 2️⃣ Работа с файлами (index.html, script.js и т.д.)
-# Редактируете файлы -> сохраняете -> проверяете:
-git status
+### 2. Работаем над изменениями...
+#### (создаем/редактируем файлы)
 
-# 3️⃣ Фиксация изменений в ветке
+### 3. Пушим ветку
 git add .
-git commit -m "Мои изменения: добавил X в index.html"
+git commit -m "Описание изменений"
 git push origin feature/my-feature
 
-# 4️⃣ 🔥 Критически важный этап: Обновление main
-# Вариант A (если хотите ПЕРЕЗАПИСАТЬ удалённый main):
-git checkout main
-git merge --squash feature/my-feature  # Объединяет все изменения в 1 коммит
-git commit -m "ВСЕ мои изменения за $(date +%d.%m.%Y)"
-git push origin main --force-with-lease  # Безопасный force
+### 4. Создаем Pull Request (через веб-интерфейс GitHub)
+### 5. Мержим PR (Squash and merge recommended)
 
-# Вариант B (если нужно СОХРАНИТЬ историю):
+### 6. Создаем тег (версию)
 git checkout main
-git merge --no-ff feature/my-feature  # Создаст коммит слияния
-git push origin main
-
-# 5️⃣ Создание тега версии (если нужно)
-git tag -a v1.1.0 -m "Стабильная версия от $(date +%d.%m.%Y)"
+git pull origin main
+git tag -a v1.1.0 -m "Добавлена новая функциональность"
 git push origin v1.1.0
 
-# 6️⃣ Очистка
+### 7. Удаляем ветку
 git branch -d feature/my-feature
 git push origin --delete feature/my-feature
-
-# ======================
-# 🛡️ АВАРИЙНЫЕ КОМАНДЫ
-# ======================
-# Если что-то пошло не так:
-git reflog  # Показать историю действий
-git reset --hard COMMIT_HASH  # Откат к указанному коммиту
-git stash  # Временное сохранение незакоммиченных изменений
-
 
 ## 📄 Лицензия
 Этот проект лицензирован под MIT License. Вы можете свободно использовать, изменять и распространять код, при условии, что вы укажете автора.
