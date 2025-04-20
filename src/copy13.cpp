@@ -1,31 +1,21 @@
 /*Здраствуйте! В этой версии есть недоточеты! Пока непонятно 
 1) Точки A и B параметры путя (в кофиге они как дефолт)
-2) Нужно возможно поставить модули в триангуляции и построении пути на p->field
-3)нужно убрать высоту в триангуляции (она еще может быть отрицательной)
+2)
+3)нужно убрать высоту в триангуляции
 4) Доработать версию с наклоном (считаем наклон тележки)
 5)Нужно хранить список путей (чтобы в начале применили команду path сколько душе угодно, а потом их распечатали разом)
 6) Улучшить логирование
 
-7) Если добавятся новые команды меняем readme file и help <-------------------------------------------------------------------------------------
+7) Если добавятся новые команды меняем readme file и help 
 
 8) Добавить критический угол наклона по бокам и вверх/вниз
 
-9) Писать в логи метаданные компонент <-------------------------------------------------------------------------------------
+9)
 
-10)Писать в логи центры кластеров (kmeans и kmeanskern) <-------------------------------------------------------------------------------------
+10) Есть ненужные переменные, функции и тд
 
-11) В методе wave записать в список компоненты которые мы убираем как шум, записать их метаданные в лог файл, добавить в метаданные количество пикселей <-------------------------------------
-12) 
-13) 
-14)
-15) 
-
-16)  wave в readme + новые параметры + новые условия <-------------------------------------------------------------------------------------
-
-17) Есть ненужные переменные, функции и тд
-
-Изменения: убрал неявное использование команд в Control (также добавил новые команды) + добавил параметры для Gnuplot и bmp write и для bin + написал вопросы и ключевые моменты + улучшил help.txt
-+ путаница с уровнем 127 <---------------СЕЙЧАС----------------------------------------------------------------------
+Изменения: решена путаница с уровнем 127 + В методе wave записаны в список компоненты которые мы убираем как шум, записаны их метаданные в лог файл, добавлены в метаданные количество пикселей, 
+ записаны  метаданные в лог файл обычных компонент + логируются центры кластеров
 
         ПРОГРАММА ЕЩЕ НЕ ДО КОНЦА ГОТОВА!!! МЕТОДЫ ТРИАНГУЛЯЦИИ И ПОСТРОЕНИЯ ПУТИ НЕ ГОТОВЫ!!! Следите за обновлениями на гитхаб [GitHub Profile](https://github.com/DebugDestroy)
 */
@@ -288,9 +278,10 @@ public:
     double eigenvec1_x, eigenvec1_y;
     double eigenvec2_x, eigenvec2_y;
     double eigenvalue1, eigenvalue2;
-
+    int pixelCount;  // Поле для хранения количества пикселей
+    
    // Основной конструктор (для готовой матрицы)
-    Component(const std::vector<std::vector<double>>& inputComponenta) : componenta(inputComponenta) {
+    Component(const std::vector<std::vector<double>>& inputComponenta, int count) : componenta(inputComponenta), pixelCount(count) {
         calculate_metadata();
     }
 
@@ -463,16 +454,16 @@ class GaussBuilder {
    }
    
    for (auto& row : p->field) {
-        std::fill(row.begin(), row.end(), 0); // Уровень равнины
+        std::fill(row.begin(), row.end(), 127); // Уровень равнины
     }
         double value; 
         for (const auto& g : gaussi) {
     for (long unsigned int x = 0; x < p->field[0].size(); ++x) {
         for (long unsigned int y = 0; y < p->field.size(); ++y) {
             value = g.h * exp(-((pow((x - g.x0) / g.sigma_x, 2)) + (pow((y - g.y0) / g.sigma_y, 2))) / 2); 
-            p->field[y][x] += value; 
-           // Ограничиваем значения между -255 и 255
-                p->field[y][x] = std::clamp(p->field[y][x], -255.0, 255.0);
+            p->field[y][x] += value;
+           // Ограничиваем значения между 0 и 255
+                p->field[y][x] = std::clamp(p->field[y][x], 0.0, 255.0);
         }
     }
 }
@@ -525,7 +516,7 @@ class BmpHandler {
     // Write pixel data
     for (int y = height - 1; y >= 0; --y) { // BMP stores pixels bottom-to-top
         for (int x = 0; x < width; ++x) {
-            unsigned char color = static_cast<unsigned char>(std::fabs(pixelMatrix[y][x])); // Color
+            unsigned char color = static_cast<unsigned char>(pixelMatrix[y][x]); // Color
             bmpFile.put(color); // B
             bmpFile.put(color); // G
             bmpFile.put(color); // R
@@ -875,7 +866,7 @@ private:
         // 1. Данные бинарного изображения (с инверсией Y)
 for (int y = height - 1; y >= 0; --y) {
     for (int x = 0; x < width; ++x) {
-        fprintf(gnuplotPipe, "%f ", std::fabs(CopyPole[y][x]));
+        fprintf(gnuplotPipe, "%f ", CopyPole[y][x]);
     }
             fprintf(gnuplotPipe, "\n");
         }
@@ -931,43 +922,40 @@ for (int y = height - 1; y >= 0; --y) {
         return;
     }
 
-    int rows = p->field.size(); 
-    int cols = p->field[0].size(); 
-    // Открываем конвейер для gnuplot 
-    FILE* gnuplotPipe = popen("gnuplot -p", "w"); 
-    if (!gnuplotPipe) { 
-        std::cerr << "Could not open pipe to gnuplot." << std::endl; 
-        return; 
+    int rows = p->field.size();
+    int cols = p->field[0].size();
+    
+    FILE* gnuplotPipe = popen("gnuplot -persist", "w");
+    if (!gnuplotPipe) {
+        std::cerr << "Could not open pipe to gnuplot." << std::endl;
+        return;
     }
     
-    // Устанавливаем диапазон z от -255 до 255
-    fprintf(gnuplotPipe, "set zrange [-255:255]\n"); 
-    fprintf(gnuplotPipe, "set xrange [0:%d]\n", cols - 1); 
-    fprintf(gnuplotPipe, "set yrange [0:%d]\n", rows - 1); 
-    fprintf(gnuplotPipe, "set terminal png\n"); 
+    // Настройки 3D графика
+    fprintf(gnuplotPipe, "set terminal pngcairo enhanced size 800,600\n");
     fprintf(gnuplotPipe, "set output '%s'\n", filename.c_str());
-
-    // Включаем pm3d для плавного отображения
-    fprintf(gnuplotPipe, "set pm3d\n");
+    fprintf(gnuplotPipe, "set xlabel 'X'\n");
+    fprintf(gnuplotPipe, "set ylabel 'Y'\n");
+    fprintf(gnuplotPipe, "set zlabel 'Height'\n");
+    fprintf(gnuplotPipe, "set xrange [0:%d]\n", cols - 1);
+    fprintf(gnuplotPipe, "set yrange [0:%d]\n", rows - 1);
+    fprintf(gnuplotPipe, "set zrange [-255:255]\n");
     fprintf(gnuplotPipe, "set hidden3d\n");
+    fprintf(gnuplotPipe, "set pm3d\n");
     
-    // Используем буфер для хранения данных
-    std::ostringstream dataStream;
+    // Формат данных: x y z
+    fprintf(gnuplotPipe, "splot '-' with pm3d title 'Height Map'\n");
     
-    // Форматируем данные в виде матрицы
-    for (int y = rows - 1; y >= 0; --y) {
-        for (int x = 0; x < cols; ++x) { 
-            dataStream << x << " " << y << " " << p->field[y][x] << "\n";
+    // Записываем данные в правильном порядке
+    for (int y = 0; y < rows; ++y) {
+        for (int x = 0; x < cols; ++x) {
+            // Преобразуем координаты для правильной ориентации
+            fprintf(gnuplotPipe, "%d %d %f\n", x, rows-1-y, p->field[y][x]);
         }
-        dataStream << "\n"; // Пустая строка между строками данных
+        fprintf(gnuplotPipe, "\n"); // Пустая строка между слоями Y
     }
-
-    // Отправляем все данные за один раз
-    fprintf(gnuplotPipe, "splot '-' with pm3d\n");
     
-    fprintf(gnuplotPipe, "%s", dataStream.str().c_str());
-
-    fprintf(gnuplotPipe, "\n"); // Одна пустая строка для завершения ввода данных
+    fprintf(gnuplotPipe, "e\n"); // Конец данных
     pclose(gnuplotPipe);
 }
 
@@ -999,7 +987,7 @@ void plotVoronoi(const std::unique_ptr<Pole>& p, const std::vector<VoronoiEdge>&
     // 1. Данные поля
     for (int y = height - 1; y >= 0; --y) {
         for (int x = 0; x < width; ++x) {
-            fprintf(gnuplotPipe, "%f ", std::fabs(p->field[y][x]));
+            fprintf(gnuplotPipe, "%f ", p->field[y][x]);
         }
         fprintf(gnuplotPipe, "\n");
     }
@@ -1049,7 +1037,7 @@ if (!p) return;
     // Данные фона (с инверсией Y)
     for (int y = height-1; y >= 0; --y) {
         for (int x = 0; x < width; ++x) {
-            fprintf(gnuplotPipe, "%f ", std::fabs(p->field[y][x]));
+            fprintf(gnuplotPipe, "%f ", p->field[y][x]);
         }
         fprintf(gnuplotPipe, "\n");
     }
@@ -1097,7 +1085,7 @@ void plotPath(const std::vector<PointD>& path, const std::unique_ptr<Pole>& p, c
     // 1. Данные фона (инверсия Y)
     for (int y = height-1; y >= 0; --y) {
         for (int x = 0; x < width; ++x) {
-            fprintf(gnuplotPipe, "%f ", std::fabs(p->field[y][x]));
+            fprintf(gnuplotPipe, "%f ", p->field[y][x]);
         }
         fprintf(gnuplotPipe, "\n");
     }
@@ -1243,24 +1231,26 @@ int length, width;
     bool contains(const Triangle& tri, const PointD& p) {
         return tri.a == p || tri.b == p || tri.c == p;
     }
-
-    int count = 0;//Для шума
        
-    int incrementAndCollect(std::vector<std::vector<double>>& componenta, std::vector<std::vector<double>> &CopyPole, int x, int y, int i) {
+    int incrementAndCollect(std::vector<std::vector<double>>& componenta, std::vector<std::vector<double>>& CopyPole, int x, int y, int i, int& pixelCount) {
+    if (x < 1 || y < 1 || x > (int)componenta[0].size() - 2 || 
+        y > (int)componenta.size() - 2 || CopyPole[y][x] < 250) {
+        return -1;
+    }
 
-        if (x < 1 || y < 1 || x > (int) componenta[0].size() - 2 || y > (int) componenta.size() - 2 || CopyPole[y][x] < 250) return -1;
-
-        if (CopyPole[y][x] >= 255 && CopyPole[y][x] <= 255) {
-            CopyPole[y][x] = 0; // Пометить как посещенное
-            count = count < i + 1 ? i + 1 : count;
-            componenta[y][x] = 255; // Увеличить значение в Componenta
-            incrementAndCollect(componenta, CopyPole, x + 1, y, i + 1);
-            incrementAndCollect(componenta, CopyPole, x - 1, y, i + 1);
-            incrementAndCollect(componenta, CopyPole, x, y + 1, i + 1);
-            incrementAndCollect(componenta, CopyPole, x, y - 1, i + 1);
-        }
+    if (CopyPole[y][x] >= 255 && CopyPole[y][x] <= 255) {
+        CopyPole[y][x] = 0; // Пометить как посещенное
+        pixelCount++; // Увеличиваем счетчик пикселей
+        componenta[y][x] = 255;
         
-    return count;
+        // Рекурсивный вызов для соседних пикселей
+        incrementAndCollect(componenta, CopyPole, x + 1, y, i + 1, pixelCount);
+        incrementAndCollect(componenta, CopyPole, x - 1, y, i + 1, pixelCount);
+        incrementAndCollect(componenta, CopyPole, x, y + 1, i + 1, pixelCount);
+        incrementAndCollect(componenta, CopyPole, x, y - 1, i + 1, pixelCount);
+    }
+    
+    return pixelCount;
 }
        void bin(std::vector<std::vector<double>>& CopyPole, int slice, std::unique_ptr<Pole>& p, ThresholdMode mode) {
     if (p == nullptr) {
@@ -1269,26 +1259,30 @@ int length, width;
     }
     
     CopyPole = p->field;
-    
+    int symmetric_slice = 2*127 - slice;
+
     for (int x = 0; x < (int)p->field[0].size(); ++x) {
         for (int y = 0; y < (int)p->field.size(); ++y) {
             double value = p->field[y][x];
             switch (mode) {
-                case ThresholdMode::All:
-                    CopyPole[y][x] = std::fabs(value) > slice ? 255 : 0;
+                case ThresholdMode::All: {
+                    bool is_peak = (slice >= 127) ? (value > slice) : (value > symmetric_slice);
+                    bool is_valley = (slice >= 127) ? (value < symmetric_slice) : (value < slice);
+                    CopyPole[y][x] = (is_peak || is_valley) ? 255 : 0;
                     break;
+                }
                 case ThresholdMode::Peaks:
-                    CopyPole[y][x] = value > slice ? 255 : 0;
+                    CopyPole[y][x] = (slice >= 127) ? (value > slice) : (value > symmetric_slice);
                     break;
                 case ThresholdMode::Valleys:
-                    CopyPole[y][x] = value < -slice ? 255 : 0;
+                    CopyPole[y][x] = (slice >= 127) ? (value < symmetric_slice) : (value < slice);
                     break;
             }
         } 
     }
 }
     
-    void wave(int noisy, std::vector<Component>& componenti, std::vector<std::vector<double>>& CopyPole, std::unique_ptr<Pole>& p) {
+    void wave(int noisy, std::vector<Component>& componenti, std::vector<std::vector<double>>& CopyPole, std::unique_ptr<Pole>& p, Logger& logger, bool loggingEnabled) {
     if (p == nullptr) {
         std::cerr << "Pole not initialized!" << std::endl;
         return;
@@ -1296,29 +1290,41 @@ int length, width;
 
     int rows = p->field.size();
     int cols = (rows > 0) ? p->field[0].size() : 0;
+    std::vector<Component> noiseComponents; // Для хранения шумовых компонент
 
-    // Проходим по всем пикселям поля
     for (int y = 0; y < rows; ++y) {
         for (int x = 0; x < cols; ++x) {
-            // Если пиксель принадлежит компоненте (значение 255)
             if (CopyPole[y][x] <= 255 && CopyPole[y][x] >= 255) {
-                // Создаем временную матрицу для хранения данных компоненты
                 std::vector<std::vector<double>> componentData(rows, std::vector<double>(cols, 0));
-                
-                // Заполняем компоненту и получаем количество пикселей
-                int pixelCount = incrementAndCollect(componentData, CopyPole, x, y, 0);
+                int pixelCount = 0;
+                incrementAndCollect(componentData, CopyPole, x, y, 0, pixelCount);
 
-                // Если компонента достаточно большая, добавляем её
                 if (pixelCount >= noisy) {
-                    // Используем конструктор, который вызывает calculate_metadata()
-                    Component component(componentData);
+                    Component component(componentData, pixelCount);
                     componenti.push_back(component);
-                }
-                else {// Удаляем шум из основного поля
+                    
+                    // Логируем метаданные значимой компоненты
+               logger.logMessage( "Significant component: pixels=" + std::to_string(pixelCount) +
+                                  ", center=(" + std::to_string(component.center_x) + "," + std::to_string(component.center_y) +
+                                  "), size=(" + std::to_string(component.max_x - component.min_x) + 
+                                  "x" + std::to_string(component.max_y - component.min_y) + ")",
+                                   loggingEnabled);
+                } else {
+                    Component noiseComponent(componentData, pixelCount);
+                    noiseComponents.push_back(noiseComponent);
+                    
+                    // Логируем метаданные шумовой компоненты  
+                     logger.logMessage( "Noise component: pixels=" + std::to_string(pixelCount) +
+                                        ", center=(" + std::to_string(noiseComponent.center_x) + "," + std::to_string(noiseComponent.center_y) +
+                                        "), size=(" + std::to_string(noiseComponent.max_x - noiseComponent.min_x) + 
+                                        "x" + std::to_string(noiseComponent.max_y - noiseComponent.min_y) + ")",
+                                        loggingEnabled);
+                    
+                    // Удаляем шум из основного поля
                     for (int i = 0; i < rows; ++i) {
                         for (int j = 0; j < cols; ++j) {
                             if (componentData[i][j] == 255) {
-                                p->field[i][j] = 0; // Устанавливаем значение в 0 для удаления шума
+                                p->field[i][j] = 127;
                             }
                         }
                     }
@@ -1326,7 +1332,11 @@ int length, width;
             }
         }
     }
-  }
+    
+        logger.logMessage( "Wave processing complete. Significant components: " + std::to_string(componenti.size()) +
+                           ", Noise components: " + std::to_string(noiseComponents.size()),
+                           loggingEnabled);
+}
 };
 
 class KMeans {
@@ -1706,10 +1716,10 @@ void Dispetcher(DispatcherParams& params) {
     }
     
     if (params.s == "wave") {
-    componentCalculator.wave(params.noisy, componenti, CopyPole, p);
-    loggercontrol.logMessage("wave used", b);
+    componentCalculator.wave(params.noisy, componenti, CopyPole, p, loggercontrol, b);
+    loggercontrol.logMessage("Wave used with noisy threshold: " + std::to_string(params.noisy), b);
     loggercontrol.logMessage("Component amount = " + std::to_string(componenti.size()), b);
-    copier.removeNoise(CopyPole, componenti);//копия без шума 
+    copier.removeNoise(CopyPole, componenti); //копия без шума 
     }
      
     if (params.s == "k_means") {
@@ -1721,7 +1731,18 @@ void Dispetcher(DispatcherParams& params) {
 
             auto result = kMeans->cluster(kMeansData, params.k);
             applyClusterResults(result, CopyPole);
-        }
+            
+    // Логирование параметров и центров кластеров
+    std::string logMessage = "k_means clustering: k=" + std::to_string(params.k) + 
+                            ", centers=[";
+    for (const auto& center : result.centers) {
+        logMessage += "(" + std::to_string(center[0]) + "," + std::to_string(center[1]) + "),";
+    }
+    if (!result.centers.empty()) logMessage.pop_back(); // Удаляем последнюю запятую
+    logMessage += "]";
+    loggercontrol.logMessage(logMessage, b);
+    }
+        
     if (params.s == "k_means_kern") {
             if (!kMeans || params.k <= 0 || params.kk <= 0 || p == nullptr) {
         loggercontrol.logMessage("Invalid parameters or KMeans not initialized", b);
@@ -1736,10 +1757,17 @@ void Dispetcher(DispatcherParams& params) {
 
             auto result = kMeans->kmeansWithKernels(kMeansData, params.k, params.kk);
             applyClusterResults(result, CopyPole);
-            loggercontrol.logMessage("Applied kernel-based k-means clustering with " + 
-                                   std::to_string(params.k) + " clusters and kernel size " + 
-                                   std::to_string(params.kk), b);
-        }
+            // Логирование параметров и центров кластеров одной строкой
+    std::string logMessage = "k_means_kern clustering: k=" + std::to_string(params.k) + 
+                            ", kk=" + std::to_string(params.kk) + 
+                            ", centers=[";
+    for (const auto& center : result.centers) {
+        logMessage += "(" + std::to_string(center[0]) + "," + std::to_string(center[1]) + "),";
+    }
+    if (!result.centers.empty()) logMessage.pop_back(); // Удаляем последнюю запятую
+    logMessage += "]";
+    loggercontrol.logMessage(logMessage, b);
+    }
         
     if (params.s == "triangulate") {
         clusterCenters = getClusterCenters();
@@ -2048,7 +2076,7 @@ end
 ##### ======================================
 ## 🔄 SAFE WORKFLOW v1.0
 ##### ======================================
-#### Философия: "Мои изменения — священны, main обновляется без боли"
+#### Философия: "Мои изменения — священны 😤️, main обновляется без боли 😇️"
 
 ### 1️⃣ Начало работы (без опасного pull!)
 ```
@@ -2563,7 +2591,7 @@ end
 ##### ======================================
 ## 🔄 SAFE WORKFLOW v1.0
 ##### ======================================
-#### Философия: "Мои изменения — священны, main обновляется без боли"
+#### Философия: "Мои изменения — священны 😤️, main обновляется без боли 😇️"
 
 ### 1️⃣ Начало работы (без опасного pull!)
 ```
