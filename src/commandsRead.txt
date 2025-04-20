@@ -3,7 +3,7 @@ help
 bmp_read /home/log/Gauss/results/visualizations/Read.bmp
 gnuplot /home/log/Gauss/results/visualizations/gnuplot.png
 bmp_write /home/log/Gauss/results/visualizations/Polew.bmp Full
-bin 20 All
+bin 147 All
 bmp_write /home/log/Gauss/results/visualizations/Slice.bmp Binary
 wave 10
 PlotMetedata /home/log/Gauss/results/visualizations/Metadata.png
