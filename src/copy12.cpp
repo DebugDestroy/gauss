@@ -1,28 +1,31 @@
 /*Здраствуйте! В этой версии есть недоточеты! Пока непонятно 
-1) что означает радиус из конфиг файла ( типо он круглый но плоский или это мячик)
+1) Точки A и B параметры путя (в кофиге они как дефолт)
 2) Нужно возможно поставить модули в триангуляции и построении пути на p->field
 3)нужно убрать высоту в триангуляции (она еще может быть отрицательной)
 4) Доработать версию с наклоном (считаем наклон тележки)
-
-5) Файлы нужно сохранять в правильных местах
-
+5)Нужно хранить список путей (чтобы в начале применили команду path сколько душе угодно, а потом их распечатали разом)
 6) Улучшить логирование
-7) Если добавятся новые команды меняем readme file и help
+
+7) Если добавятся новые команды меняем readme file и help <-------------------------------------------------------------------------------------
+
 8) Добавить критический угол наклона по бокам и вверх/вниз
-9) Что за путаница с уровнем 127
-10) Почему нужно делать срез только для горок ( все что выше slice горка) но ведь есть и ямки ( все что ниже slice ямка)
-11) Вопрос о маршруте по ребрам Воронова или же через середины ребер между центрами
-12) Фактчески kmeans не нужен
-13) Точки А и Б добавлены в триангуляцию
-14) Условие с радиусом странное.Если она круглая то как мне проверить что она застряла
 
-15) bmp write строит файл с именем ( дать ему параметр)
+9) Писать в логи метаданные компонент <-------------------------------------------------------------------------------------
 
-16) Порог для шума в конфиг или в новую команду wave? + wave в readme
+10)Писать в логи центры кластеров (kmeans и kmeanskern) <-------------------------------------------------------------------------------------
+
+11) В методе wave записать в список компоненты которые мы убираем как шум, записать их метаданные в лог файл, добавить в метаданные количество пикселей <-------------------------------------
+12) 
+13) 
+14)
+15) 
+
+16)  wave в readme + новые параметры + новые условия <-------------------------------------------------------------------------------------
 
 17) Есть ненужные переменные, функции и тд
 
-Изменения: убрал неявное использование команд в Control + добавил параметры для Gnuplot и bmp write в командный файл + написал вопросы и ключевые моменты + улучшил help.txt
+Изменения: убрал неявное использование команд в Control (также добавил новые команды) + добавил параметры для Gnuplot и bmp write и для bin + написал вопросы и ключевые моменты + улучшил help.txt
++ путаница с уровнем 127 <---------------СЕЙЧАС----------------------------------------------------------------------
 
         ПРОГРАММА ЕЩЕ НЕ ДО КОНЦА ГОТОВА!!! МЕТОДЫ ТРИАНГУЛЯЦИИ И ПОСТРОЕНИЯ ПУТИ НЕ ГОТОВЫ!!! Следите за обновлениями на гитхаб [GitHub Profile](https://github.com/DebugDestroy)
 */
@@ -43,6 +46,17 @@
 #include <unordered_map> // Для std::unordered_map
 #include <valarray>    // Для std::valarray (если используется)
 
+enum class BmpWriteMode {//для bmp_write
+    Binary,  // Бинарное изображение
+    Full     // Полное поле
+};
+
+enum class ThresholdMode {// Для bin
+    All,     // и ямы, и горы (по модулю)
+    Peaks,   // только горы (без модуля, значение > slice)
+    Valleys  // только ямы (без модуля, значение < -slice)
+};
+
 struct DispatcherParams {//параметры для диспетчера
    std::string s;//строка с командой
     int A; // размер поля
@@ -53,8 +67,9 @@ struct DispatcherParams {//параметры для диспетчера
     double sx;//для гаусса
     double sy;//для гаусса
     std::string filename;// сохраняет имя файла
-    int slice;//срез для горок ( все что выше slice горка) но ведь есть и ямки ( все что ниже slice ямка)
-    bool is_binary_image;//false (0) - изображение бинарное, true (1) - изображение полное
+    BmpWriteMode bmp_mode;  // Режим записи BMP
+    int slice;//срез 
+    ThresholdMode bin_mode;// Для выбора режима bin
     int noisy;//Уровень шума (все компоненты меньше - шум)
     int k;//количество кластеров для метода k_means
     int kk;//количество кластеров для метода k_means_with_kern
@@ -152,11 +167,12 @@ struct AStarNode {
 //Классы для логирования
 class Config {
 public:
-    int fieldWidth;
-    int fieldHeight;
+    int fieldWidth, fieldHeight;
     double defaultX, defaultY, defaultSx, defaultSy, defaultH;
     std::string logFileNameInterface;
     std::string logFileNameControl;
+    std::string defaultGnuplot, defaultPlotMetedata, defaultPlotVoronoi, defaultPlotDelaunay, defaultPlotPath, defaultWrite, defaultRead, defaultWriteModeImage, defaultBinMode;
+    int defaultSlice, defaultNoisy, defaultKlaster, defaultKlasterKern;
     bool loggingInterfaceEnabled;
     bool loggingControlEnabled;
     double pointA_x, pointA_y, pointB_x, pointB_y;
@@ -178,16 +194,29 @@ while (configFile >> key) { // Считываем ключи
     else if (key == "defaultY") configFile >> defaultY;
     else if (key == "defaultSx") configFile >> defaultSx;
     else if (key == "defaultSy") configFile >> defaultSy;
-    else if (key == "defaultH") configFile >> defaultH;
+    else if (key == "defaultH") configFile >> defaultH;  
+    else if (key == "defaultGnuplot") configFile >> defaultGnuplot;  
+    else if (key == "defaultPlotMetedata") configFile >> defaultPlotMetedata;
+    else if (key == "defaultPlotVoronoi") configFile >> defaultPlotVoronoi;
+    else if (key == "defaultPlotDelaunay") configFile >> defaultPlotDelaunay;
+    else if (key == "defaultPlotPath") configFile >> defaultPlotPath;   
+    else if (key == "defaultWrite") configFile >> defaultWrite;
+    else if (key == "defaultWriteModeImage") configFile >> defaultWriteModeImage;
+    else if (key == "defaultRead") configFile >> defaultRead;
+    else if (key == "defaultSlice") configFile >> defaultSlice;
+    else if (key == "defaultBinMode") configFile >> defaultBinMode;
+    else if (key == "defaultNoisy") configFile >> defaultNoisy;
+    else if (key == "defaultKlaster") configFile >> defaultKlaster;
+    else if (key == "defaultKlasterKern") configFile >> defaultKlasterKern;  
     else if (key == "logFileNameInterface") configFile >> logFileNameInterface;
     else if (key == "logFileNameControl") configFile >> logFileNameControl;
     else if (key == "loggingInterfaceEnabled") configFile >> std::boolalpha >> loggingInterfaceEnabled;
     else if (key == "loggingControlEnabled") configFile >> std::boolalpha >> loggingControlEnabled;
     else if (key == "pointA_x") configFile >> pointA_x;
-            else if (key == "pointA_y") configFile >> pointA_y;
-            else if (key == "pointB_x") configFile >> pointB_x;
-            else if (key == "pointB_y") configFile >> pointB_y;
-            else if (key == "vehicleRadius") configFile >> vehicleRadius;
+    else if (key == "pointA_y") configFile >> pointA_y;
+    else if (key == "pointB_x") configFile >> pointB_x;
+    else if (key == "pointB_y") configFile >> pointB_y;
+    else if (key == "vehicleRadius") configFile >> vehicleRadius;
 }
 
         configFile.close();
@@ -232,32 +261,7 @@ struct Color{ // структура для хранения rgb цвета
 class Gaus { // Класс, хранящий Гауссы
 public:
     double h, x0, y0, sigma_x, sigma_y;
-    Gaus(double h, double x0, double y0, double sigma_x, double sigma_y)
-        : h(h), x0(x0), y0(y0), sigma_x(sigma_x), sigma_y(sigma_y) {}
-
-    double calculate(int x, int y) const { //Функция вычисления Гаусса
-    double dx = x - x0;
-    double dy = y - y0;
-    double denom_x = 2 * sigma_x * sigma_x;
-    double denom_y = 2 * sigma_y * sigma_y;
-
-    // Проверка на ноль
-    if (denom_x == 0 || denom_y == 0) {
-        std::cerr << "Error: sigma_x or sigma_y is zero!" << std::endl;
-        return 0;
-    }
-
-    double exponent = -((dx * dx) / denom_x + (dy * dy) / denom_y);
-
-    if (exponent < -700) {
-        return 0;
-    } else if (exponent > 700) {
-        return std::numeric_limits<double>::infinity();
-    }
-
-    return h * exp(exponent);
-}
-
+    Gaus(double h, double x0, double y0, double sigma_x, double sigma_y) : h(h), x0(x0), y0(y0), sigma_x(sigma_x), sigma_y(sigma_y) {}
 };
 
 class Pole {
@@ -286,8 +290,7 @@ public:
     double eigenvalue1, eigenvalue2;
 
    // Основной конструктор (для готовой матрицы)
-    Component(const std::vector<std::vector<double>>& inputComponenta) 
-        : componenta(inputComponenta) {
+    Component(const std::vector<std::vector<double>>& inputComponenta) : componenta(inputComponenta) {
         calculate_metadata();
     }
 
@@ -366,8 +369,7 @@ public:
 
 class Copier {
 public:
-    void removeNoise(std::vector<std::vector<double>>& field, 
-                    const std::vector<Component>& components) {
+    void removeNoise(std::vector<std::vector<double>>& field, const std::vector<Component>& components) {
         // Обнуляем поле
         for (auto& row : field) std::fill(row.begin(), row.end(), 0.0);
         
@@ -435,8 +437,7 @@ public:
         return colors;
     }
 };
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 class GaussBuilder {
    public:
    
@@ -566,8 +567,8 @@ class BmpHandler {
             bmpFile.get(); // Читаем R
             double value = color; // Цвет в высоту
             
-            pixelMatrix[y][x] = value; // Обновляем матрицу значений
-            p->field[y][x] = value; // Обновляем поле в Pole
+            pixelMatrix[y][x] = value; // Обновляем матрицу значений 
+            p->field[y][x] = value; // Обновляем поле в Pole 
             //Значения в gaussi некорректные
         }
         bmpFile.ignore((4 - (width * 3) % 4) % 4); // Пропускаем паддинг
@@ -845,7 +846,7 @@ private:
     
    public:
     GnuplotInterface(Config& cfg) : config(cfg) {} // Конструктор
-    void plotBinaryWithComponents(const std::vector<std::vector<double>> &CopyPole, const std::vector<Component>& components) {
+    void plotBinaryWithComponents(const std::vector<std::vector<double>> &CopyPole, const std::vector<Component>& components, const std::string& filename) {
 
         FILE* gnuplotPipe = popen("gnuplot -persist", "w");
         if (!gnuplotPipe) {
@@ -858,7 +859,7 @@ private:
 
         // Настройки графика
         fprintf(gnuplotPipe, "set terminal pngcairo size 1600,1200\n");
-        fprintf(gnuplotPipe, "set output '/home/log/Gauss/results/visualizations/binary_with_components.png'\n");
+        fprintf(gnuplotPipe, "set output '%s'\n", filename.c_str());
         fprintf(gnuplotPipe, "set title 'Binary Image with Components Metadata'\n");
         fprintf(gnuplotPipe, "set size ratio -1\n");
         fprintf(gnuplotPipe, "set xrange [0:%d]\n", width-1);
@@ -970,7 +971,7 @@ for (int y = height - 1; y >= 0; --y) {
     pclose(gnuplotPipe);
 }
 
-void plotVoronoi(const std::unique_ptr<Pole>& p, const std::vector<VoronoiEdge>& edges, const std::vector<PointD>& sites) {
+void plotVoronoi(const std::unique_ptr<Pole>& p, const std::vector<VoronoiEdge>& edges, const std::vector<PointD>& sites, const std::string& filename) {
     if (!p || edges.empty()) return;
 
     const int height = p->field.size();
@@ -984,7 +985,7 @@ void plotVoronoi(const std::unique_ptr<Pole>& p, const std::vector<VoronoiEdge>&
 
     // Настройки графика
     fprintf(gnuplotPipe, "set terminal pngcairo size 1600,1200\n");
-    fprintf(gnuplotPipe, "set output '/home/log/Gauss/results/visualizations/voronoi_diagram.png'\n");
+    fprintf(gnuplotPipe, "set output '%s'\n", filename.c_str());
     fprintf(gnuplotPipe, "set title 'Voronoi Diagram'\n");
     fprintf(gnuplotPipe, "set size ratio -1\n");
     fprintf(gnuplotPipe, "set xrange [0:%d]\n", width - 1);
@@ -1023,7 +1024,7 @@ void plotVoronoi(const std::unique_ptr<Pole>& p, const std::vector<VoronoiEdge>&
     pclose(gnuplotPipe);
 }
     
-    void plotDelaunay(const std::vector<Triangle>& triangles, std::unique_ptr<Pole>& p) {
+    void plotDelaunay(const std::vector<Triangle>& triangles, std::unique_ptr<Pole>& p, const std::string& filename) {
     FILE* gnuplotPipe = popen("gnuplot -persist", "w");
     if (!gnuplotPipe) {
         std::cerr << "Failed to open gnuplot pipe" << std::endl;
@@ -1035,7 +1036,7 @@ if (!p) return;
 
     // Настройки графика
     fprintf(gnuplotPipe, "set terminal pngcairo size 1600,1200\n");
-    fprintf(gnuplotPipe, "set output '/home/log/Gauss/results/visualizations/delaunay_triangulation.png'\n");
+    fprintf(gnuplotPipe, "set output '%s'\n", filename.c_str());
     fprintf(gnuplotPipe, "set title 'Delaunay Triangulation'\n");
     fprintf(gnuplotPipe, "set size ratio -1\n");
     fprintf(gnuplotPipe, "set xrange [0:%d]\n", width-1);
@@ -1066,7 +1067,7 @@ if (!p) return;
     pclose(gnuplotPipe);
 }
 
-void plotPath(const std::vector<PointD>& path, const std::unique_ptr<Pole>& p, const std::string& outputFile = "/home/log/Gauss/results/visualizations/path_plot.png") {
+void plotPath(const std::vector<PointD>& path, const std::unique_ptr<Pole>& p, const std::string& filename) {
     if (!p || path.empty()) return;
 
     FILE* gnuplotPipe = popen("gnuplot -persist", "w");
@@ -1080,7 +1081,7 @@ void plotPath(const std::vector<PointD>& path, const std::unique_ptr<Pole>& p, c
 
     // Настройки графика
     fprintf(gnuplotPipe, "set terminal pngcairo size 1600,1200\n");
-    fprintf(gnuplotPipe, "set output '%s'\n", outputFile.c_str());
+    fprintf(gnuplotPipe, "set output '%s'\n", filename.c_str());
     fprintf(gnuplotPipe, "set title 'Path Visualization'\n");
     fprintf(gnuplotPipe, "set size ratio -1\n");
     fprintf(gnuplotPipe, "set xrange [0:%d]\n", width-1);
@@ -1261,19 +1262,31 @@ int length, width;
         
     return count;
 }
-       void bin(std::vector<std::vector<double>> &CopyPole, int slise, std::unique_ptr<Pole>& p) {
-       if (p == nullptr) {
-       std::cerr << "Pole not initialized!" << std::endl;
-       return;
-   }
-       CopyPole = p->field;//Копия
-        
-            for (int x = 0; x < (int) p->field[0].size(); ++x) {
-                for (int y = 0; y < (int) p->field.size(); ++y) {
-                   CopyPole[y][x] = std::fabs(p->field[y][x]) > slise ? 255 : 0;
-                } 
-            }
+       void bin(std::vector<std::vector<double>>& CopyPole, int slice, std::unique_ptr<Pole>& p, ThresholdMode mode) {
+    if (p == nullptr) {
+        std::cerr << "Pole not initialized!" << std::endl;
+        return;
     }
+    
+    CopyPole = p->field;
+    
+    for (int x = 0; x < (int)p->field[0].size(); ++x) {
+        for (int y = 0; y < (int)p->field.size(); ++y) {
+            double value = p->field[y][x];
+            switch (mode) {
+                case ThresholdMode::All:
+                    CopyPole[y][x] = std::fabs(value) > slice ? 255 : 0;
+                    break;
+                case ThresholdMode::Peaks:
+                    CopyPole[y][x] = value > slice ? 255 : 0;
+                    break;
+                case ThresholdMode::Valleys:
+                    CopyPole[y][x] = value < -slice ? 255 : 0;
+                    break;
+            }
+        } 
+    }
+}
     
     void wave(int noisy, std::vector<Component>& componenti, std::vector<std::vector<double>>& CopyPole, std::unique_ptr<Pole>& p) {
     if (p == nullptr) {
@@ -1562,11 +1575,14 @@ public:
     std::unique_ptr<Pole> p= nullptr; // Pointer to Pole
     std::unique_ptr<KMeans> kMeans = nullptr; // Используем умный указатель
     std::vector<std::vector<double>> kMeansData;
-    std::vector<Triangle> lastTriangulation;
+    std::vector<Triangle> lastTriangulation; // Результат триангуляции
     PathFinder pathFinder;
     VoronoiDiagram voronoi{pathFinder}; // Инициализируем через конструктор;
     TerrainGrid terrainGrid;
-     
+    
+    std::vector<PointD> clusterCenters;      // Центры кластеров
+    std::vector<PointD> path;                // Найденный путь 
+    
     Control(Config& cfg, Logger& log) : config(cfg), loggercontrol(log), gnuplotInterface(cfg), pathFinder(cfg.vehicleRadius) {
      kMeans = std::make_unique<KMeans>(); // Инициализация
         if (config.loggingControlEnabled) {
@@ -1650,15 +1666,34 @@ void Dispetcher(DispatcherParams& params) {
     loggercontrol.logMessage("gnuplot used", b);
     }
 
-    if (params.s == "bmp_write") {
-        if (params.is_binary_image == 1) {
-            bmpHandler.bmp_write(p->field, params.filename);
-            loggercontrol.logMessage("bmp_write used", b);
-        } else {
-            bmpHandler.bmp_write(CopyPole, params.filename);
-            loggercontrol.logMessage("bmp_write used", b);
-        }
+    if (params.s == "PlotMetedata") {
+    gnuplotInterface.plotBinaryWithComponents(CopyPole, componenti, params.filename);//визуализация метаданных 
+    loggercontrol.logMessage("PlotMetedata used", b);
     }
+    
+    if (params.s == "PlotVoronoi") {
+    gnuplotInterface.plotVoronoi(p, voronoi.edges, clusterCenters, params.filename);
+    loggercontrol.logMessage("PlotVoronoi used", b);
+    }
+    
+    if (params.s == "PlotDelaunay") {
+    gnuplotInterface.plotDelaunay(lastTriangulation, p, params.filename);
+    loggercontrol.logMessage("PlotDelaunay used", b);
+    }
+    
+    if (params.s == "PlotPath") {
+    gnuplotInterface.plotPath(path, p, params.filename); // Вызов метода визуализации
+    loggercontrol.logMessage("PlotPath used", b);
+    }
+
+    if (params.s == "bmp_write") {
+    if (params.bmp_mode == BmpWriteMode::Full) {
+        bmpHandler.bmp_write(p->field, params.filename);
+    } else {
+        bmpHandler.bmp_write(CopyPole, params.filename);
+    }
+    loggercontrol.logMessage("bmp_write used, mode: " + std::string((params.bmp_mode == BmpWriteMode::Full ? "full" : "binary")), b);
+}
 
     if (params.s == "bmp_read") {
     bmpHandler.bmp_read(gaussBuilder, params.filename, CopyPole, p);
@@ -1666,7 +1701,7 @@ void Dispetcher(DispatcherParams& params) {
     }
 
     if (params.s == "bin") {
-    componentCalculator.bin(CopyPole, params.slice, p);
+    componentCalculator.bin(CopyPole, params.slice, p, params.bin_mode);
     loggercontrol.logMessage("bin used, slice=" + std::to_string(params.slice), b);
     }
     
@@ -1674,19 +1709,18 @@ void Dispetcher(DispatcherParams& params) {
     componentCalculator.wave(params.noisy, componenti, CopyPole, p);
     loggercontrol.logMessage("wave used", b);
     loggercontrol.logMessage("Component amount = " + std::to_string(componenti.size()), b);
-    copier.removeNoise(CopyPole, componenti);//копия без шума
-    gnuplotInterface.plotBinaryWithComponents(CopyPole, componenti);//визуализация метаданных   
+    copier.removeNoise(CopyPole, componenti);//копия без шума 
     }
      
     if (params.s == "k_means") {
             if (params.k <= 0 || p == nullptr) return;
             
+            copier.removeNoise(CopyPole, componenti);//копия без шума
             prepareKMeansData(CopyPole);
             if (kMeansData.empty()) return;
 
             auto result = kMeans->cluster(kMeansData, params.k);
             applyClusterResults(result, CopyPole);
-            //copier.removeNoise(CopyPole, componenti);//Если не хочешь засорять COPY но не работает визуализация
         }
     if (params.s == "k_means_kern") {
             if (!kMeans || params.k <= 0 || params.kk <= 0 || p == nullptr) {
@@ -1705,15 +1739,14 @@ void Dispetcher(DispatcherParams& params) {
             loggercontrol.logMessage("Applied kernel-based k-means clustering with " + 
                                    std::to_string(params.k) + " clusters and kernel size " + 
                                    std::to_string(params.kk), b);
-            //copier.removeNoise(CopyPole, componenti);//Если не хочешь засорять COPY но не работает визуализация
         }
         
     if (params.s == "triangulate") {
-    auto clusterCenters = getClusterCenters();
+        clusterCenters = getClusterCenters();
     
     // Добавляем точки A и B, если их ещё нет
-PointD pointA(config.pointA_x, config.pointA_y);
-PointD pointB(config.pointB_x, config.pointB_y);
+    PointD pointA(config.pointA_x, config.pointA_y);
+    PointD pointB(config.pointB_x, config.pointB_y);
 
 if (std::find(clusterCenters.begin(), clusterCenters.end(), pointA) == clusterCenters.end()) {
     clusterCenters.push_back(pointA);
@@ -1730,35 +1763,20 @@ if (std::find(clusterCenters.begin(), clusterCenters.end(), pointB) == clusterCe
         }
     }
     
-    auto triangles = componentCalculator.bowyerWatson(clusterCenters, *p);
-    this->lastTriangulation = triangles;
-    voronoi.buildFromDelaunay(triangles, pathFinder, p);
-    // Используйте актуальное изображение
-    gnuplotInterface.plotDelaunay(triangles, p);
-   gnuplotInterface.plotVoronoi(p, voronoi.edges, clusterCenters);
-    loggercontrol.logMessage("Triangulation visualized", b);
+    lastTriangulation = componentCalculator.bowyerWatson(clusterCenters, *p);
+    voronoi.buildFromDelaunay(lastTriangulation, pathFinder, p);
 }
 
         // Новая команда для поиска пути
    if (params.s == "find_path") {
         PointD start(config.pointA_x, config.pointA_y); // Добавлено
     PointD goal(config.pointB_x, config.pointB_y);  // Добавлено
-    if (this->lastTriangulation.empty()) {
+    if (lastTriangulation.empty()) {
         std::cerr << "Error: Triangulation not performed yet! Run 'triangulate' first.\n";
         return;
     }
-    auto path = pathFinder.findPathAStar(start, goal, this->lastTriangulation);
-    // Сохранить путь в BMP
-        std::vector<std::vector<double>> pathMatrix = p->field;//Странный мув!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        for (const auto& p : path) {
-            int x = static_cast<int>(p.x);
-            int y = static_cast<int>(p.y);
-            if (x >= 0 && x < pathMatrix[0].size() && y >= 0 && y < pathMatrix.size()) {
-                pathMatrix[y][x] = 255; // Отметить путь белым цветом
-            }
-        }
-        
-    gnuplotInterface.plotPath(path, p); // Вызов метода визуализации
+    path = pathFinder.findPathAStar(start, goal, lastTriangulation);
+    
     if (path.empty()) {
         std::cerr << "Путь не найден! Проверьте триангуляцию и параметры." << std::endl;
     }
@@ -1793,16 +1811,18 @@ public:
     
     void print() {
         bool a;
+        std::string commandfilename;
         std::ifstream file;
+        std::string line;
         std::cout << "Hello, dear user, this program builds Gaussians.\nEnter commands from a text file (PRESS 0) or from the keyboard (PRESS 1)?" << std::endl;
         std::cin >> a;
         loggerinterface.logMessage("User chose input method: " + std::to_string(a), b);
         if (a == 0) {
             std::cout << "You will enter commands from a text file.\nEnter filename:" << std::endl;
-            std::cin >> params.filename;
-            loggerinterface.logMessage("Reading commands from file: " + params.filename, b);
-            file.open(params.filename);
-            params.filename = "output.bmp"; //УДАЛИТЬ
+            std::cin >> commandfilename;
+            loggerinterface.logMessage("Reading commands from file: " + commandfilename, b);
+            file.open(commandfilename);
+            
             if (!file) {
                 std::cout << "File not found" << std::endl;
                 loggerinterface.logMessage("Error: File not found.", b);
@@ -1830,7 +1850,7 @@ public:
 - Кластеризация объектов методом k-means
 - Триангуляция Делоне с учетом высот
 - Построение диаграммы Вороного
-- Поиск пути с ограничениями по углу наклона тележки
+- Поиск пути с ограничениями по углу наклона тележки и ее радиуса
   
 
 ## ⚙️ Системные требования
@@ -1917,9 +1937,10 @@ make
 ├── README.md                           # Документация
 ├── src/
 │   ├── config.txt                      # Основные параметры системы
-│   ├── commands.txt                    # Пример командного файла
+│   ├── commandsGauss.txt               # Пример командного файла, генерирующий поле гаусами
+│   ├── commandsRead.txt                # Пример командного файла, генерирующий поле картинкой Read.bmp
 │   ├── main.cpp                        # Исходный код программы
-│   └── auto.sh                         # Скрипт, запускающий main.cpp и читающий файл commands.txt
+│   └── auto.sh                         # Скрипт, запускающий main.cpp и читающий файл commandsGauss.txt
 └── results/                            # Все результаты работы (внутри Gauss)
     ├── docs/
     │   ├── help.txt                    # Справочник
@@ -1934,27 +1955,33 @@ make
         ├── output_kmeans.bmp           # K-means
         ├── output_kmeans_kern.bmp      # K-means с ядрами
         ├── slice.bmp                   # Бинаризированная карта
+        ├── Read.bmp                    # Поле для чтения
         └── output.bmp                  # Сгенерированная карта
 ```
 
 
 ## 🛠 Команды управления
 
-| Команда            | Параметры              | Описание                                                                |
-|--------------------|------------------------|-------------------------------------------------------------------------|
-| help               | -                      | Создание файла с пояснением команд                                      |
-| init               | -                      | Инициализация поля                                                      |
-| g                  | x y sx sy h            | Создает гаусс                                                           |
-| generate           | -                      | Складывает гауссы                                                       |
-| gnuplot            | filename.png           | Рисует картинку в gnuplot                                               |
-| bmp_write          | filename.bmp           | Создает черно-белую серую картинку BMP                                  |
-| bmp_read           | filename.bmp           | Чтение BMP файла и инициализация поля новыми размерами                  |
-| bin                | integer_number         | Срез: все, что выше или ниже integer_number - черное, остальное - белое |
-| k_means            | k                      | Выделение k кластеров                                                   |
-| k_means_kern       | kk                     | Алгоритм k-means с ядрами размера kk                                    |
-| triangulate        | -                      | Построение триангуляции                                                 |
-| find_path          | -                      | Построение маршрута между точками A и B                                 |
-| end                | -                      | Это конец программы                                                     | 
+| Команда            | Параметры                      | Описание                                                                 |
+|--------------------|--------------------------------|--------------------------------------------------------------------------|
+| help               | -                              | Создание файла с пояснением команд                                       |
+| init               | -                              | Инициализация поля                                                       |
+| g                  | x y sx sy h                    | Создает гаусс с центром (x,y), размерами (sx,sy) и высотой h             |
+| generate           | -                              | Складывает все добавленные гауссы в итоговое поле                        |
+| gnuplot            | filename.png                   | Сохраняет 3D-визуализацию поля в PNG файл                                |
+| PlotMetedata       | filename.png                   | Визуализирует метаданные компонент с границами и центрами                |
+| PlotVoronoi        | filename.png                   | Строит диаграмму Вороного по текущей триангуляции                        |
+| PlotDelaunay       | filename.png                   | Визуализирует триангуляцию Делоне                                        |
+| PlotPath           | filename.png                   | Отображает найденный путь между точками A и B                            |
+| bmp_write          | filename.bmp [Full/Binary]     | Сохраняет поле в BMP: Full - полное, Binary - бинаризованное             |
+| bmp_read           | filename.bmp                   | Загружает поле из BMP файла                                              |
+| bin                | slice [Peaks/Valleys/All]      | Бинаризация: Peaks - только пики, Valleys - впадины, All - по модулю     |
+| wave               | noisy                          | Удаляет компоненты размером ≤ noisy как шум                              |
+| k_means            | k                              | Кластеризует данные в k кластеров                                        |
+| k_means_kern       | kk                             | Кластеризация с ядрами размера kk                                        |
+| triangulate        | -                              | Строит триангуляцию Делоне по центрам компонент                          |
+| find_path          | -                              | Ищет путь между точками A и B через триангуляцию                         |
+| end                | -                              | Завершает работу программы                                               |
 
 
 ## ⚠️ Важно
@@ -1963,88 +1990,116 @@ make
 3. Маршрут будет найден не всегда!
 4. Для триангуляции и построения пути, нужно чтобы количество компонент было больше 3
 5. Если пользуетесь программой, то важно использовать ту же файловую структуру!
+6. Путь к файлу пишем полностью
+7. Важен порядок команд, не забывайте делать картинки после команд
+8. Для команды bmp_write не полагайтесь на значения по умолчанию
+9. В триангуляцию сейчас добавляются точки (A и B), это имеет только плюсы (точки всегда в триангуляции, а значит маршрут всегда будет строиться)
+10. Уровень "равнины" = 127, чтобы метод записи поля по гаусам согласовался с записью по картике
 
 
 ## 📜 Командный файл (примеры)
-1) Если нужно прочитать данные с файла cat.bmp
+1) Если нужно прочитать данные с файла Read.bmp
 ```
 init
 help
-bmp_read cat.bmp
-gnuplot
-bmp_write
-bin 127
-k_means 2
-k_means_kern 3
+bmp_read /home/log/Gauss/results/visualizations/Read.bmp
+gnuplot /home/log/Gauss/results/visualizations/gnuplot.png
+bmp_write /home/log/Gauss/results/visualizations/Polew.bmp Full
+bin 20 All
+bmp_write /home/log/Gauss/results/visualizations/Slice.bmp Binary
+wave 10
+PlotMetedata /home/log/Gauss/results/visualizations/Metadata.png
+k_means 5
+bmp_write /home/log/Gauss/results/visualizations/kmeans.bmp Binary
 triangulate
+PlotVoronoi /home/log/Gauss/results/visualizations/Diagramma_Voronova.png
+PlotDelaunay /home/log/Gauss/results/visualizations/Triangulation_Delone.png
 find_path
+PlotPath /home/log/Gauss/results/visualizations/Path.png
 end
 ```
 2) Если данные вводятся с помощью гаусов
 ```
 init
 help
-g 99 50 25 25 200
-g 50 50 20 20 200
-g 200 50 20 20 200
-g 50 200 20 20 200
-g 189 180 20 20 200
-g 130 130 20 20 200
+g 99 50 25 25 -50
+g 50 50 20 20 50
+g 200 50 20 20 -50
+g 50 200 20 20 50
+g 189 180 20 20 -50
+g 130 130 20 20 50
 generate
-gnuplot
-bmp_write
-bin 127
+gnuplot /home/log/Gauss/results/visualizations/gnuplot.png
+bmp_write /home/log/Gauss/results/visualizations/Pole.bmp Full
+bin 20 All
+bmp_write /home/log/Gauss/results/visualizations/Slice.bmp Binary
+wave 10
+PlotMetedata /home/log/Gauss/results/visualizations/Metadata.png
 k_means 5
+bmp_write /home/log/Gauss/results/visualizations/kmeans.bmp Binary
 triangulate
+PlotVoronoi /home/log/Gauss/results/visualizations/Diagramma_Voronova.png
+PlotDelaunay /home/log/Gauss/results/visualizations/Triangulation_Delone.png
 find_path
+PlotPath /home/log/Gauss/results/visualizations/Path.png
 end
 ```
 
-# ======================
-# 🔄 SAFE WORKFLOW v1.0
-# ======================
-# Цель: Обновить main своими изменениями БЕЗ потерь
+##### ======================================
+## 🔄 SAFE WORKFLOW v1.0
+##### ======================================
+#### Философия: "Мои изменения — священны 😤, main обновляется без боли 😇"
 
-# 1️⃣ [НЕ ДЕЛАТЬ git pull!] Переключиться на main и создать ветку
+### 1️⃣ Начало работы (без опасного pull!)
+```
 git checkout main
-git checkout -b feature/my-feature  # Создаем ветку ОТ ЛОКАЛЬНОГО main (без pull)
+git checkout -b feature/improved-structure  # Создаем ветку ОТ локального main
+```
 
-# 2️⃣ Работа с файлами (index.html, script.js и т.д.)
-# Редактируете файлы -> сохраняете -> проверяете:
+### 2️⃣ Работа с файлами
+#### Редактируете файлы -> сохраняете -> проверяете:
+```
 git status
+```
 
-# 3️⃣ Фиксация изменений в ветке
+### 3️⃣ Фиксация изменений в ветке
+```
 git add .
-git commit -m "Мои изменения: добавил X в index.html"
-git push origin feature/my-feature
+git commit -m "Мои изменения ..."
+git push origin feature/improved-structure
+```
 
-# 4️⃣ 🔥 Критически важный этап: Обновление main
-# Вариант A (если хотите ПЕРЕЗАПИСАТЬ удалённый main):
-git checkout main
-git merge --squash feature/my-feature  # Объединяет все изменения в 1 коммит
-git commit -m "ВСЕ мои изменения за $(date +%d.%m.%Y) "
-git push origin main --force-with-lease  # Безопасный force
 
-# Вариант B (если нужно СОХРАНИТЬ историю):
+### 4️⃣ Лучший способ обновить main:
+#### --- Способ 1: Полный контроль (перезапись main) ---
+```
 git checkout main
-git merge --no-ff feature/my-feature  # Создаст коммит слияния
+git merge --squash feature/improved-structure  # Все изменения -> один коммит
+git commit -m "РЕЛИЗ: Новая структура проекта"
+git push origin main --force-with-lease  # Безопасная перезапись
+```
+
+#### --- Способ 2: Аккуратный мерж (если main меняли другие) ---
+```
+git fetch origin  # Проверить изменения без слияния
+git merge origin/main --no-commit  # Показать конфликты ДО применения
+# Если конфликтов нет:
+git commit -m "Мерж улучшенной структуры"
 git push origin main
+```
 
-# 5️⃣ Создание тега версии (если нужно)
-git tag -a v1.1.0 -m "Стабильная версия от $(date +%d.%m.%Y) "
-git push origin v1.1.0
+### 5️⃣ Создание тега
+```
+git tag -a v2.0.0 -m "Обновленная структура проекта"
+git push origin v2.0.0
+```
 
-# 6️⃣ Очистка
-git branch -d feature/my-feature
-git push origin --delete feature/my-feature
+### 6️⃣ Очистка
+```
+git branch -d feature/improved-structure
+git push origin --delete feature/improved-structure
+```
 
-# ======================
-# 🛡️ АВАРИЙНЫЕ КОМАНДЫ
-# ======================
-# Если что-то пошло не так:
-git reflog  # Показать историю действий
-git reset --hard COMMIT_HASH  # Откат к указанному коммиту
-git stash  # Временное сохранение незакоммиченных изменений
 
 ## 📄 Лицензия
 Этот проект лицензирован под MIT License. Вы можете свободно использовать, изменять и распространять код, при условии, что вы укажете автора.
@@ -2085,75 +2140,195 @@ Developed with ❤️ by **DebugDestroy**
                      return;
              }
  else if (params.s == "g") {
+    // Установка значений по умолчанию
+    params.x = config.defaultX;
+    params.y = config.defaultY;
+    params.sx = config.defaultSx;
+    params.sy = config.defaultSy;
+    params.h = config.defaultH;
 
-                // Читаем параметры из файла
-                file >> params.x >> params.y >> params.sx >> params.sy >> params.h;
+    // Чтение строки из файла
+    if (std::getline(file, line)) {
+        std::istringstream iss(line);
+        
+        // Чтение параметров команды
+        iss >> params.x;  // Если не прочитается, останется defaultX
+        iss >> params.y;  // Аналогично для остальных параметров
+        iss >> params.sx; //...
+        iss >> params.sy; //...
+        iss >> params.h; //...
+    }
 
-                // Проверяем, были ли параметры указаны
-                if (file.fail()) {
-                    // Если не удалось прочитать, значит, используем значения по умолчанию
-                    if (file.eof()) { // Желательно проверить конец файла, чтобы избежать повторного чтения
-                        params.x = config.defaultX;
-                        params.y = config.defaultY;
-                        params.sx = config.defaultSx;
-                        params.sy = config.defaultSy;
-                        params.h = config.defaultH;
-                    } else {
-                        // Если произошла ошибка чтения или недостаточно параметров
-                        // Нужно сбросить флаг ошибки для дальнейшего чтения
-                        file.clear();
-
-                        // Проверяем, какие параметры были прочитаны
-                        if (!(file >> params.x)) params.x = config.defaultX; // Если не удалось получить x, берем по умолчанию
-                        if (!(file >> params.y)) params.y = config.defaultY; // Если не удалось получить y, берем по умолчанию
-                        if (!(file >> params.sx)) params.sx = config.defaultSx; // ...
-                        if (!(file >> params.sy)) params.sy = config.defaultSy; // ...
-                        if (!(file >> params.h)) params.h = config.defaultH; // ...
-                    }
-                }
-
-                loggerinterface.logMessage("Adding Gaussian: x=" + std::to_string(params.x) +
-                    ", y=" + std::to_string(params.y) + 
-                    ", sx=" + std::to_string(params.sx) + 
-                    ", sy=" + std::to_string(params.sy) + 
-                    ", h=" + std::to_string(params.h), b);
-                c.Dispetcher(params);
-            } else if (params.s == "generate") {
+    // Логирование и вызов обработчика
+    loggerinterface.logMessage("Adding Gaussian: x=" + std::to_string(params.x) + 
+                             ", y=" + std::to_string(params.y) + 
+                             ", sx=" + std::to_string(params.sx) + 
+                             ", sy=" + std::to_string(params.sy) + 
+                             ", h=" + std::to_string(params.h), b);
+                  c.Dispetcher(params);
+                } else if (params.s == "generate") {
                     c.Dispetcher(params);
                     loggerinterface.logMessage("Generated values in the field.", b);
                 } else if (params.s == "gnuplot") {
-                    file >> params.filename;
+                    std::getline(file, line);
+                    std::istringstream iss(line);
+                    
+                    // Установка значений по умолчанию
+                    params.filename = config.defaultGnuplot;
+                    
+                    // Чтение параметров команды
+                    iss >> params.filename;
+                    
                     c.Dispetcher(params);
                     loggerinterface.logMessage("Called gnuplot:" + params.filename, b);
-                } else if (params.s == "bmp_write") {
-                    file >> params.filename;
-                    file >> params.is_binary_image;
+                } else if (params.s == "PlotMetedata") {
+                    std::getline(file, line);
+                    std::istringstream iss(line);
+                    
+                    // Установка значений по умолчанию
+                    params.filename = config.defaultPlotMetedata;
+                    
+                    // Чтение параметров команды
+                    iss >> params.filename;
+                    
                     c.Dispetcher(params);
-                    loggerinterface.logMessage("Created BMP file:" + params.filename, b);
+                    loggerinterface.logMessage("Called PlotMetedata:" + params.filename, b);
+                } else if (params.s == "PlotVoronoi") {
+                    std::getline(file, line);
+                    std::istringstream iss(line);
+                    
+                    // Установка значений по умолчанию
+                    params.filename = config.defaultPlotVoronoi;
+                    
+                    // Чтение параметров команды
+                    iss >> params.filename;
+                    
+                    c.Dispetcher(params);
+                    loggerinterface.logMessage("Called PlotVoronoi:" + params.filename, b);
+                } else if (params.s == "PlotDelaunay") {
+                    std::getline(file, line);
+                    std::istringstream iss(line);
+                    
+                    // Установка значений по умолчанию
+                    params.filename = config.defaultPlotDelaunay;
+                    
+                    // Чтение параметров команды
+                    iss >> params.filename;
+                    
+                    c.Dispetcher(params);
+                    loggerinterface.logMessage("Called PlotDelaunay:" + params.filename, b);
+                } else if (params.s == "PlotPath") {
+                    std::getline(file, line);
+                    std::istringstream iss(line);
+                    
+                    // Установка значений по умолчанию
+                    params.filename = config.defaultPlotPath;
+                    
+                    // Чтение параметров команды
+                    iss >> params.filename;
+                    
+                    c.Dispetcher(params);
+                    loggerinterface.logMessage("Called PlotPath:" + params.filename, b);
+                } else if (params.s == "bmp_write") {
+                    std::string modeWrite;
+                    std::getline(file, line);
+                    std::istringstream iss(line);
+                    
+                    // Установка значений по умолчанию
+                    params.filename = config.defaultWrite;
+                    modeWrite = config.defaultWriteModeImage;
+                    
+                    // Чтение параметров команды
+                    iss >> params.filename;
+                    iss >> modeWrite;
+                    
+                    if (modeWrite == "Full") {
+                params.bmp_mode = BmpWriteMode::Full;
+            } else params.bmp_mode = BmpWriteMode::Binary;
+                
+                    c.Dispetcher(params);
+                    loggerinterface.logMessage("Created BMP file:" + params.filename + ", Mode image:" + modeWrite, b);
                 } else if (params.s == "bmp_read") {
-                    file >> params.filename; // Чтение имени файла для bmp_read
+                    std::getline(file, line);
+                    std::istringstream iss(line);
+                    
+                    // Установка значений по умолчанию
+                    params.filename = config.defaultRead;
+                    
+                    // Чтение параметров команды
+                    iss >> params.filename;
+                    
                     c.Dispetcher(params);
                     loggerinterface.logMessage("Read BMP file: " + params.filename, b);
-                    //params.filename = "output.bmp"; УДАЛИТЬ
                 } else if (params.s == "bin") {
-                    file >> params.slice;
+                    std::string modeBin;
+                    std::getline(file, line);
+                    std::istringstream iss(line);
+                    
+                    // Установка значений по умолчанию
+                    params.slice = config.defaultSlice;
+                    modeBin = config.defaultBinMode;
+                    
+                    // Чтение параметров команды
+                    iss >> params.slice;
+                    iss >> modeBin;
+                    
+            if (modeBin == "Peaks") {
+                params.bin_mode = ThresholdMode::Peaks;
+            } else if (modeBin == "Valleys") {
+                params.bin_mode = ThresholdMode::Valleys;
+            } else {
+                params.bin_mode = ThresholdMode::All;
+            }
+        
                     c.Dispetcher(params);
-                    loggerinterface.logMessage("Slice applied: slice=" + std::to_string(params.slice), b);
+                    loggerinterface.logMessage("Slice applied: slice=" + std::to_string(params.slice) + ", Bin Mode:" + modeBin, b);
                 } else if (params.s == "wave") {
-                    file >> params.noisy;
+                    std::getline(file, line);
+                    std::istringstream iss(line);
+                    
+                    // Установка значений по умолчанию
+                    params.noisy = config.defaultNoisy;
+                    
+                    // Чтение параметров команды
+                    iss >> params.noisy;
+                    
                     c.Dispetcher(params);
                     loggerinterface.logMessage("Wave will be used", b);
                     loggerinterface.logMessage("Component amount = " + std::to_string(c.componenti.size()), b);
                 } else if (params.s == "k_means") {
-                        file >> params.k;
-                        c.Dispetcher(params);
-                        loggerinterface.logMessage("Cluster count", b);
+                    std::getline(file, line);
+                    std::istringstream iss(line);
+                    
+                    // Установка значений по умолчанию
+                    params.k = config.defaultKlaster;
+                    
+                    // Чтение параметров команды
+                    iss >> params.k;
+                    
+                    c.Dispetcher(params);
+                    loggerinterface.logMessage("Cluster count", b);
                 } else if (params.s == "k_means_kern") {
-                    file >> params.kk;
+                    std::getline(file, line);
+                    std::istringstream iss(line);
+                    
+                    // Установка значений по умолчанию
+                    params.kk = config.defaultKlasterKern;
+                    
+                    // Чтение параметров команды
+                    iss >> params.kk;
+                    
                     c.Dispetcher(params);
                     loggerinterface.logMessage("Cluster kern worked", b);
                 }
                  else if (params.s == "triangulate") {
+                 /*
+                    std::getline(file, line);
+                    std::istringstream iss(line);
+                    
+                    // Установка значений по умолчанию
+                    
+                    // Чтение параметров команды*/
                     loggerinterface.logMessage("triangulate worke", b);
                     c.Dispetcher(params);
                 }
@@ -2174,7 +2349,7 @@ Developed with ❤️ by **DebugDestroy**
             std::ofstream helpFile("/home/log/Gauss/results/docs/help.txt");
             if (helpFile.is_open()) {
                 helpFile << R"(
-# # Terrain Navigation System
+# Terrain Navigation System
 
 Программа для анализа рельефа местности, построения триангуляции Делоне, диаграмм Вороного и поиска оптимальных маршрутов с учетом препятствий.
 
@@ -2183,7 +2358,7 @@ Developed with ❤️ by **DebugDestroy**
 - Кластеризация объектов методом k-means
 - Триангуляция Делоне с учетом высот
 - Построение диаграммы Вороного
-- Поиск пути с ограничениями по углу наклона тележки
+- Поиск пути с ограничениями по углу наклона тележки и ее радиуса
   
 
 ## ⚙️ Системные требования
@@ -2270,9 +2445,10 @@ make
 ├── README.md                           # Документация
 ├── src/
 │   ├── config.txt                      # Основные параметры системы
-│   ├── commands.txt                    # Пример командного файла
+│   ├── commandsGauss.txt               # Пример командного файла, генерирующий поле гаусами
+│   ├── commandsRead.txt                # Пример командного файла, генерирующий поле картинкой Read.bmp
 │   ├── main.cpp                        # Исходный код программы
-│   └── auto.sh                         # Скрипт, запускающий main.cpp и читающий файл commands.txt
+│   └── auto.sh                         # Скрипт, запускающий main.cpp и читающий файл commandsGauss.txt
 └── results/                            # Все результаты работы (внутри Gauss)
     ├── docs/
     │   ├── help.txt                    # Справочник
@@ -2287,27 +2463,33 @@ make
         ├── output_kmeans.bmp           # K-means
         ├── output_kmeans_kern.bmp      # K-means с ядрами
         ├── slice.bmp                   # Бинаризированная карта
+        ├── Read.bmp                    # Поле для чтения
         └── output.bmp                  # Сгенерированная карта
 ```
 
 
 ## 🛠 Команды управления
 
-| Команда            | Параметры              | Описание                                                                |
-|--------------------|------------------------|-------------------------------------------------------------------------|
-| help               | -                      | Создание файла с пояснением команд                                      |
-| init               | -                      | Инициализация поля                                                      |
-| g                  | x y sx sy h            | Создает гаусс                                                           |
-| generate           | -                      | Складывает гауссы                                                       |
-| gnuplot            | filename.png           | Рисует картинку в gnuplot                                               |
-| bmp_write          | filename.bmp           | Создает черно-белую серую картинку BMP                                  |
-| bmp_read           | filename.bmp           | Чтение BMP файла и инициализация поля новыми размерами                  |
-| bin                | integer_number         | Срез: все, что выше или ниже integer_number - черное, остальное - белое |
-| k_means            | k                      | Выделение k кластеров                                                   |
-| k_means_kern       | kk                     | Алгоритм k-means с ядрами размера kk                                    |
-| triangulate        | -                      | Построение триангуляции                                                 |
-| find_path          | -                      | Построение маршрута между точками A и B                                 |
-| end                | -                      | Это конец программы                                                     | 
+| Команда            | Параметры                      | Описание                                                                 |
+|--------------------|--------------------------------|--------------------------------------------------------------------------|
+| help               | -                              | Создание файла с пояснением команд                                       |
+| init               | -                              | Инициализация поля                                                       |
+| g                  | x y sx sy h                    | Создает гаусс с центром (x,y), размерами (sx,sy) и высотой h             |
+| generate           | -                              | Складывает все добавленные гауссы в итоговое поле                        |
+| gnuplot            | filename.png                   | Сохраняет 3D-визуализацию поля в PNG файл                                |
+| PlotMetedata       | filename.png                   | Визуализирует метаданные компонент с границами и центрами                |
+| PlotVoronoi        | filename.png                   | Строит диаграмму Вороного по текущей триангуляции                        |
+| PlotDelaunay       | filename.png                   | Визуализирует триангуляцию Делоне                                        |
+| PlotPath           | filename.png                   | Отображает найденный путь между точками A и B                            |
+| bmp_write          | filename.bmp [Full/Binary]     | Сохраняет поле в BMP: Full - полное, Binary - бинаризованное             |
+| bmp_read           | filename.bmp                   | Загружает поле из BMP файла                                              |
+| bin                | slice [Peaks/Valleys/All]      | Бинаризация: Peaks - только пики, Valleys - впадины, All - по модулю     |
+| wave               | noisy                          | Удаляет компоненты размером ≤ noisy как шум                              |
+| k_means            | k                              | Кластеризует данные в k кластеров                                        |
+| k_means_kern       | kk                             | Кластеризация с ядрами размера kk                                        |
+| triangulate        | -                              | Строит триангуляцию Делоне по центрам компонент                          |
+| find_path          | -                              | Ищет путь между точками A и B через триангуляцию                         |
+| end                | -                              | Завершает работу программы                                               |
 
 
 ## ⚠️ Важно
@@ -2316,88 +2498,115 @@ make
 3. Маршрут будет найден не всегда!
 4. Для триангуляции и построения пути, нужно чтобы количество компонент было больше 3
 5. Если пользуетесь программой, то важно использовать ту же файловую структуру!
+6. Путь к файлу пишем полностью
+7. Важен порядок команд, не забывайте делать картинки после команд
+8. Для команды bmp_write не полагайтесь на значения по умолчанию
+9. В триангуляцию сейчас добавляются точки (A и B), это имеет только плюсы (точки всегда в триангуляции, а значит маршрут всегда будет строиться)
+10. Уровень "равнины" = 127, чтобы метод записи поля по гаусам согласовался с записью по картике
 
 
 ## 📜 Командный файл (примеры)
-1) Если нужно прочитать данные с файла cat.bmp
+1) Если нужно прочитать данные с файла Read.bmp
 ```
 init
 help
-bmp_read cat.bmp
-gnuplot
-bmp_write
-bin 127
-k_means 2
-k_means_kern 3
+bmp_read /home/log/Gauss/results/visualizations/Read.bmp
+gnuplot /home/log/Gauss/results/visualizations/gnuplot.png
+bmp_write /home/log/Gauss/results/visualizations/Polew.bmp Full
+bin 20 All
+bmp_write /home/log/Gauss/results/visualizations/Slice.bmp Binary
+wave 10
+PlotMetedata /home/log/Gauss/results/visualizations/Metadata.png
+k_means 5
+bmp_write /home/log/Gauss/results/visualizations/kmeans.bmp Binary
 triangulate
+PlotVoronoi /home/log/Gauss/results/visualizations/Diagramma_Voronova.png
+PlotDelaunay /home/log/Gauss/results/visualizations/Triangulation_Delone.png
 find_path
+PlotPath /home/log/Gauss/results/visualizations/Path.png
 end
 ```
 2) Если данные вводятся с помощью гаусов
 ```
 init
 help
-g 99 50 25 25 200
-g 50 50 20 20 200
-g 200 50 20 20 200
-g 50 200 20 20 200
-g 189 180 20 20 200
-g 130 130 20 20 200
+g 99 50 25 25 -50
+g 50 50 20 20 50
+g 200 50 20 20 -50
+g 50 200 20 20 50
+g 189 180 20 20 -50
+g 130 130 20 20 50
 generate
-gnuplot
-bmp_write
-bin 127
+gnuplot /home/log/Gauss/results/visualizations/gnuplot.png
+bmp_write /home/log/Gauss/results/visualizations/Pole.bmp Full
+bin 20 All
+bmp_write /home/log/Gauss/results/visualizations/Slice.bmp Binary
+wave 10
+PlotMetedata /home/log/Gauss/results/visualizations/Metadata.png
 k_means 5
+bmp_write /home/log/Gauss/results/visualizations/kmeans.bmp Binary
 triangulate
+PlotVoronoi /home/log/Gauss/results/visualizations/Diagramma_Voronova.png
+PlotDelaunay /home/log/Gauss/results/visualizations/Triangulation_Delone.png
 find_path
+PlotPath /home/log/Gauss/results/visualizations/Path.png
 end
 ```
 
-# ======================
-# 🔄 SAFE WORKFLOW v1.0
-# ======================
-# Цель: Обновить main своими изменениями БЕЗ потерь
+##### ======================================
+## 🔄 SAFE WORKFLOW v1.0
+##### ======================================
+#### Философия: "Мои изменения — священны 😤, main обновляется без боли 😇"
 
-# 1️⃣ [НЕ ДЕЛАТЬ git pull!] Переключиться на main и создать ветку
+### 1️⃣ Начало работы (без опасного pull!)
+```
 git checkout main
-git checkout -b feature/my-feature  # Создаем ветку ОТ ЛОКАЛЬНОГО main (без pull)
+git checkout -b feature/improved-structure  # Создаем ветку ОТ локального main
+```
 
-# 2️⃣ Работа с файлами (index.html, script.js и т.д.)
-# Редактируете файлы -> сохраняете -> проверяете:
+### 2️⃣ Работа с файлами
+#### Редактируете файлы -> сохраняете -> проверяете:
+```
 git status
+```
 
-# 3️⃣ Фиксация изменений в ветке
+### 3️⃣ Фиксация изменений в ветке
+```
 git add .
-git commit -m "Мои изменения: добавил X в index.html"
-git push origin feature/my-feature
+git commit -m "Мои изменения ..."
+git push origin feature/improved-structure
+```
 
-# 4️⃣ 🔥 Критически важный этап: Обновление main
-# Вариант A (если хотите ПЕРЕЗАПИСАТЬ удалённый main):
-git checkout main
-git merge --squash feature/my-feature  # Объединяет все изменения в 1 коммит
-git commit -m "ВСЕ мои изменения за $(date +%d.%m.%Y) "
-git push origin main --force-with-lease  # Безопасный force
 
-# Вариант B (если нужно СОХРАНИТЬ историю):
+### 4️⃣ Лучший способ обновить main:
+#### --- Способ 1: Полный контроль (перезапись main) ---
+```
 git checkout main
-git merge --no-ff feature/my-feature  # Создаст коммит слияния
+git merge --squash feature/improved-structure  # Все изменения -> один коммит
+git commit -m "РЕЛИЗ: Новая структура проекта"
+git push origin main --force-with-lease  # Безопасная перезапись
+```
+
+#### --- Способ 2: Аккуратный мерж (если main меняли другие) ---
+```
+git fetch origin  # Проверить изменения без слияния
+git merge origin/main --no-commit  # Показать конфликты ДО применения
+# Если конфликтов нет:
+git commit -m "Мерж улучшенной структуры"
 git push origin main
+```
 
-# 5️⃣ Создание тега версии (если нужно)
-git tag -a v1.1.0 -m "Стабильная версия от $(date +%d.%m.%Y) "
-git push origin v1.1.0
+### 5️⃣ Создание тега
+```
+git tag -a v2.0.0 -m "Обновленная структура проекта"
+git push origin v2.0.0
+```
 
-# 6️⃣ Очистка
-git branch -d feature/my-feature
-git push origin --delete feature/my-feature
-
-# ======================
-# 🛡️ АВАРИЙНЫЕ КОМАНДЫ
-# ======================
-# Если что-то пошло не так:
-git reflog  # Показать историю действий
-git reset --hard COMMIT_HASH  # Откат к указанному коммиту
-git stash  # Временное сохранение незакоммиченных изменений
+### 6️⃣ Очистка
+```
+git branch -d feature/improved-structure
+git push origin --delete feature/improved-structure
+```
 
 
 ## 📄 Лицензия
@@ -2442,32 +2651,31 @@ Developed with ❤️ by **DebugDestroy**
              }
              
   if (params.s == "g") {
-    std::string input;
-    std::getline(std::cin, input);
-
-    std::istringstream inputStream(input);
-
+    std::getline(std::cin, line);
+    std::istringstream iss(line);
+    
     // Инициализируем переменные значениями по умолчанию
     params.x = config.defaultX;
     params.y = config.defaultY;
     params.sx = config.defaultSx;
     params.sy = config.defaultSy;
     params.h = config.defaultH;
-
+    
+        
     // Читаем введенные данные
-    if (!(inputStream >> params.x)) {
+    if (!(iss >> params.x)) {
         std::cout << "The default value for x is used: " << config.defaultX << std::endl;
     }
-    if (!(inputStream >> params.y)) {
+    if (!(iss >> params.y)) {
         std::cout << "The default value for y is used: " << config.defaultY << std::endl;
     }
-    if (!(inputStream >> params.sx)) {
+    if (!(iss >> params.sx)) {
         std::cout << "The default value for sx is used: " << config.defaultSx << std::endl;
     }
-    if (!(inputStream >> params.sy)) {
+    if (!(iss >> params.sy)) {
         std::cout << "The default value for sy is used: " << config.defaultSy << std::endl;
     }
-    if (!(inputStream >> params.h)) {
+    if (!(iss >> params.h)) {
         std::cout << "The default value for h is used: " << config.defaultH << std::endl;
     }
 
@@ -2484,34 +2692,77 @@ Developed with ❤️ by **DebugDestroy**
                     std::cout << "Generated values in the field." << std::endl;
                     loggerinterface.logMessage("Generated values in the field.", b);
                 } if (params.s == "gnuplot") {
-                    std::cout << "Enter the filename to draw:" << std::endl;
+                    std::cout << "Enter the filename(full path) to draw:" << std::endl;
                     std::cin >> params.filename;//имя для файла
                     c.Dispetcher(params);
                     std::cout << "Called gnuplot:" + params.filename << std::endl;
                     loggerinterface.logMessage("Called gnuplot:" + params.filename, b);
-                } if (params.s == "bmp_write") {
-                    std::cout << "Enter the filename to draw:" << std::endl;
+                } if (params.s == "PlotMetedata") {
+                    std::cout << "Enter the filename(full path) to draw:" << std::endl;
                     std::cin >> params.filename;//имя для файла
-                    std::cout << "Image is binary (0) or not (1):" << std::endl;
-                    std::cin >> params.is_binary_image;
                     c.Dispetcher(params);
-                    std::cout << "Created BMP file:" + params.filename << std::endl;
+                    std::cout << "Called PlotMetedata:" + params.filename << std::endl;
+                    loggerinterface.logMessage("Called PlotMetedata:" + params.filename, b);
+                } if (params.s == "PlotVoronoi") {
+                    std::cout << "Enter the filename(full path) to draw:" << std::endl;
+                    std::cin >> params.filename;//имя для файла
+                    c.Dispetcher(params);
+                    std::cout << "Called PlotVoronoi:" + params.filename << std::endl;
+                    loggerinterface.logMessage("Called PlotVoronoi:" + params.filename, b);
+                } if (params.s == "PlotDelaunay") {
+                    std::cout << "Enter the filename(full path) to draw:" << std::endl;
+                    std::cin >> params.filename;//имя для файла
+                    c.Dispetcher(params);
+                    std::cout << "Called PlotDelaunay:" + params.filename << std::endl;
+                    loggerinterface.logMessage("Called PlotDelaunay:" + params.filename, b);
+                } if (params.s == "PlotPath") {
+                    std::cout << "Enter the filename(full path) to draw:" << std::endl;
+                    std::cin >> params.filename;//имя для файла
+                    c.Dispetcher(params);
+                    std::cout << "Called PlotPath:" + params.filename << std::endl;
+                    loggerinterface.logMessage("Called PlotPath:" + params.filename, b);
+                } if (params.s == "bmp_write") {
+                    std::string modeWrite;
+                    
+                    std::cout << "Enter the filename(full path) to draw:" << std::endl;
+                    std::cin >> params.filename;//имя для файла
+                    std::cout << "Image is binary (Binary) or not (Full):" << std::endl;
+                    std::cin >> modeWrite;
+                    
+                    if (modeWrite == "Full") {
+                params.bmp_mode = BmpWriteMode::Full;
+            } else params.bmp_mode = BmpWriteMode::Binary;
+            
+                    c.Dispetcher(params);
+                    std::cout << "Created BMP file:" + params.filename + ", bmp_mode:" + modeWrite << std::endl;
                     loggerinterface.logMessage("Created BMP file:" + params.filename, b);
                 } if (params.s == "bmp_read") {
-                    std::cout << "Enter the filename to read:" << std::endl;
+                    std::cout << "Enter the filename(full path) to read:" << std::endl;
                     std::cin >> params.filename;
                     c.Dispetcher(params);
                     std::cout << "Read BMP file: " + params.filename << std::endl;
                     loggerinterface.logMessage("Read BMP file: " + params.filename, b);
-                    //params.filename = "output.bmp"; УДАЛИТЬ
                 }  if (params.s == "end") {
                     std::cout << "Ending the program" << std::endl;
                     loggerinterface.logMessage("Ending the program.", b);
                     break;
                 }
                    if (params.s == "bin") {
+                     std::string modeBin;
+                     
                      std::cout << "Enter slice level:" << std::endl;
                      std::cin >> params.slice;
+                     std::cout << "Enter Bin Mode (Peaks, Valleys, All): " << std::endl;
+                     std::cin >> modeBin;
+                     
+            if (modeBin == "Peaks") {
+                params.bin_mode = ThresholdMode::Peaks;
+            } else if (modeBin == "Valleys") {
+                params.bin_mode = ThresholdMode::Valleys;
+            } else {
+                params.bin_mode = ThresholdMode::All;
+            }
+            
                      c.Dispetcher(params);
                      loggerinterface.logMessage("Slice applied: slice=" + std::to_string(params.slice), b);
                      std::cout << "Slice applied: slice=" << params.slice << std::endl;
