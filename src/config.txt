@@ -13,7 +13,7 @@ defaultPlotPath /home/log/Gauss/results/visualizations/Path.png
 defaultWrite /home/log/Gauss/results/visualizations/Write.bmp
 defaultWriteModeImage Full
 defaultRead /home/log/Gauss/results/visualizations/Read.bmp
-defaultSlice 100
+defaultSlice 127
 defaultBinMode All
 defaultNoisy 10
 defaultKlaster 5

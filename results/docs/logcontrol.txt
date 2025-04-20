@@ -38,3 +38,274 @@
 [2025-04-20 13:01:16] PlotVoronoi used
 [2025-04-20 13:01:17] PlotDelaunay used
 [2025-04-20 13:01:17] PlotPath used
+[2025-04-20 19:53:17] Logging Control is enabled.
+[2025-04-20 19:53:17] init used: 250 x 250
+[2025-04-20 19:53:17] g used: x=99.000000, y=50.000000, sx=25.000000, sy=50.000000, h=-50.000000
+[2025-04-20 19:53:17] g used: x=50.000000, y=50.000000, sx=20.000000, sy=50.000000, h=50.000000
+[2025-04-20 19:53:17] g used: x=200.000000, y=50.000000, sx=20.000000, sy=50.000000, h=-50.000000
+[2025-04-20 19:53:17] g used: x=50.000000, y=200.000000, sx=20.000000, sy=200.000000, h=50.000000
+[2025-04-20 19:53:17] g used: x=189.000000, y=180.000000, sx=20.000000, sy=180.000000, h=-50.000000
+[2025-04-20 19:53:17] g used: x=130.000000, y=130.000000, sx=20.000000, sy=130.000000, h=50.000000
+[2025-04-20 19:53:17] generate used
+[2025-04-20 19:53:17] gnuplot used
+[2025-04-20 19:53:17] bmp_write used, mode: full
+[2025-04-20 19:53:17] bin used, slice=20
+[2025-04-20 19:53:17] bmp_write used, mode: binary
+[2025-04-20 19:53:17] wave used
+[2025-04-20 19:53:17] Component amount = 1
+[2025-04-20 19:53:17] PlotMetedata used
+[2025-04-20 19:53:18] bmp_write used, mode: binary
+[2025-04-20 19:53:18] PlotVoronoi used
+[2025-04-20 19:53:18] PlotDelaunay used
+[2025-04-20 19:53:19] PlotPath used
+[2025-04-20 20:10:56] Logging Control is enabled.
+[2025-04-20 20:10:56] init used: 250 x 250
+[2025-04-20 20:10:56] g used: x=99.000000, y=50.000000, sx=25.000000, sy=50.000000, h=-50.000000
+[2025-04-20 20:10:56] g used: x=50.000000, y=50.000000, sx=20.000000, sy=50.000000, h=50.000000
+[2025-04-20 20:10:56] g used: x=200.000000, y=50.000000, sx=20.000000, sy=50.000000, h=-50.000000
+[2025-04-20 20:10:56] g used: x=50.000000, y=200.000000, sx=20.000000, sy=200.000000, h=50.000000
+[2025-04-20 20:10:56] g used: x=189.000000, y=180.000000, sx=20.000000, sy=180.000000, h=-50.000000
+[2025-04-20 20:10:56] g used: x=130.000000, y=130.000000, sx=20.000000, sy=130.000000, h=50.000000
+[2025-04-20 20:10:56] generate used
+[2025-04-20 20:10:56] gnuplot used
+[2025-04-20 20:10:56] bmp_write used, mode: full
+[2025-04-20 20:10:56] bin used, slice=147
+[2025-04-20 20:10:56] bmp_write used, mode: binary
+[2025-04-20 20:10:56] wave used
+[2025-04-20 20:10:56] Component amount = 6
+[2025-04-20 20:10:56] PlotMetedata used
+[2025-04-20 20:10:56] bmp_write used, mode: binary
+[2025-04-20 20:10:57] PlotVoronoi used
+[2025-04-20 20:10:57] PlotDelaunay used
+[2025-04-20 20:10:57] PlotPath used
+[2025-04-20 20:21:26] Logging Control is enabled.
+[2025-04-20 20:21:26] init used: 250 x 250
+[2025-04-20 20:21:26] bmp_read used, filename: /home/log/Gauss/results/visualizations/Read.bmp
+[2025-04-20 20:21:26] gnuplot used
+[2025-04-20 20:21:26] bmp_write used, mode: full
+[2025-04-20 20:21:26] bin used, slice=147
+[2025-04-20 20:21:26] bmp_write used, mode: binary
+[2025-04-20 20:21:26] wave used
+[2025-04-20 20:21:26] Component amount = 6
+[2025-04-20 20:21:26] PlotMetedata used
+[2025-04-20 20:21:26] bmp_write used, mode: binary
+[2025-04-20 20:21:27] PlotVoronoi used
+[2025-04-20 20:21:27] PlotDelaunay used
+[2025-04-20 20:21:27] PlotPath used
+[2025-04-20 21:08:54] Logging Control is enabled.
+[2025-04-20 21:08:54] init used: 250 x 250
+[2025-04-20 21:08:54] g used: x=99.000000, y=50.000000, sx=25.000000, sy=50.000000, h=-50.000000
+[2025-04-20 21:08:54] g used: x=50.000000, y=50.000000, sx=20.000000, sy=50.000000, h=50.000000
+[2025-04-20 21:08:54] g used: x=200.000000, y=50.000000, sx=20.000000, sy=50.000000, h=-50.000000
+[2025-04-20 21:08:54] g used: x=50.000000, y=200.000000, sx=20.000000, sy=200.000000, h=50.000000
+[2025-04-20 21:08:54] g used: x=189.000000, y=180.000000, sx=20.000000, sy=180.000000, h=-50.000000
+[2025-04-20 21:08:54] g used: x=130.000000, y=130.000000, sx=20.000000, sy=130.000000, h=50.000000
+[2025-04-20 21:08:54] generate used
+[2025-04-20 21:08:54] gnuplot used
+[2025-04-20 21:08:54] bmp_write used, mode: full
+[2025-04-20 21:08:54] bin used, slice=147
+[2025-04-20 21:08:54] bmp_write used, mode: binary
+[2025-04-20 21:08:54] Significant component: pixels=2843, center=(104.528667,49.565600), size=(52x65)
+[2025-04-20 21:08:54] Significant component: pixels=2327, center=(199.847013,50.000000), size=(54x54)
+[2025-04-20 21:08:54] Significant component: pixels=1577, center=(44.138237,50.000000), size=(40x48)
+[2025-04-20 21:08:54] Significant component: pixels=2186, center=(129.893870,130.410796), size=(52x51)
+[2025-04-20 21:08:54] Significant component: pixels=2267, center=(189.358624,180.319806), size=(53x53)
+[2025-04-20 21:08:54] Significant component: pixels=2313, center=(50.000000,200.000000), size=(54x54)
+[2025-04-20 21:08:54] Wave processing complete. Significant components: 6, Noise components: 0
+[2025-04-20 21:08:54] Wave used with noisy threshold: 10
+[2025-04-20 21:08:54] Component amount = 6
+[2025-04-20 21:08:55] PlotMetedata used
+[2025-04-20 21:08:55] bmp_write used, mode: binary
+[2025-04-20 21:08:55] PlotVoronoi used
+[2025-04-20 21:08:55] PlotDelaunay used
+[2025-04-20 21:08:55] PlotPath used
+[2025-04-20 21:13:36] Logging Control is enabled.
+[2025-04-20 21:13:36] init used: 250 x 250
+[2025-04-20 21:13:36] g used: x=99.000000, y=50.000000, sx=25.000000, sy=50.000000, h=-50.000000
+[2025-04-20 21:13:36] g used: x=50.000000, y=50.000000, sx=20.000000, sy=50.000000, h=50.000000
+[2025-04-20 21:13:36] g used: x=200.000000, y=50.000000, sx=20.000000, sy=50.000000, h=-50.000000
+[2025-04-20 21:13:36] g used: x=50.000000, y=200.000000, sx=20.000000, sy=200.000000, h=50.000000
+[2025-04-20 21:13:36] g used: x=189.000000, y=180.000000, sx=20.000000, sy=180.000000, h=-50.000000
+[2025-04-20 21:13:36] g used: x=130.000000, y=130.000000, sx=20.000000, sy=130.000000, h=50.000000
+[2025-04-20 21:13:36] generate used
+[2025-04-20 21:13:36] gnuplot used
+[2025-04-20 21:13:36] bmp_write used, mode: full
+[2025-04-20 21:13:36] bin used, slice=147
+[2025-04-20 21:13:36] bmp_write used, mode: binary
+[2025-04-20 21:13:36] Significant component: pixels=2843, center=(104.528667,49.565600), size=(52x65)
+[2025-04-20 21:13:36] Significant component: pixels=2327, center=(199.847013,50.000000), size=(54x54)
+[2025-04-20 21:13:36] Significant component: pixels=1577, center=(44.138237,50.000000), size=(40x48)
+[2025-04-20 21:13:36] Significant component: pixels=2186, center=(129.893870,130.410796), size=(52x51)
+[2025-04-20 21:13:36] Significant component: pixels=2267, center=(189.358624,180.319806), size=(53x53)
+[2025-04-20 21:13:36] Significant component: pixels=2313, center=(50.000000,200.000000), size=(54x54)
+[2025-04-20 21:13:36] Wave processing complete. Significant components: 6, Noise components: 0
+[2025-04-20 21:13:36] Wave used with noisy threshold: 10
+[2025-04-20 21:13:36] Component amount = 6
+[2025-04-20 21:13:37] PlotMetedata used
+[2025-04-20 21:13:37] bmp_write used, mode: binary
+[2025-04-20 21:13:37] PlotVoronoi used
+[2025-04-20 21:13:37] PlotDelaunay used
+[2025-04-20 21:13:37] PlotPath used
+[2025-04-20 21:16:28] Logging Control is enabled.
+[2025-04-20 21:16:28] init used: 250 x 250
+[2025-04-20 21:16:28] g used: x=99.000000, y=50.000000, sx=25.000000, sy=50.000000, h=-50.000000
+[2025-04-20 21:16:28] g used: x=50.000000, y=50.000000, sx=20.000000, sy=50.000000, h=50.000000
+[2025-04-20 21:16:28] g used: x=200.000000, y=50.000000, sx=20.000000, sy=50.000000, h=-50.000000
+[2025-04-20 21:16:28] g used: x=50.000000, y=200.000000, sx=20.000000, sy=200.000000, h=50.000000
+[2025-04-20 21:16:28] g used: x=189.000000, y=180.000000, sx=20.000000, sy=180.000000, h=-50.000000
+[2025-04-20 21:16:28] g used: x=130.000000, y=130.000000, sx=20.000000, sy=130.000000, h=50.000000
+[2025-04-20 21:16:28] generate used
+[2025-04-20 21:16:28] gnuplot used
+[2025-04-20 21:16:28] bmp_write used, mode: full
+[2025-04-20 21:16:28] bin used, slice=147
+[2025-04-20 21:16:28] bmp_write used, mode: binary
+[2025-04-20 21:16:28] Significant component: pixels=2843, center=(104.528667,49.565600), size=(52x65)
+[2025-04-20 21:16:28] Significant component: pixels=2327, center=(199.847013,50.000000), size=(54x54)
+[2025-04-20 21:16:28] Significant component: pixels=1577, center=(44.138237,50.000000), size=(40x48)
+[2025-04-20 21:16:28] Significant component: pixels=2186, center=(129.893870,130.410796), size=(52x51)
+[2025-04-20 21:16:28] Significant component: pixels=2267, center=(189.358624,180.319806), size=(53x53)
+[2025-04-20 21:16:28] Significant component: pixels=2313, center=(50.000000,200.000000), size=(54x54)
+[2025-04-20 21:16:28] Wave processing complete. Significant components: 6, Noise components: 0
+[2025-04-20 21:16:28] Wave used with noisy threshold: 10
+[2025-04-20 21:16:28] Component amount = 6
+[2025-04-20 21:16:28] PlotMetedata used
+[2025-04-20 21:16:28] bmp_write used, mode: binary
+[2025-04-20 21:16:28] PlotVoronoi used
+[2025-04-20 21:16:29] PlotDelaunay used
+[2025-04-20 21:16:29] PlotPath used
+[2025-04-20 21:18:40] Logging Control is enabled.
+[2025-04-20 21:18:40] init used: 250 x 250
+[2025-04-20 21:18:40] g used: x=99.000000, y=50.000000, sx=25.000000, sy=50.000000, h=-50.000000
+[2025-04-20 21:18:40] g used: x=50.000000, y=50.000000, sx=20.000000, sy=50.000000, h=50.000000
+[2025-04-20 21:18:40] g used: x=200.000000, y=50.000000, sx=20.000000, sy=50.000000, h=-50.000000
+[2025-04-20 21:18:40] g used: x=50.000000, y=200.000000, sx=20.000000, sy=200.000000, h=50.000000
+[2025-04-20 21:18:40] g used: x=189.000000, y=180.000000, sx=20.000000, sy=180.000000, h=-50.000000
+[2025-04-20 21:18:40] g used: x=130.000000, y=130.000000, sx=20.000000, sy=130.000000, h=50.000000
+[2025-04-20 21:18:40] generate used
+[2025-04-20 21:18:41] gnuplot used
+[2025-04-20 21:18:41] bmp_write used, mode: full
+[2025-04-20 21:18:41] bin used, slice=147
+[2025-04-20 21:18:41] bmp_write used, mode: binary
+[2025-04-20 21:18:41] Significant component: pixels=2843, center=(104.528667,49.565600), size=(52x65)
+[2025-04-20 21:18:41] Significant component: pixels=2327, center=(199.847013,50.000000), size=(54x54)
+[2025-04-20 21:18:41] Significant component: pixels=1577, center=(44.138237,50.000000), size=(40x48)
+[2025-04-20 21:18:41] Significant component: pixels=2186, center=(129.893870,130.410796), size=(52x51)
+[2025-04-20 21:18:41] Significant component: pixels=2267, center=(189.358624,180.319806), size=(53x53)
+[2025-04-20 21:18:41] Significant component: pixels=2313, center=(50.000000,200.000000), size=(54x54)
+[2025-04-20 21:18:41] Wave processing complete. Significant components: 6, Noise components: 0
+[2025-04-20 21:18:41] Wave used with noisy threshold: 10
+[2025-04-20 21:18:41] Component amount = 6
+[2025-04-20 21:18:41] PlotMetedata used
+[2025-04-20 21:18:41] bmp_write used, mode: binary
+[2025-04-20 21:18:41] PlotVoronoi used
+[2025-04-20 21:18:42] PlotDelaunay used
+[2025-04-20 21:18:42] PlotPath used
+[2025-04-20 21:20:26] Logging Control is enabled.
+[2025-04-20 21:20:26] init used: 250 x 250
+[2025-04-20 21:20:26] g used: x=99.000000, y=50.000000, sx=25.000000, sy=50.000000, h=-50.000000
+[2025-04-20 21:20:26] g used: x=50.000000, y=50.000000, sx=20.000000, sy=50.000000, h=50.000000
+[2025-04-20 21:20:26] g used: x=200.000000, y=50.000000, sx=20.000000, sy=50.000000, h=-50.000000
+[2025-04-20 21:20:26] g used: x=50.000000, y=200.000000, sx=20.000000, sy=200.000000, h=50.000000
+[2025-04-20 21:20:26] g used: x=189.000000, y=180.000000, sx=20.000000, sy=180.000000, h=-50.000000
+[2025-04-20 21:20:26] g used: x=130.000000, y=130.000000, sx=20.000000, sy=130.000000, h=50.000000
+[2025-04-20 21:20:26] generate used
+[2025-04-20 21:20:27] gnuplot used
+[2025-04-20 21:20:27] bmp_write used, mode: full
+[2025-04-20 21:20:27] bin used, slice=147
+[2025-04-20 21:20:27] bmp_write used, mode: binary
+[2025-04-20 21:20:27] Significant component: pixels=2843, center=(104.528667,49.565600), size=(52x65)
+[2025-04-20 21:20:27] Significant component: pixels=2327, center=(199.847013,50.000000), size=(54x54)
+[2025-04-20 21:20:27] Significant component: pixels=1577, center=(44.138237,50.000000), size=(40x48)
+[2025-04-20 21:20:27] Significant component: pixels=2186, center=(129.893870,130.410796), size=(52x51)
+[2025-04-20 21:20:27] Significant component: pixels=2267, center=(189.358624,180.319806), size=(53x53)
+[2025-04-20 21:20:27] Significant component: pixels=2313, center=(50.000000,200.000000), size=(54x54)
+[2025-04-20 21:20:27] Wave processing complete. Significant components: 6, Noise components: 0
+[2025-04-20 21:20:27] Wave used with noisy threshold: 10
+[2025-04-20 21:20:27] Component amount = 6
+[2025-04-20 21:20:27] PlotMetedata used
+[2025-04-20 21:20:27] bmp_write used, mode: binary
+[2025-04-20 21:20:27] PlotVoronoi used
+[2025-04-20 21:20:28] PlotDelaunay used
+[2025-04-20 21:20:28] PlotPath used
+[2025-04-20 21:25:47] Logging Control is enabled.
+[2025-04-20 21:25:47] init used: 250 x 250
+[2025-04-20 21:25:47] g used: x=99.000000, y=50.000000, sx=25.000000, sy=50.000000, h=-50.000000
+[2025-04-20 21:25:47] g used: x=50.000000, y=50.000000, sx=20.000000, sy=50.000000, h=50.000000
+[2025-04-20 21:25:47] g used: x=200.000000, y=50.000000, sx=20.000000, sy=50.000000, h=-50.000000
+[2025-04-20 21:25:47] g used: x=50.000000, y=200.000000, sx=20.000000, sy=200.000000, h=50.000000
+[2025-04-20 21:25:47] g used: x=189.000000, y=180.000000, sx=20.000000, sy=180.000000, h=-50.000000
+[2025-04-20 21:25:47] g used: x=130.000000, y=130.000000, sx=20.000000, sy=130.000000, h=50.000000
+[2025-04-20 21:25:47] generate used
+[2025-04-20 21:25:47] gnuplot used
+[2025-04-20 21:25:47] bmp_write used, mode: full
+[2025-04-20 21:25:47] bin used, slice=147
+[2025-04-20 21:25:47] bmp_write used, mode: binary
+[2025-04-20 21:25:47] Significant component: pixels=2843, center=(104.528667,49.565600), size=(52x65)
+[2025-04-20 21:25:47] Significant component: pixels=2327, center=(199.847013,50.000000), size=(54x54)
+[2025-04-20 21:25:47] Significant component: pixels=1577, center=(44.138237,50.000000), size=(40x48)
+[2025-04-20 21:25:47] Significant component: pixels=2186, center=(129.893870,130.410796), size=(52x51)
+[2025-04-20 21:25:47] Significant component: pixels=2267, center=(189.358624,180.319806), size=(53x53)
+[2025-04-20 21:25:47] Significant component: pixels=2313, center=(50.000000,200.000000), size=(54x54)
+[2025-04-20 21:25:47] Wave processing complete. Significant components: 6, Noise components: 0
+[2025-04-20 21:25:47] Wave used with noisy threshold: 10
+[2025-04-20 21:25:47] Component amount = 6
+[2025-04-20 21:25:47] PlotMetedata used
+[2025-04-20 21:25:47] bmp_write used, mode: binary
+[2025-04-20 21:25:48] PlotVoronoi used
+[2025-04-20 21:25:48] PlotDelaunay used
+[2025-04-20 21:25:48] PlotPath used
+[2025-04-20 21:27:19] Logging Control is enabled.
+[2025-04-20 21:27:19] init used: 250 x 250
+[2025-04-20 21:27:19] g used: x=99.000000, y=50.000000, sx=25.000000, sy=50.000000, h=-50.000000
+[2025-04-20 21:27:19] g used: x=50.000000, y=50.000000, sx=20.000000, sy=50.000000, h=50.000000
+[2025-04-20 21:27:19] g used: x=200.000000, y=50.000000, sx=20.000000, sy=50.000000, h=-50.000000
+[2025-04-20 21:27:19] g used: x=50.000000, y=200.000000, sx=20.000000, sy=200.000000, h=50.000000
+[2025-04-20 21:27:19] g used: x=189.000000, y=180.000000, sx=20.000000, sy=180.000000, h=-50.000000
+[2025-04-20 21:27:19] g used: x=130.000000, y=130.000000, sx=20.000000, sy=130.000000, h=50.000000
+[2025-04-20 21:27:19] generate used
+[2025-04-20 21:27:20] gnuplot used
+[2025-04-20 21:27:20] bmp_write used, mode: full
+[2025-04-20 21:27:20] bin used, slice=147
+[2025-04-20 21:27:20] bmp_write used, mode: binary
+[2025-04-20 21:27:20] Significant component: pixels=2843, center=(104.528667,49.565600), size=(52x65)
+[2025-04-20 21:27:20] Significant component: pixels=2327, center=(199.847013,50.000000), size=(54x54)
+[2025-04-20 21:27:20] Significant component: pixels=1577, center=(44.138237,50.000000), size=(40x48)
+[2025-04-20 21:27:20] Significant component: pixels=2186, center=(129.893870,130.410796), size=(52x51)
+[2025-04-20 21:27:20] Significant component: pixels=2267, center=(189.358624,180.319806), size=(53x53)
+[2025-04-20 21:27:20] Significant component: pixels=2313, center=(50.000000,200.000000), size=(54x54)
+[2025-04-20 21:27:20] Wave processing complete. Significant components: 6, Noise components: 0
+[2025-04-20 21:27:20] Wave used with noisy threshold: 10
+[2025-04-20 21:27:20] Component amount = 6
+[2025-04-20 21:27:20] PlotMetedata used
+[2025-04-20 21:27:20] bmp_write used, mode: binary
+[2025-04-20 21:27:21] PlotVoronoi used
+[2025-04-20 21:27:21] PlotDelaunay used
+[2025-04-20 21:27:21] PlotPath used
+[2025-04-20 22:06:34] Logging Control is enabled.
+[2025-04-20 22:06:34] init used: 250 x 250
+[2025-04-20 22:06:34] g used: x=99.000000, y=50.000000, sx=25.000000, sy=50.000000, h=-50.000000
+[2025-04-20 22:06:34] g used: x=50.000000, y=50.000000, sx=20.000000, sy=50.000000, h=50.000000
+[2025-04-20 22:06:34] g used: x=200.000000, y=50.000000, sx=20.000000, sy=50.000000, h=-50.000000
+[2025-04-20 22:06:34] g used: x=50.000000, y=200.000000, sx=20.000000, sy=200.000000, h=50.000000
+[2025-04-20 22:06:34] g used: x=189.000000, y=180.000000, sx=20.000000, sy=180.000000, h=-50.000000
+[2025-04-20 22:06:34] g used: x=130.000000, y=130.000000, sx=20.000000, sy=130.000000, h=50.000000
+[2025-04-20 22:06:34] generate used
+[2025-04-20 22:06:35] gnuplot used
+[2025-04-20 22:06:35] bmp_write used, mode: full
+[2025-04-20 22:06:35] bin used, slice=147
+[2025-04-20 22:06:35] bmp_write used, mode: binary
+[2025-04-20 22:06:35] Significant component: pixels=2843, center=(104.528667,49.565600), size=(52x65)
+[2025-04-20 22:06:35] Significant component: pixels=2327, center=(199.847013,50.000000), size=(54x54)
+[2025-04-20 22:06:35] Significant component: pixels=1577, center=(44.138237,50.000000), size=(40x48)
+[2025-04-20 22:06:35] Significant component: pixels=2186, center=(129.893870,130.410796), size=(52x51)
+[2025-04-20 22:06:35] Significant component: pixels=2267, center=(189.358624,180.319806), size=(53x53)
+[2025-04-20 22:06:35] Significant component: pixels=2313, center=(50.000000,200.000000), size=(54x54)
+[2025-04-20 22:06:35] Wave processing complete. Significant components: 6, Noise components: 0
+[2025-04-20 22:06:35] Wave used with noisy threshold: 10
+[2025-04-20 22:06:35] Component amount = 6
+[2025-04-20 22:06:35] PlotMetedata used
+[2025-04-20 22:06:35] k_means clustering: k=5, centers=[(129.893870,130.410796),(50.000000,200.000000),(199.847013,50.000000),(82.982127,49.720588),(189.358624,180.319806)]
+[2025-04-20 22:06:35] bmp_write used, mode: binary
+[2025-04-20 22:06:35] PlotVoronoi used
+[2025-04-20 22:06:36] PlotDelaunay used
+[2025-04-20 22:06:36] PlotPath used
