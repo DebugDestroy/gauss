@@ -1,23 +1,14 @@
-/*Здраствуйте! В этой версии есть недоточеты! Пока непонятно 
-1) Точки A и B параметры путя (в кофиге они как дефолт)
-2)
-3)нужно убрать высоту в триангуляции
-4) Доработать версию с наклоном (считаем наклон тележки)
-5)Нужно хранить список путей (чтобы в начале применили команду path сколько душе угодно, а потом их распечатали разом)
-6) Улучшить логирование
+/*Здраствуйте! В этой версии есть недоточеты! Осталось
+1) Если добавятся новые команды меняем readme file и help 
+2)Улучшить логирование
+3) Возможно новые требования
+4)Оптимизация
 
-7) Если добавятся новые команды меняем readme file и help 
+Изменения:  храним список путей (чтобы в начале применили команду path сколько душе угодно, а потом их распечатали разом, но эта распечатка не реализована), исправлена диаграмма воронова + 
+улучшена визуализация + теперь условия проходимости коррекны ( условие с радиусом и с наклонами в стороны) + добавлены параметры в команду path + улучшено логирование (но не до конца) + 
+ правильная визуализация метаданных компонент + убрал точки A и B из триангулизации + Визуализация маршрута 3D новая команда + углы правильно считаются и логируются
 
-8) Добавить критический угол наклона по бокам и вверх/вниз
-
-9)
-
-10) Есть ненужные переменные, функции и тд
-
-Изменения: решена путаница с уровнем 127 + В методе wave записаны в список компоненты которые мы убираем как шум, записаны их метаданные в лог файл, добавлены в метаданные количество пикселей, 
- записаны  метаданные в лог файл обычных компонент + логируются центры кластеров
-
-        ПРОГРАММА ЕЩЕ НЕ ДО КОНЦА ГОТОВА!!! МЕТОДЫ ТРИАНГУЛЯЦИИ И ПОСТРОЕНИЯ ПУТИ НЕ ГОТОВЫ!!! Следите за обновлениями на гитхаб [GitHub Profile](https://github.com/DebugDestroy)
+                           Программа готова!!! Но всю равно следите за обновлениями на гитхаб [GitHub Profile](https://github.com/DebugDestroy)
 */
 
 #include <iostream>
@@ -63,6 +54,7 @@ struct DispatcherParams {//параметры для диспетчера
     int noisy;//Уровень шума (все компоненты меньше - шум)
     int k;//количество кластеров для метода k_means
     int kk;//количество кластеров для метода k_means_with_kern
+    double pointA_x, pointA_y, pointB_x, pointB_y;// точки A и B для путя
 };
 
 // Структура для точки с вещественными координатами (для точности) auto clusterCenters = getClusterCenters();
@@ -81,7 +73,6 @@ struct PointD {
 
 struct Triangle {
     PointD a, b, c;
-    double minElevation;  // Минимальная высота в треугольнике
     Triangle(PointD a_, PointD b_, PointD c_) : a(a_), b(b_), c(c_) {}
 
     // Добавляем оператор сравнения
@@ -93,16 +84,11 @@ struct Triangle {
                (a == other.c && b == other.a && c == other.b) ||
                (a == other.c && b == other.b && c == other.a);
     }
-    bool isDelaunay(const std::vector<PointD>& allPoints) const {
-        PointD circumCenter = calculateCircumcenter();
-        double radius = distance(circumCenter, a);
-        for (const auto& p : allPoints) {
-            if (p != a && p != b && p != c && distance(p, circumCenter) < radius - 1e-6) {
-                return false;
-            }
-        }
-        return true;
-    }
+    static bool areCollinear(const PointD& a, const PointD& b, const PointD& c) {
+    double area = (b.y - a.y) * (c.x - b.x) - (c.y - b.y) * (b.x - a.x);
+    return std::fabs(area) < 1e-6; // Проверяем, близко ли значение к нулю
+}
+
      PointD calculateCircumcenter() const {
         // Реализация вычисления центра окружности
         double d = 2 * (a.x*(b.y - c.y) + b.x*(c.y - a.y) + c.x*(a.y - b.y));
@@ -124,19 +110,24 @@ struct Edge {
     bool operator==(const Edge& other) const {
         return (a == other.a && b == other.b) || (a == other.b && b == other.a);
     }
+    
+    double length() const {
+        return std::hypot(a.x - b.x, a.y - b.y);
+    }
 };
 
 struct VoronoiEdge {
     PointD start, end;
-    bool isInfinite = false; // Флаг бесконечности (как же круто звучит!!!!!!!!) 
-    VoronoiEdge(PointD s, PointD e, bool infinite = false) : start(s), end(e), isInfinite(infinite) {}
+    VoronoiEdge(PointD s, PointD e) : start(s), end(e) {}
 };
 
 // Структура для хранения данных ячейки сетки
 struct GridCell {
     PointD position;       // Координаты центра ячейки
-    double slopeAngle = 0; // Угол наклона в градусах
-    bool visited = false;  // Флаг посещения
+    double height = 0;     // Высота в этой точке
+    double slopeX = 0;     // Наклон по оси X (в радианах)
+    double slopeY = 0;     // Наклон по оси Y (в радианах)
+    bool visited = false;
 };
 
 struct AStarNode {
@@ -161,12 +152,12 @@ public:
     double defaultX, defaultY, defaultSx, defaultSy, defaultH;
     std::string logFileNameInterface;
     std::string logFileNameControl;
-    std::string defaultGnuplot, defaultPlotMetedata, defaultPlotVoronoi, defaultPlotDelaunay, defaultPlotPath, defaultWrite, defaultRead, defaultWriteModeImage, defaultBinMode;
+    std::string defaultGnuplot, defaultPlotMetedata, defaultPlotVoronoi, defaultPlotDelaunay, defaultPlotPath, defaultWrite, defaultRead, defaultWriteModeImage, defaultBinMode, defaultPlot3DPath;
     int defaultSlice, defaultNoisy, defaultKlaster, defaultKlasterKern;
     bool loggingInterfaceEnabled;
     bool loggingControlEnabled;
-    double pointA_x, pointA_y, pointB_x, pointB_y;
-    double vehicleRadius;
+    double defaultpointA_x, defaultpointA_y, defaultpointB_x, defaultpointB_y;
+    double vehicleRadius, maxSideAngle, maxUpDownAngle;
 
     Config(const std::string& filename) {
         
@@ -202,11 +193,14 @@ while (configFile >> key) { // Считываем ключи
     else if (key == "logFileNameControl") configFile >> logFileNameControl;
     else if (key == "loggingInterfaceEnabled") configFile >> std::boolalpha >> loggingInterfaceEnabled;
     else if (key == "loggingControlEnabled") configFile >> std::boolalpha >> loggingControlEnabled;
-    else if (key == "pointA_x") configFile >> pointA_x;
-    else if (key == "pointA_y") configFile >> pointA_y;
-    else if (key == "pointB_x") configFile >> pointB_x;
-    else if (key == "pointB_y") configFile >> pointB_y;
-    else if (key == "vehicleRadius") configFile >> vehicleRadius;
+    else if (key == "defaultpointA_x") configFile >> defaultpointA_x;
+    else if (key == "defaultpointA_y") configFile >> defaultpointA_y;
+    else if (key == "defaultpointB_x") configFile >> defaultpointB_x;
+    else if (key == "defaultpointB_y") configFile >> defaultpointB_y;
+    else if (key == "vehicleRadius") configFile >> vehicleRadius;    
+    else if (key == "maxSideAngle") configFile >> maxSideAngle;
+    else if (key == "maxUpDownAngle") configFile >> maxUpDownAngle;
+    else if (key == "defaultPlot3DPath") configFile >> defaultPlot3DPath;
 }
 
         configFile.close();
@@ -286,76 +280,82 @@ public:
     }
 
     void calculate_metadata() {
-        // Находим границы и центр
-        min_x = componenta[0].size();
-        min_y = componenta.size();
-        max_x = 0;
-        max_y = 0;
-        double sum_x = 0, sum_y = 0;
-        int count = 0;
+    // Находим границы и центр
+    min_x = componenta[0].size();
+    min_y = componenta.size();
+    max_x = 0;
+    max_y = 0;
+    double sum_x = 0, sum_y = 0;
+    int count = 0;
 
-        for (int i = 0; i < componenta.size(); ++i) {
-            for (int j = 0; j < componenta[0].size(); ++j) {
-                if (componenta[i][j] == 255) { // Точка принадлежит компоненте
-                    min_x = std::min(min_x, j);
-                    min_y = std::min(min_y, i);
-                    max_x = std::max(max_x, j);
-                    max_y = std::max(max_y, i);
-                    sum_x += j;
-                    sum_y += i;
-                    count++;
-                }
+    for (int y = 0; y < componenta.size(); ++y) {
+        for (int x = 0; x < componenta[0].size(); ++x) {
+            if (componenta[y][x] == 255) {
+                min_x = std::min(min_x, x);
+                min_y = std::min(min_y, y);
+                max_x = std::max(max_x, x);
+                max_y = std::max(max_y, y);
+                sum_x += x;
+                sum_y += y;
+                count++;
             }
         }
-         if (count == 0) {
+    }
+
+    if (count == 0) {
         std::cerr << "Error: Component has no valid pixels!" << std::endl;
-        center_x = 0;
-        center_y = 0;
+        center_x = center_y = 0;
         return;
     }
-        center_x = sum_x / count;
-        center_y = sum_y / count;
 
-        // Расчет ковариационной матрицы
-        double cov_xx = 0, cov_xy = 0, cov_yy = 0;
-        for (int i = min_x; i <= max_x; ++i) {
-            for (int j = min_y; j <= max_y; ++j) {
-                if (componenta[i][j] == 0) {
-                    double dx = i - center_x;
-                    double dy = j - center_y;
-                    cov_xx += dx * dx;
-                    cov_xy += dx * dy;
-                    cov_yy += dy * dy;
-                }
+    center_x = sum_x / count;
+    center_y = sum_y / count;
+
+    // Корректный расчет ковариационной матрицы
+    double cov_xx = 0, cov_xy = 0, cov_yy = 0;
+    for (int y = min_y; y <= max_y; ++y) {
+        for (int x = min_x; x <= max_x; ++x) {
+            if (componenta[y][x] == 255) {  // Исправлено условие
+                double dx = x - center_x;
+                double dy = y - center_y;
+                cov_xx += dx * dx;
+                cov_xy += dx * dy;
+                cov_yy += dy * dy;
             }
         }
-        
-        cov_xx /= count;
-        cov_xy /= count;
-        cov_yy /= count;
-
-        // Собственные значения и векторы
-        double trace = cov_xx + cov_yy;
-        double det = cov_xx * cov_yy - cov_xy * cov_xy;
-        eigenvalue1 = (trace + sqrt(trace * trace - 4 * det)) / 2;
-        eigenvalue2 = (trace - sqrt(trace * trace - 4 * det)) / 2;
-
-        // Собственные векторы (упрощенный расчет)
-        if (cov_xy != 0) {
-            eigenvec1_x = eigenvalue1 - cov_yy;
-            eigenvec1_y = cov_xy;
-            eigenvec2_x = eigenvalue2 - cov_yy;
-            eigenvec2_y = cov_xy;
-        } else {
-            eigenvec1_x = 1; eigenvec1_y = 0;
-            eigenvec2_x = 0; eigenvec2_y = 1;
-        }
-
-        // Вывод результатов
-        std::cout << "Eigenvalues: " << eigenvalue1 << ", " << eigenvalue2 << std::endl;
-        std::cout << "Eigenvector 1: (" << eigenvec1_x << ", " << eigenvec1_y << ")" << std::endl;
-        std::cout << "Eigenvector 2: (" << eigenvec2_x << ", " << eigenvec2_y << ")" << std::endl;
     }
+
+    cov_xx /= count;
+    cov_xy /= count;
+    cov_yy /= count;
+
+    // Собственные значения
+    double trace = cov_xx + cov_yy;
+    double det = cov_xx * cov_yy - cov_xy * cov_xy;
+    eigenvalue1 = (trace + sqrt(trace * trace - 4 * det)) / 2;
+    eigenvalue2 = (trace - sqrt(trace * trace - 4 * det)) / 2;
+
+    // Корректный расчет собственных векторов
+    if (fabs(cov_xy) > 1e-10) {
+        // Первый собственный вектор (для eigenvalue1)
+        eigenvec1_x = cov_xy;
+        eigenvec1_y = eigenvalue1 - cov_xx;
+        
+        // Второй собственный вектор (для eigenvalue2)
+        eigenvec2_x = cov_xy;
+        eigenvec2_y = eigenvalue2 - cov_xx;
+    } else {
+        eigenvec1_x = 1; eigenvec1_y = 0;
+        eigenvec2_x = 0; eigenvec2_y = 1;
+    }
+
+    // Нормализация векторов
+    double norm1 = sqrt(eigenvec1_x * eigenvec1_x + eigenvec1_y * eigenvec1_y);
+    double norm2 = sqrt(eigenvec2_x * eigenvec2_x + eigenvec2_y * eigenvec2_y);
+    
+    eigenvec1_x /= norm1; eigenvec1_y /= norm1;
+    eigenvec2_x /= norm2; eigenvec2_y /= norm2;
+}
 };
 
 class Copier {
@@ -568,11 +568,111 @@ class BmpHandler {
   }
 };
 
+// Класс для работы с сеткой рельефа
+class TerrainGrid {
+public:
+TerrainGrid(int width, int height) {
+        initialize(width, height);
+    }
+    std::vector<std::vector<GridCell>> cells;
+
+    // Инициализация сетки на основе размеров поля
+    void initialize(int width, int height) {
+         // 1. Изменение размера двумерного вектора cells
+    //    - height строк
+    //    - width столбцов в каждой строке
+    cells.resize(height, std::vector<GridCell>(width));
+
+    // 2. Двойной цикл для итерации по всем ячейкам сетки
+    for (int y = 0; y < height; ++y) {         // Проход по строкам (ось Y)
+        for (int x = 0; x < width; ++x) {      // Проход по столбцам (ось X)
+            
+            // 3. Расчет координат центра ячейки:
+            cells[y][x].position = PointD(
+                // Ось X: 
+                x + 0.5,                       // Центр ячейки по X
+                
+                // Ось Y (инверсия):
+                (height - y - 1) + 0.5         // Центр ячейки по Y с инверсией
+            );
+            
+            // Пример для сетки 3x3:
+            // y=0 -> Y = (3-0-1)+0.5 = 2.5 (верхний ряд)
+            // y=1 -> Y = (3-1-1)+0.5 = 1.5 (средний ряд)
+            // y=2 -> Y = (3-2-1)+0.5 = 0.5 (нижний ряд)
+        }
+    }
+    }
+    
+    std::pair<double, double> getEdgeSlopes(const Edge& edge) const {
+    // Вычисляем направление ребра
+    PointD dir = {
+        edge.b.x - edge.a.x,
+        edge.b.y - edge.a.y
+    };
+    double length = std::hypot(dir.x, dir.y);
+    if (length < 1e-6) return {0, 0};
+    
+    // Нормализуем направление
+    dir.x /= length;
+    dir.y /= length;
+    
+    // Средняя точка ребра
+    int x = static_cast<int>((edge.a.x + edge.b.x) / 2);
+    int y = static_cast<int>((edge.a.y + edge.b.y) / 2);
+    
+    // Проверяем границы
+    if (x <= 0 || y <= 0 || x >= cells[0].size()-1 || y >= cells.size()-1) {
+        return {0, 0};
+    }
+
+    // Вычисляем углы наклона
+    double forwardSlope = atan(cells[y][x].slopeX * dir.x + cells[y][x].slopeY * dir.y);
+    double sideSlope = atan(cells[y][x].slopeX * (-dir.y) + cells[y][x].slopeY * dir.x);
+    
+    return {
+        forwardSlope * 180.0 / M_PI,  // Преобразуем в градусы
+        sideSlope * 180.0 / M_PI
+    };
+}
+
+    // Расчет углов наклона на основе данных высот
+    void calculateSlopes(const Pole& elevationData) {
+    if (elevationData.field.empty()) {
+        throw std::invalid_argument("Pole data is empty");
+    }
+
+    const int height = cells.size();
+    const int width = cells[0].size();
+
+    for (int y = 1; y < height-1; ++y) {
+        for (int x = 1; x < width-1; ++x) {
+            // Сохраняем высоту
+            cells[y][x].height = elevationData.field[y][x];
+            
+            // Вычисляем производные (центральные разности)
+            cells[y][x].slopeX = (elevationData.field[y][x+1] - elevationData.field[y][x-1]) / 2.0;
+            cells[y][x].slopeY = (elevationData.field[y+1][x] - elevationData.field[y-1][x]) / 2.0;
+        }
+    }
+}
+
+    // Сброс флагов посещения
+    void resetVisited() {
+        for (auto& row : cells) {
+            for (auto& cell : row) {
+                cell.visited = false;
+            }
+        }
+    } 
+};
+
 class PathFinder {
 private:
-    double vehicleRadius;
+    const Config& config;
 public:
-    PathFinder(double radius) : vehicleRadius(radius) {}
+    PathFinder(const Config& cfg) : config(cfg) {}
+    
     // Эвристическая функция (евклидово расстояние)
     double heuristic(const PointD& a, const PointD& b) {
         return std::hypot(a.x - b.x, a.y - b.y);
@@ -603,22 +703,14 @@ public:
     return !(has_neg && has_pos);
 }
     
-   bool isNavigable(const Triangle& tri, double radius) {
-    const double minSafeElevation = 0.5; // Минимально допустимая высота
-    double safeElevation = std::max(tri.minElevation, minSafeElevation);
-    bool navigable = safeElevation > radius;
-
-    if (!navigable) {
-        std::cout << "Треугольник непроходим: мин. высота = " << tri.minElevation 
-                  << " (с учётом защиты: " << safeElevation << ")"
-                  << ", радиус = " << radius 
-                  << ", вершины: (" 
-                  << tri.a.x << ", " << tri.a.y << "), ("
-                  << tri.b.x << ", " << tri.b.y << "), ("
-                  << tri.c.x << ", " << tri.c.y << ")\n";
-    }
-    return navigable;
+  bool isNavigable(const Edge& edge, const TerrainGrid& terrainGrid) const {
+    auto [forwardAngle, sideAngle] = terrainGrid.getEdgeSlopes(edge);
+    
+    return abs(forwardAngle) <= config.maxUpDownAngle && 
+           abs(sideAngle) <= config.maxSideAngle &&
+           edge.length() > config.vehicleRadius * 2;
 }
+    
     // Найти соседние треугольники для заданного треугольника
     std::vector<const Triangle*> findNeighbors(const Triangle& tri, const std::vector<Triangle>& allTriangles) const {
         std::vector<const Triangle*> neighbors;
@@ -630,67 +722,99 @@ public:
         }
         return neighbors;
     }
-
 public:
     // Найти путь от start до goal через триангуляцию
-    std::vector<PointD> findPathAStar(const PointD& start, const PointD& goal, const std::vector<Triangle>& triangles) {
-        std::vector<PointD> path;
+    std::vector<PointD> findPathAStar(const PointD& start, const PointD& goal, 
+                                            const std::vector<Triangle>& triangles, 
+                                            const TerrainGrid& terrainGrid,
+                                            const std::vector<std::vector<double>>& binaryMap,
+                                            Logger& logger, bool loggingEnabled) {  // Добавляем параметр логгера
+    std::vector<PointD> path;
 
-        // Найти стартовый и целевой треугольники
-        const Triangle* startTri = findContainingTriangle(start, triangles);
-        const Triangle* goalTri = findContainingTriangle(goal, triangles);
-        if (!startTri) {
-        std::cerr << "Стартовая точка (" << start.x << ", " << start.y << ") вне триангуляции!\n";
+    logger.logMessage("=== НАЧАЛО ПОИСКА ПУТИ ===", loggingEnabled);
+    logger.logMessage("Старт: (" + std::to_string(start.x) + ", " + std::to_string(start.y) + ")", loggingEnabled);
+    logger.logMessage("Цель: (" + std::to_string(goal.x) + ", " + std::to_string(goal.y) + ")", loggingEnabled);
+
+    // Найти стартовый и целевой треугольники
+    const Triangle* startTri = findContainingTriangle(start, triangles);
+    const Triangle* goalTri = findContainingTriangle(goal, triangles);
+    
+    if (!startTri) {
+        std::string msg = "Стартовая точка (" + std::to_string(start.x) + ", " + std::to_string(start.y) + ") вне триангуляции!";
+        logger.logMessage(msg, loggingEnabled);
         return {};
     }
     if (!goalTri) {
-        std::cerr << "Конечная точка (" << goal.x << ", " << goal.y << ") вне триангуляции!\n";
+        std::string msg = "Конечная точка (" + std::to_string(goal.x) + ", " + std::to_string(goal.y) + ") вне триангуляции!";
+        logger.logMessage(msg, loggingEnabled);
         return {};
     }
-    if (startTri == goalTri) {
-    return {start, goal}; // Прямой путь между точками
-}
 
-        // Приоритетная очередь для обработки узлов
-        std::priority_queue<AStarNode> openSet;
-        std::unordered_map<const Triangle*, double> costSoFar;
-         // Исправление: проверка на пустую триангуляцию
-    if (triangles.empty()) {
-        std::cerr << "Триангуляция не построена!" << std::endl;
+    // Проверка для случая, когда start и goal в одном треугольнике
+    if (startTri == goalTri) {
+        logger.logMessage("Старт и цель находятся в одном треугольнике", loggingEnabled);
+        path = {start, goal};
+        if (!checkPathFeasibility(path, terrainGrid, binaryMap, logger, loggingEnabled)) {  // Передаем логгер
+            logger.logMessage("Прямой путь НЕ проходим!", loggingEnabled);
+            return {};
+        }
+        logger.logMessage("Прямой путь проходим", loggingEnabled);
         return path;
     }
 
-        // Инициализация стартового узла
-        PointD startCenter = startTri->calculateCircumcenter();
-        openSet.emplace(startCenter, startTri);
-        costSoFar[startTri] = 0;
+    // Основной алгоритм A*
+    logger.logMessage("Запуск алгоритма A*...", loggingEnabled);
+    std::priority_queue<AStarNode> openSet;
+    std::unordered_map<const Triangle*, double> costSoFar;
 
-        while (!openSet.empty()) {
-            AStarNode current = openSet.top();
-            openSet.pop();
+    if (triangles.empty()) {
+        logger.logMessage("Ошибка: триангуляция не построена!", loggingEnabled);
+        return {};
+    }
 
-            // Если достигли цели
-            if (current.tri == goalTri) {
-                // Восстановление пути
+    PointD startCenter = startTri->calculateCircumcenter();
+    openSet.emplace(startCenter, startTri);
+    costSoFar[startTri] = 0;
+    logger.logMessage("Начальный узел добавлен в очередь", loggingEnabled);
+
+    while (!openSet.empty()) {
+        AStarNode current = openSet.top();
+        openSet.pop();
+
+        if (current.tri == goalTri) {
+            logger.logMessage("Целевой треугольник достигнут!", loggingEnabled);
+            // Восстановление пути
             while (current.parent) {
                 path.push_back(current.position);
                 current = *current.parent;
             }
             std::reverse(path.begin(), path.end());
             
-            // Добавляем реальные точки A и B
+            // Добавляем старт и цель
             if (!path.empty()) {
-                path.insert(path.begin(), start); // Стартовая точка
-                path.push_back(goal);             // Целевая точка
+                path.insert(path.begin(), start);
+                path.push_back(goal);
+                
+                logger.logMessage("Проверка проходимости пути...", loggingEnabled);
+                if (!checkPathFeasibility(path, terrainGrid, binaryMap, logger, loggingEnabled)) {
+                    logger.logMessage("Путь НЕ проходим!", loggingEnabled);
+                    return {};
+                }
+                logger.logMessage("Путь успешно проверен и проходим!", loggingEnabled);
             }
-            
-            return path;  // Возвращаем корректный путь
+            return path;
         }
 
         // Обработка соседей
         for (const auto& neighbor : getNeighbors(*current.tri, triangles)) {
-            if (!isNavigable(*neighbor, vehicleRadius)) continue;
-            
+            Edge edgeToCheck(current.position, neighbor->calculateCircumcenter());
+            if (!isNavigable(edgeToCheck, terrainGrid)) {
+                logger.logMessage("Ребро (" + std::to_string(edgeToCheck.a.x) + "," + std::to_string(edgeToCheck.a.y) + 
+                                ")-(" + std::to_string(edgeToCheck.b.x) + "," + std::to_string(edgeToCheck.b.y) + 
+                                ") непроходимо", loggingEnabled);
+                continue;
+            }
+
             PointD neighborCenter = neighbor->calculateCircumcenter();
             double newCost = current.g + heuristic(current.position, neighborCenter);
 
@@ -698,11 +822,167 @@ public:
                 costSoFar[neighbor] = newCost;
                 double priority = newCost + heuristic(neighborCenter, goal);
                 openSet.emplace(neighborCenter, neighbor, new AStarNode(current));
+                logger.logMessage("Добавлен новый узел в очередь: (" + 
+                                std::to_string(neighborCenter.x) + "," + 
+                                std::to_string(neighborCenter.y) + ")", loggingEnabled);
             }
         }
     }
 
-    return {};  // Путь не найден
+    logger.logMessage("Путь не найден!", loggingEnabled);
+    return {};
+}
+
+bool checkPathFeasibility(const std::vector<PointD>& path,
+                                    const TerrainGrid& terrainGrid,
+                                    const std::vector<std::vector<double>>& binaryMap,
+                                    Logger& logger, bool loggingEnabled) const {
+    logger.logMessage("=== ПРОВЕРКА ПРОХОДИМОСТИ ПУТИ ===", loggingEnabled);
+    logger.logMessage("Всего сегментов: " + std::to_string(path.size()-1), loggingEnabled);
+
+    for (size_t i = 0; i < path.size() - 1; ++i) {
+        logger.logMessage("Анализ сегмента " + std::to_string(i+1) + ": (" + 
+                        std::to_string(path[i].x) + "," + std::to_string(path[i].y) + ") -> (" +
+                        std::to_string(path[i+1].x) + "," + std::to_string(path[i+1].y) + ")", loggingEnabled);
+        
+        const auto linePixels = bresenhamLine(path[i], path[i+1]);
+        logger.logMessage("Пикселей в сегменте: " + std::to_string(linePixels.size()), loggingEnabled);
+        
+        for (const auto& pixel : linePixels) {
+            // 1. Проверка углов наклона
+            auto [forwardAngle, sideAngle] = getVehicleSlopeAngles(pixel, path[i+1], terrainGrid);
+            
+            std::string angleInfo = "Пиксель (" + std::to_string(pixel.x) + "," + std::to_string(pixel.y) + 
+                                  "): forward=" + std::to_string(forwardAngle) + 
+                                  "°, side=" + std::to_string(sideAngle) + "°";
+            logger.logMessage(angleInfo, loggingEnabled);
+
+            if (forwardAngle > config.maxUpDownAngle || sideAngle > config.maxSideAngle) {
+                std::string msg = "ПРЕВЫШЕН УГОЛ НАКЛОНА в пикселе (" + 
+                                std::to_string(pixel.x) + "," + std::to_string(pixel.y) + 
+                                "): forward=" + std::to_string(forwardAngle) + 
+                                " (max " + std::to_string(config.maxUpDownAngle) + 
+                                "), side=" + std::to_string(sideAngle) + 
+                                " (max " + std::to_string(config.maxSideAngle) + ")";
+                logger.logMessage(msg, loggingEnabled);
+                return false;
+            }
+
+            // 2. Проверка радиуса тележки
+            if (!isVehicleRadiusValid(pixel, binaryMap)) {
+                std::string msg = "СТОЛКНОВЕНИЕ в пикселе (" + 
+                                std::to_string(pixel.x) + "," + std::to_string(pixel.y) + 
+                                "), радиус тележки: " + std::to_string(config.vehicleRadius);
+                logger.logMessage(msg, loggingEnabled);
+                return false;
+            }
+        }
+    }
+    
+    logger.logMessage("Все проверки пройдены успешно!", loggingEnabled);
+    return true;
+}
+
+std::vector<PointD> bresenhamLine(const PointD& start, const PointD& end) const {
+    std::vector<PointD> linePoints;
+    
+    int x0 = static_cast<int>(start.x);
+    int y0 = static_cast<int>(start.y);
+    int x1 = static_cast<int>(end.x);
+    int y1 = static_cast<int>(end.y);
+
+    int dx = abs(x1 - x0);
+    int dy = -abs(y1 - y0);
+    int sx = x0 < x1 ? 1 : -1;
+    int sy = y0 < y1 ? 1 : -1;
+    int err = dx + dy;
+
+    while (true) {
+        linePoints.emplace_back(x0, y0);
+        if (x0 == x1 && y0 == y1) break;
+        
+        int e2 = 2 * err;
+        if (e2 >= dy) {
+            err += dy;
+            x0 += sx;
+        }
+        if (e2 <= dx) {
+            err += dx;
+            y0 += sy;
+        }
+    }
+    return linePoints;
+}
+
+std::pair<double, double> getVehicleSlopeAngles(
+    const PointD& pixel, 
+    const PointD& nextPixel, 
+    const TerrainGrid& grid
+) const {
+    if (pixel == nextPixel) return {0, 0};
+
+    // Проверяем границы сетки
+    int x = static_cast<int>(pixel.x);
+    int y = static_cast<int>(pixel.y);
+    if (x <= 0 || y <= 0 || x >= grid.cells[0].size()-1 || y >= grid.cells.size()-1) {
+        return {90, 90}; // Края сетки считаем непроходимыми
+    }
+
+    // Вектор направления движения (нормализованный)
+    PointD dir = {
+        nextPixel.x - pixel.x,
+        nextPixel.y - pixel.y
+    };
+    double length = std::hypot(dir.x, dir.y);
+    if (length < 1e-6) return {0, 0};
+    dir.x /= length;
+    dir.y /= length;
+
+    // Получаем высоты в текущей точке и соседних точках
+    double z = grid.cells[y][x].height; 
+    double z_right = grid.cells[y][x+1].height;
+    double z_left = grid.cells[y][x-1].height;
+    double z_top = grid.cells[y-1][x].height;
+    double z_bottom = grid.cells[y+1][x].height;
+
+    // Вычисляем производные по x и y
+    double dzdx = (z_right - z_left) / 2.0;
+    double dzdy = (z_bottom - z_top) / 2.0;
+
+    // Угол наклона по направлению движения (forward)
+    double forwardAngle = std::atan(dzdx * dir.x + dzdy * dir.y) * 180.0 / M_PI;
+
+    // Перпендикулярное направление (для side angle)
+    PointD perp = {-dir.y, dir.x};
+    double sideAngle = std::atan(dzdx * perp.x + dzdy * perp.y) * 180.0 / M_PI;
+
+    return {
+        std::abs(forwardAngle),  // Угол вдоль направления движения
+        std::abs(sideAngle)      // Угол поперек направления движения
+    };
+}
+
+bool isVehicleRadiusValid(const PointD& pixel, const std::vector<std::vector<double>>& binaryMap) const {
+    int x = static_cast<int>(pixel.x);
+    int y = static_cast<int>(pixel.y);
+    int radius = static_cast<int>(config.vehicleRadius);
+
+    // Проверяем все пиксели в радиусе
+    for (int dy = -radius; dy <= radius; ++dy) {
+        for (int dx = -radius; dx <= radius; ++dx) {
+            int nx = x + dx;
+            int ny = y + dy;
+            if (nx >= 0 && ny >= 0 && nx < binaryMap[0].size() && ny < binaryMap.size()) {
+                if (binaryMap[ny][nx] == 255) { // Препятствие
+                    double dist = std::hypot(dx, dy);
+                    if (dist < config.vehicleRadius) {
+                        return false;
+                    }
+                }
+            }
+        }
+    }
+    return true;
 }
 
     // Получить соседей треугольника
@@ -724,7 +1004,7 @@ public:
     }
     return false;
 }
-    bool otherHasEdge(const Triangle& other, const Edge& edge) const {
+bool otherHasEdge(const Triangle& other, const Edge& edge) const {
     return (Edge(other.a, other.b) == edge) || 
            (Edge(other.b, other.c) == edge) || 
            (Edge(other.c, other.a) == edge);
@@ -733,57 +1013,117 @@ public:
 
 class VoronoiDiagram {
 public:
- const PathFinder& pathFinder; // Добавляем ссылку на PathFinder
-    std::vector<VoronoiEdge> edges;
     
-    VoronoiDiagram(const PathFinder& pf) : pathFinder(pf) {} // Конструктор
-    
-    void buildFromDelaunay(const std::vector<Triangle>& triangles, const PathFinder& pathFinder, const std::unique_ptr<Pole>& p) {
+    void buildFromDelaunay(const std::vector<Triangle>& triangles, const PathFinder& pathFinder, const std::unique_ptr<Pole>& p, std::vector<VoronoiEdge>& edges) {
     const int height = p->field.size();
     const int width = p->field[0].size();
-    
+    edges.clear();
+
     if (!p) {
         std::cerr << "Pole is not initialized!" << std::endl;
         return;
     }
-    
+
     for (const auto& tri : triangles) {
-        PointD cc1 = tri.calculateCircumcenter();
-        
-        // Проверка на выход центра за границы поля
-        if (cc1.x < 0 || cc1.y < 0 || cc1.x >= width || cc1.y >= height) {
-            // Обработка выхода за границы (например, пропускаем этот треугольник)
-            continue; // Пропускаем дальнейшую обработку для этого треугольника
-        }
-        
-        auto neighbors = pathFinder.findNeighbors(tri, triangles);
-        
-        // Если соседей меньше 3, это граничный треугольник
-        if (neighbors.size() < 3) {
-            // Находим граничные рёбра и обрезаем их
-            std::vector<Edge> boundaryEdges = getBoundaryEdges(tri, triangles);
-            for (const auto& edge : boundaryEdges) {
-                PointD intersection = calculateBoundaryIntersection(cc1, edge, width, height);
-                edges.emplace_back(cc1, intersection);
-            }
-        } 
-            // Обычные рёбра между центрами
+            PointD cc1 = tri.calculateCircumcenter();
+            bool cc1_valid = isPointInsideField(cc1, width, height);
+            
+            auto neighbors = pathFinder.findNeighbors(tri, triangles);
+
+            // Обработка обычных ребер
             for (const auto& neighbor : neighbors) {
                 PointD cc2 = neighbor->calculateCircumcenter();
-                
-                // Проверка на выход центра соседа за границы поля
-                if (cc2.x < 0 || cc2.y < 0 || cc2.x >= width || cc2.y >= height) {
-                    continue; // Пропускаем дальнейшую обработку для этого соседа
+                bool cc2_valid = isPointInsideField(cc2, width, height);
+
+                if (cc1_valid && cc2_valid) {
+                    // Оба центра внутри - просто добавляем ребро
+                    edges.emplace_back(cc1, cc2);
+                } 
+                else if (cc1_valid || cc2_valid) {
+                    // Только один центр внутри - обрезаем ребро
+                    auto clipped = clipEdgeToField(cc1, cc2, width, height);
+                    if (!clipped.empty()) {
+                        edges.emplace_back(clipped[0], clipped[1]);
+                    }
                 }
-                
-                edges.emplace_back(cc1, cc2);
+                // Оба центра снаружи - игнорируем
             }
-        
+
+            // Обработка граничных треугольников
+            if (neighbors.size() < 3) {
+                handleBoundaryTriangle(tri, cc1, width, height, edges, cc1_valid, triangles, pathFinder);
+            }
+        }
+    }
+
+private:
+    std::vector<PointD> clipEdgeToField(const PointD& p1, const PointD& p2, int width, int height) {
+    // Реализация алгоритма Коэна-Сазерленда для отсечения отрезка
+    auto code = [&](const PointD& p) {
+        int c = 0;
+        if (p.x < 0) c |= 1;
+        if (p.x > width) c |= 2;
+        if (p.y < 0) c |= 4;
+        if (p.y > height) c |= 8;
+        return c;
+    };
+
+    int code1 = code(p1);
+    int code2 = code(p2);
+    PointD a = p1, b = p2;
+
+    while (true) {
+        if (!(code1 | code2)) return {a, b}; // Полностью внутри
+        if (code1 & code2) return {}; // Полностью снаружи
+
+        int outcode = code1 ? code1 : code2;
+        PointD p;
+
+        // Находим точку пересечения
+        if (outcode & 8) { // Верхняя граница
+            p.x = a.x + (b.x - a.x) * (height - a.y) / (b.y - a.y);
+            p.y = height;
+        }
+        else if (outcode & 4) { // Нижняя граница
+            p.x = a.x + (b.x - a.x) * (-a.y) / (b.y - a.y);
+            p.y = 0;
+        }
+        else if (outcode & 2) { // Правая граница
+            p.y = a.y + (b.y - a.y) * (width - a.x) / (b.x - a.x);
+            p.x = width;
+        }
+        else if (outcode & 1) { // Левая граница
+            p.y = a.y + (b.y - a.y) * (-a.x) / (b.x - a.x);
+            p.x = 0;
+        }
+
+        // Обновляем внешнюю точку
+        if (outcode == code1) {
+            a = p;
+            code1 = code(a);
+        }
+        else {
+            b = p;
+            code2 = code(b);
+        }
     }
 }
 
-private:
-    std::vector<Edge> getBoundaryEdges(const Triangle& tri, const std::vector<Triangle>& allTriangles) {
+bool isPointInsideField(const PointD& p, int width, int height) {
+        return p.x >= 0 && p.y >= 0 && p.x < width && p.y < height;
+    }
+
+    void handleBoundaryTriangle(const Triangle& tri, const PointD& cc, int width, int height, std::vector<VoronoiEdge>& edges, bool cc_valid,
+                                const std::vector<Triangle>& allTriangles,  const PathFinder& pathFinder) {
+        if (!cc_valid) return;
+
+        for (const auto& edge : getBoundaryEdges(tri, allTriangles, pathFinder)) {
+            PointD boundaryPoint = calculateBoundaryIntersection(cc, edge, width, height);
+            edges.emplace_back(cc, boundaryPoint);
+        }
+    }
+
+    std::vector<Edge> getBoundaryEdges(const Triangle& tri, const std::vector<Triangle>& allTriangles,  const PathFinder& pathFinder) {
         std::vector<Edge> boundaryEdges;
         for (const auto& edge : { Edge(tri.a, tri.b), Edge(tri.b, tri.c), Edge(tri.c, tri.a) }) {
             bool isBoundary = true;
@@ -828,7 +1168,6 @@ private:
    
 class GnuplotInterface {
 private:
- Config& config; // Добавляем ссылку на Config
  
   // Преобразование Y-координаты для Gnuplot
     double transformY(double y, int height) const {
@@ -836,7 +1175,6 @@ private:
     }
     
    public:
-    GnuplotInterface(Config& cfg) : config(cfg) {} // Конструктор
     void plotBinaryWithComponents(const std::vector<std::vector<double>> &CopyPole, const std::vector<Component>& components, const std::string& filename) {
 
         FILE* gnuplotPipe = popen("gnuplot -persist", "w");
@@ -894,25 +1232,29 @@ for (int y = height - 1; y >= 0; --y) {
         fprintf(gnuplotPipe, "e\n");
 
          // 4. Собственные векторы (зеленые стрелки)
-        for (const auto& comp : components) {
-        const double scale = std::min(comp.max_x - comp.min_x, comp.max_y - comp.min_y) * 0.2;
-            double cy = transformY(comp.center_y, height);
-            
-            // Первый собственный вектор
-            fprintf(gnuplotPipe, "%f %f %f %f\n", 
-                    comp.center_x,
-                    cy,
-                    comp.eigenvec1_x * scale,
-                    -comp.eigenvec1_y * scale); // Инверсия Y
+for (const auto& comp : components) {
+    double cy = transformY(comp.center_y, height);
+    
+    // Масштабируем собственные вектора по собственным значениям
+    double scale_factor = 1; // Общий масштаб для визуализации
+    double vec1_scale = scale_factor * sqrt(comp.eigenvalue1);
+    double vec2_scale = scale_factor * sqrt(comp.eigenvalue2);
+    
+    // Первый собственный вектор
+    fprintf(gnuplotPipe, "%f %f %f %f\n", 
+            comp.center_x,
+            cy,
+            comp.eigenvec1_x * vec1_scale,
+            -comp.eigenvec1_y * vec1_scale);
 
-            // Второй собственный вектор
-            fprintf(gnuplotPipe, "%f %f %f %f\n", 
-                    comp.center_x,
-                    cy,
-                    comp.eigenvec2_x * scale,
-                    -comp.eigenvec2_y * scale);// Инверсия Y
-        }
-        fprintf(gnuplotPipe, "e\n");
+    // Второй собственный вектор
+    fprintf(gnuplotPipe, "%f %f %f %f\n", 
+            comp.center_x,
+            cy,
+            comp.eigenvec2_x * vec2_scale,
+            -comp.eigenvec2_y * vec2_scale);
+}
+fprintf(gnuplotPipe, "e\n");
 
         pclose(gnuplotPipe);
     }
@@ -932,16 +1274,17 @@ for (int y = height - 1; y >= 0; --y) {
     }
     
     // Настройки 3D графика
-    fprintf(gnuplotPipe, "set terminal pngcairo enhanced size 800,600\n");
+    fprintf(gnuplotPipe, "set terminal pngcairo enhanced size 1600,1200\n");
     fprintf(gnuplotPipe, "set output '%s'\n", filename.c_str());
     fprintf(gnuplotPipe, "set xlabel 'X'\n");
     fprintf(gnuplotPipe, "set ylabel 'Y'\n");
     fprintf(gnuplotPipe, "set zlabel 'Height'\n");
     fprintf(gnuplotPipe, "set xrange [0:%d]\n", cols - 1);
     fprintf(gnuplotPipe, "set yrange [0:%d]\n", rows - 1);
-    fprintf(gnuplotPipe, "set zrange [-255:255]\n");
+    fprintf(gnuplotPipe, "set zrange [*:*]\n"); // Автомасштабирование по Z
     fprintf(gnuplotPipe, "set hidden3d\n");
     fprintf(gnuplotPipe, "set pm3d\n");
+    fprintf(gnuplotPipe, "set view 60, 30, 1, 1\n"); // Угол обзора
     
     // Формат данных: x y z
     fprintf(gnuplotPipe, "splot '-' with pm3d title 'Height Map'\n");
@@ -971,20 +1314,25 @@ void plotVoronoi(const std::unique_ptr<Pole>& p, const std::vector<VoronoiEdge>&
         return;
     }
 
-    // Настройки графика
-    fprintf(gnuplotPipe, "set terminal pngcairo size 1600,1200\n");
+    // Настройки графика с контрастными цветами для красного фона
+    fprintf(gnuplotPipe, "set terminal pngcairo size 1600,1200 enhanced font 'Arial,12'\n");
     fprintf(gnuplotPipe, "set output '%s'\n", filename.c_str());
-    fprintf(gnuplotPipe, "set title 'Voronoi Diagram'\n");
+    fprintf(gnuplotPipe, "set title 'Voronoi Diagram on Red Field'\n");
     fprintf(gnuplotPipe, "set size ratio -1\n");
     fprintf(gnuplotPipe, "set xrange [0:%d]\n", width - 1);
     fprintf(gnuplotPipe, "set yrange [0:%d]\n", height - 1);
     fprintf(gnuplotPipe, "unset key\n");
     
-    // Отрисовка поля, рёбер и центров
-        fprintf(gnuplotPipe, "plot '-' matrix with image, \\\n");
-        fprintf(gnuplotPipe, "'-' with lines lw 2 lc 'red', \\\n");
-        fprintf(gnuplotPipe, "'-' with points pt 7 ps 2 lc 'blue', \n");
-    // 1. Данные поля
+    // Цветовая схема:
+    fprintf(gnuplotPipe, "set style line 1 lc rgb '#00FF00' lw 2    # Ярко-зеленые ребра\n");
+    fprintf(gnuplotPipe, "set style line 2 lc rgb '#FFFFFF' pt 7 ps 2 # Белые центры\n");
+
+    // Многослойный график:
+    fprintf(gnuplotPipe, "plot '-' matrix with image, \\\n");
+    fprintf(gnuplotPipe, "'-' with lines ls 1, \\\n");  // Ребра
+    fprintf(gnuplotPipe, "'-' with points ls 2\n");     // Центры
+
+    // 1. Данные поля (красный фон)
     for (int y = height - 1; y >= 0; --y) {
         for (int x = 0; x < width; ++x) {
             fprintf(gnuplotPipe, "%f ", p->field[y][x]);
@@ -993,7 +1341,7 @@ void plotVoronoi(const std::unique_ptr<Pole>& p, const std::vector<VoronoiEdge>&
     }
     fprintf(gnuplotPipe, "e\n");
 
-    // 2. Данные рёбер
+    // 2. Ребра Вороного (ярко-зеленые)
     for (const auto& edge : edges) {
         fprintf(gnuplotPipe, "%f %f\n%f %f\n\n", 
                 edge.start.x, transformY(edge.start.y, height),
@@ -1001,7 +1349,7 @@ void plotVoronoi(const std::unique_ptr<Pole>& p, const std::vector<VoronoiEdge>&
     }
     fprintf(gnuplotPipe, "e\n");
 
-    // 3. Центры кластеров
+    // 3. Центры (белые точки)
     for (const auto& site : sites) {
         fprintf(gnuplotPipe, "%f %f\n", 
                 site.x, 
@@ -1018,23 +1366,27 @@ void plotVoronoi(const std::unique_ptr<Pole>& p, const std::vector<VoronoiEdge>&
         std::cerr << "Failed to open gnuplot pipe" << std::endl;
         return;
     }
-if (!p) return;
-     const int height = p->field.size();
+    
+    if (!p) return;
+    const int height = p->field.size();
     const int width = p->field[0].size();
 
-    // Настройки графика
-    fprintf(gnuplotPipe, "set terminal pngcairo size 1600,1200\n");
+    // Улучшенные настройки графика
+    fprintf(gnuplotPipe, "set terminal pngcairo size 1600,1200 enhanced font 'Arial,12'\n");
     fprintf(gnuplotPipe, "set output '%s'\n", filename.c_str());
     fprintf(gnuplotPipe, "set title 'Delaunay Triangulation'\n");
     fprintf(gnuplotPipe, "set size ratio -1\n");
     fprintf(gnuplotPipe, "set xrange [0:%d]\n", width-1);
     fprintf(gnuplotPipe, "set yrange [0:%d]\n", height-1);
     fprintf(gnuplotPipe, "unset key\n");
-
+    
+    // Цветовая схема
+    fprintf(gnuplotPipe, "set style line 1 lc rgb '#00FF00' lw 1.5\n");   // Ярко-зеленые линии
+    
     // Многослойный график: фон + треугольники
-    fprintf(gnuplotPipe, "plot '-' matrix with image, '-' with lines lc 'red'\n");
+    fprintf(gnuplotPipe, "plot '-' matrix with image, '-' with lines ls 1\n");
 
-    // Данные фона (с инверсией Y)
+    // 1. Данные фона (с инверсией Y)
     for (int y = height-1; y >= 0; --y) {
         for (int x = 0; x < width; ++x) {
             fprintf(gnuplotPipe, "%f ", p->field[y][x]);
@@ -1043,7 +1395,7 @@ if (!p) return;
     }
     fprintf(gnuplotPipe, "e\n");
 
-    // Данные треугольников (с инверсией Y)
+    // 2. Данные треугольников (с инверсией Y)
     for (const auto& tri : triangles) {
         fprintf(gnuplotPipe, "%f %f\n", tri.a.x, transformY(tri.a.y, height));
         fprintf(gnuplotPipe, "%f %f\n", tri.b.x, transformY(tri.b.y, height));
@@ -1055,7 +1407,7 @@ if (!p) return;
     pclose(gnuplotPipe);
 }
 
-void plotPath(const std::vector<PointD>& path, const std::unique_ptr<Pole>& p, const std::string& filename) {
+void plotPath(const std::vector<PointD>& path, const std::unique_ptr<Pole>& p, const std::string& filename, DispatcherParams& params) {
     if (!p || path.empty()) return;
 
     FILE* gnuplotPipe = popen("gnuplot -persist", "w");
@@ -1078,9 +1430,9 @@ void plotPath(const std::vector<PointD>& path, const std::unique_ptr<Pole>& p, c
 
     // Многослойный график: фон + путь + точки
     fprintf(gnuplotPipe, "plot '-' matrix with image, \\\n");
-    fprintf(gnuplotPipe, "'-' with lines lw 2 lc 'red', \\\n");
+    fprintf(gnuplotPipe, "'-' with lines lw 2 lc 'green', \\\n");
     fprintf(gnuplotPipe, "'-' with points pt 7 ps 2 lc 'blue', \\\n");
-    fprintf(gnuplotPipe, "'-' with points pt 9 ps 2 lc 'green'\n");
+    fprintf(gnuplotPipe, "'-' with points pt 9 ps 2 lc 'purple'\n");
 
     // 1. Данные фона (инверсия Y)
     for (int y = height-1; y >= 0; --y) {
@@ -1101,14 +1453,218 @@ void plotPath(const std::vector<PointD>& path, const std::unique_ptr<Pole>& p, c
 
     // 3. Точка A (синяя)
     fprintf(gnuplotPipe, "%f %f\n", 
-            config.pointA_x, 
-            transformY(config.pointA_y, height));
+            params.pointA_x, 
+            transformY(params.pointA_y, height));
     fprintf(gnuplotPipe, "e\n");
 
     // 4. Точка B (зеленая)
     fprintf(gnuplotPipe, "%f %f\n", 
-            config.pointB_x, 
-            transformY(config.pointB_y, height));
+            params.pointB_x, 
+            transformY(params.pointB_y, height));
+    fprintf(gnuplotPipe, "e\n");
+
+    pclose(gnuplotPipe);
+}
+
+void plotInteractive3DPath(const std::vector<PointD>& path, const std::unique_ptr<Pole>& p, const PointD& start, const PointD& end) {
+    if (!p || path.empty()) return;
+
+    FILE* gnuplotPipe = popen("gnuplot -persist", "w");
+    if (!gnuplotPipe) {
+        std::cerr << "Failed to open gnuplot pipe." << std::endl;
+        return;
+    }
+
+    const int height = p->field.size();
+    const int width = p->field[0].size();
+    
+    // 1. Настройки графика (должны идти первыми!)
+    fprintf(gnuplotPipe, "set terminal qt size 1600,1200 enhanced\n");
+    fprintf(gnuplotPipe, "set title '3D Path Visualization (Use mouse to rotate)'\n");
+    fprintf(gnuplotPipe, "set xlabel 'X'\n");
+    fprintf(gnuplotPipe, "set ylabel 'Y'\n");
+    fprintf(gnuplotPipe, "set zlabel 'Height'\n");
+    fprintf(gnuplotPipe, "set pm3d\n");
+    fprintf(gnuplotPipe, "set hidden3d\n");
+    fprintf(gnuplotPipe, "set view 60, 30\n");
+    fprintf(gnuplotPipe, "set mouse\n");  // Включаем интерактивное управление
+    fprintf(gnuplotPipe, "set key outside\n");
+    
+    // 2. Создаем проекцию пути (все пиксели между узлами)
+    std::vector<std::pair<int, int>> pathProjection;
+    for (size_t i = 0; i < path.size() - 1; ++i) {
+        PointD from = path[i];
+        PointD to = path[i+1];
+        
+        // Алгоритм Брезенхема для рисования линии
+        int x0 = static_cast<int>(from.x);
+        int y0 = static_cast<int>(from.y);
+        int x1 = static_cast<int>(to.x);
+        int y1 = static_cast<int>(to.y);
+        
+        int dx = abs(x1 - x0);
+        int dy = abs(y1 - y0);
+        int sx = (x0 < x1) ? 1 : -1;
+        int sy = (y0 < y1) ? 1 : -1;
+        int err = dx - dy;
+        
+        while (true) {
+            if (x0 >= 0 && y0 >= 0 && x0 < width && y0 < height) {
+                pathProjection.emplace_back(x0, y0);
+            }
+            
+            if (x0 == x1 && y0 == y1) break;
+            
+            int e2 = 2 * err;
+            if (e2 > -dy) {
+                err -= dy;
+                x0 += sx;
+            }
+            if (e2 < dx) {
+                err += dx;
+                y0 += sy;
+            }
+        }
+    }
+    
+    // 3. Проекция пути на поле (зеленые точки)
+    for (const auto& [x, y] : pathProjection) {
+        fprintf(gnuplotPipe, "set object circle at %d,%d,%f size screen 0.003 fc rgb '#00FF00' fs solid front\n",
+                x, static_cast<int>(transformY(y, height)), p->field[y][x] + 0.1);
+    }
+
+    // 4. Точки A и B
+    int startX = static_cast<int>(start.x);
+    int startY = static_cast<int>(start.y);
+    int endX = static_cast<int>(end.x);
+    int endY = static_cast<int>(end.y);
+    
+    if (startX >= 0 && startY >= 0 && startX < width && startY < height) {
+        fprintf(gnuplotPipe, "set object circle at %d,%d,%f size screen 0.008 fc rgb '#FF0000' fs solid front\n",
+                startX, static_cast<int>(transformY(startY, height)), 
+                p->field[startY][startX] + 0.2);
+    }
+    
+    fprintf(gnuplotPipe, "set label 'START' at %d,%d,%f front\n",
+                startX, static_cast<int>(transformY(startY, height)), p->field[startY][startX] + 1);
+    
+    if (endX >= 0 && endY >= 0 && endX < width && endY < height) {
+        fprintf(gnuplotPipe, "set object circle at %d,%d,%f size screen 0.008 fc rgb '#0000FF' fs solid front\n",
+                endX, static_cast<int>(transformY(endY, height)), 
+                p->field[endY][endX] + 0.2);
+    }
+    
+     fprintf(gnuplotPipe, "set label 'END' at %d,%d,%f front\n",
+                endX, static_cast<int>(transformY(endY, height)), p->field[endY][endX] + 1);
+
+    // 5. Рисуем поверхность
+    fprintf(gnuplotPipe, "splot '-' with pm3d title 'Terrain'\n");
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            fprintf(gnuplotPipe, "%d %d %f\n", x, height-1-y, p->field[y][x]);
+        }
+        fprintf(gnuplotPipe, "\n");
+    }
+    fprintf(gnuplotPipe, "e\n");
+    fprintf(gnuplotPipe, "pause mouse close\n");
+    pclose(gnuplotPipe);
+}
+
+void plot3DPath(const std::vector<PointD>& path, const std::unique_ptr<Pole>& p, const std::string& filename, const PointD& start, const PointD& end) {
+    if (!p || path.empty()) return;
+
+    FILE* gnuplotPipe = popen("gnuplot -persist", "w");
+    if (!gnuplotPipe) {
+        std::cerr << "Failed to open gnuplot pipe." << std::endl;
+        return;
+    }
+
+    const int height = p->field.size();
+    const int width = p->field[0].size();
+
+    // 1. Создаем проекцию пути (все пиксели между узлами)
+    std::vector<std::pair<int, int>> pathProjection;
+    for (size_t i = 0; i < path.size() - 1; ++i) {
+        PointD from = path[i];
+        PointD to = path[i+1];
+        
+        // Алгоритм Брезенхема для рисования линии
+        int x0 = static_cast<int>(from.x);
+        int y0 = static_cast<int>(from.y);
+        int x1 = static_cast<int>(to.x);
+        int y1 = static_cast<int>(to.y);
+        
+        int dx = abs(x1 - x0);
+        int dy = abs(y1 - y0);
+        int sx = (x0 < x1) ? 1 : -1;
+        int sy = (y0 < y1) ? 1 : -1;
+        int err = dx - dy;
+        
+        while (true) {
+            if (x0 >= 0 && y0 >= 0 && x0 < width && y0 < height) {
+                pathProjection.emplace_back(x0, y0);
+            }
+            
+            if (x0 == x1 && y0 == y1) break;
+            
+            int e2 = 2 * err;
+            if (e2 > -dy) {
+                err -= dy;
+                x0 += sx;
+            }
+            if (e2 < dx) {
+                err += dx;
+                y0 += sy;
+            }
+        }
+    }
+
+    // 2. Настройки графика
+    fprintf(gnuplotPipe, "set terminal pngcairo enhanced size 1600,1200\n");
+    fprintf(gnuplotPipe, "set output '%s'\n", filename.c_str());
+    fprintf(gnuplotPipe, "set title '3D Path Projection'\n");
+    fprintf(gnuplotPipe, "set pm3d\n");
+    fprintf(gnuplotPipe, "set hidden3d\n");
+    fprintf(gnuplotPipe, "set view 60, 30\n");
+    
+    // 3. Проекция пути на поле (зеленые точки)
+    for (const auto& [x, y] : pathProjection) {
+        fprintf(gnuplotPipe, "set object circle at %d,%d,%f size screen 0.003 fc rgb '#00FF00' fs solid front\n",
+                x, static_cast<int>(transformY(y, height)), p->field[y][x] + 0.1);
+    }
+
+    // 4. Точки A и B
+    int startX = static_cast<int>(start.x);
+    int startY = static_cast<int>(start.y);
+    int endX = static_cast<int>(end.x);
+    int endY = static_cast<int>(end.y);
+    
+    if (startX >= 0 && startY >= 0 && startX < width && startY < height) {
+        fprintf(gnuplotPipe, "set object circle at %d,%d,%f size screen 0.008 fc rgb '#FF0000' fs solid front\n",
+                startX, static_cast<int>(transformY(startY, height)), 
+                p->field[startY][startX] + 0.2);
+    }
+    
+    fprintf(gnuplotPipe, "set label 'START' at %d,%d,%f front\n",
+                startX, static_cast<int>(transformY(startY, height)), p->field[startY][startX] + 1);
+    
+    if (endX >= 0 && endY >= 0 && endX < width && endY < height) {
+        fprintf(gnuplotPipe, "set object circle at %d,%d,%f size screen 0.008 fc rgb '#0000FF' fs solid front\n",
+                endX, static_cast<int>(transformY(endY, height)), 
+                p->field[endY][endX] + 0.2);
+    }
+    
+     fprintf(gnuplotPipe, "set label 'END' at %d,%d,%f front\n",
+                endX, static_cast<int>(transformY(endY, height)), p->field[endY][endX] + 1);
+
+    // 5. Рисуем поверхность
+    fprintf(gnuplotPipe, "splot '-' with pm3d title 'Terrain'\n");
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            fprintf(gnuplotPipe, "%d %d %f\n", x, height-1-y, p->field[y][x]);
+        }
+        fprintf(gnuplotPipe, "\n");
+    }
     fprintf(gnuplotPipe, "e\n");
 
     pclose(gnuplotPipe);
@@ -1118,119 +1674,103 @@ void plotPath(const std::vector<PointD>& path, const std::unique_ptr<Pole>& p, c
    
 class ComponentCalculator {
 public:
-int length, width;
-    std::vector<std::vector<double>> CopyField;
-    std::vector<Component> components;
+    std::vector<Triangle> bowyerWatson(const std::vector<PointD>& points) {
+    std::vector<Triangle> triangles;
 
-    std::vector<Triangle> bowyerWatson(const std::vector<PointD>& points, const Pole& elevationData) {
-        std::vector<Triangle> triangles;
-        if (points.empty()) return triangles;
-         
-         // Исправление: проверка на достаточное количество точек
+    // Проверка на минимальное количество точек
     if (points.size() < 3) {
         std::cerr << "Недостаточно точек для триангуляции!" << std::endl;
         return triangles;
     }
-  
-// Проверка валидности всех точек
+
+    // Проверка на NaN-точки и коллинеарность
     for (const auto& p : points) {
         if (std::isnan(p.x) || std::isnan(p.y)) {
-            std::cerr << "Skipping invalid point (NaN)" << std::endl;
+            std::cerr << "Обнаружена некорректная точка (NaN)!" << std::endl;
             return triangles;
         }
     }
-        // Создаем супер-треугольник
-        double minX = points[0].x, maxX = points[0].x;
-        double minY = points[0].y, maxY = points[0].y;
-        for (const auto& p : points) {
-            minX = std::min(minX, p.x); maxX = std::max(maxX, p.x);
-            minY = std::min(minY, p.y); maxY = std::max(maxY, p.y);
-        }
-        
-        double dx = (maxX - minX) * 10, dy = (maxY - minY) * 10;
-        PointD p1(minX - dx, minY - dy);
-        PointD p2(maxX + dx, minY - dy);
-        PointD p3((minX + maxX)/2, maxY + dy);
-        triangles.emplace_back(p1, p2, p3);
 
-        // Добавляем точки
-        for (const auto& p : points) {
-            std::vector<Triangle> badTriangles;
-            for (const auto& tri : triangles) {
-                if (isPointInCircumcircle(p, tri)) {
-                    badTriangles.push_back(tri);
-                }
-            }
-
-            std::vector<Edge> polygon;
-            for (const auto& tri : badTriangles) {
-                std::vector<Edge> edges = { {tri.a, tri.b}, {tri.b, tri.c}, {tri.c, tri.a} };
-                for (const auto& edge : edges) {
-                    bool isShared = false;
-                    for (const auto& other : badTriangles) {
-                        if (&tri == &other) continue;
-                        if (otherHasEdge(other, edge)) isShared = true;
-                    }
-                    if (!isShared) polygon.push_back(edge);
-                }
-            }
-
-            // Удаляем плохие треугольники
-            triangles.erase(std::remove_if(triangles.begin(), triangles.end(),
-                [&](const Triangle& t) { return std::find(badTriangles.begin(), badTriangles.end(), t) != badTriangles.end(); }),
-                triangles.end());
-
-            // Добавляем новые
-            for (const auto& edge : polygon) {
-                triangles.emplace_back(edge.a, edge.b, p);
-            }
-        }
-// Удаляем треугольники супер-треугольника
-        triangles.erase(std::remove_if(triangles.begin(), triangles.end(),
-        [&](const Triangle& t) {
-            return contains(t, p1) || contains(t, p2) || contains(t, p3);
-        }), triangles.end());
-        // Обновляем минимальные высоты треугольников с проверкой на принадлежность полю
-        for (auto& tri : triangles) {
-        auto safeGetElevation = [&](const PointD& point) -> double {
-            int x = static_cast<int>(point.x);
-            int y = static_cast<int>(point.y);
-            if (x < 0 || x >= elevationData.field[0].size() || 
-                y < 0 || y >= elevationData.field.size()) {
-                std::cerr << "Точка (" << x << ", " << y << ") вне поля!" << std::endl;
-                return 0.5; // Или любое другое значение по умолчанию
-            }
-            return elevationData.field[y][x];
-        };
-
-        double hA = safeGetElevation(tri.a);
-        double hB = safeGetElevation(tri.b);
-        double hC = safeGetElevation(tri.c);
-
-        tri.minElevation = std::min({hA, hB, hC});
+    // Проверка на коллинеарность всех точек
+    if (std::all_of(points.begin(), points.end(), 
+                   [&](const PointD& p) { return Triangle::areCollinear(points[0], points[1], p); })) {
+        std::cerr << "Все точки коллинеарны, триангуляция невозможна!" << std::endl;
+        return triangles;
     }
+
+    // Создаём супер-треугольник
+    auto [minX, maxX] = std::minmax_element(points.begin(), points.end(), 
+                                          [](auto& a, auto& b) { return a.x < b.x; });
+    auto [minY, maxY] = std::minmax_element(points.begin(), points.end(), 
+                                          [](auto& a, auto& b) { return a.y < b.y; });
+
+    double dx = (maxX->x - minX->x) * 10;
+    double dy = (maxY->y - minY->y) * 10;
+    PointD p1(minX->x - dx, minY->y - dy);
+    PointD p2(maxX->x + dx, minY->y - dy);
+    PointD p3((minX->x + maxX->x) / 2, maxY->y + dy);
+
+    triangles.emplace_back(p1, p2, p3);
+
+    // Основной алгоритм
+    for (const auto& point : points) {
+        std::vector<Triangle> badTriangles;
+        std::copy_if(triangles.begin(), triangles.end(), std::back_inserter(badTriangles),
+                     [&](const Triangle& tri) { return isPointInCircumcircle(point, tri); });
+
+        std::vector<Edge> polygonEdges;
+        for (const auto& tri : badTriangles) {
+            for (const auto& edge : { Edge{tri.a, tri.b}, Edge{tri.b, tri.c}, Edge{tri.c, tri.a} }) {
+                bool isShared = std::any_of(badTriangles.begin(), badTriangles.end(),
+                    [&](const Triangle& other) { 
+                        return !(tri == other) && hasEdge(other, edge); 
+                    });
+                
+                if (!isShared) {
+                    polygonEdges.push_back(edge);
+                }
+            }
+        }
+
+        // Удаляем плохие треугольники
+        triangles.erase(std::remove_if(triangles.begin(), triangles.end(),
+            [&](const Triangle& t) { 
+                return std::find(badTriangles.begin(), badTriangles.end(), t) != badTriangles.end();
+            }), triangles.end());
+
+        // Добавляем новые треугольники
+        for (const auto& edge : polygonEdges) {
+            triangles.emplace_back(edge.a, edge.b, point);
+        }
+    }
+
+    // Удаляем треугольники, связанные с супер-треугольником
+    triangles.erase(std::remove_if(triangles.begin(), triangles.end(),
+        [&](const Triangle& t) {
+            return t.a == p1 || t.a == p2 || t.a == p3 ||
+                   t.b == p1 || t.b == p2 || t.b == p3 ||
+                   t.c == p1 || t.c == p2 || t.c == p3;
+        }), triangles.end());
 
     return triangles;
 }
 
-    bool isPointInCircumcircle(const PointD& p, const Triangle& tri) {
-        double ax = tri.a.x - p.x, ay = tri.a.y - p.y;
-        double bx = tri.b.x - p.x, by = tri.b.y - p.y;
-        double cx = tri.c.x - p.x, cy = tri.c.y - p.y;
-        
-        double det = ax * (by * (cx*cx + cy*cy) - cy * (bx*bx + by*by)) - ay * (bx * (cx*cx + cy*cy) - cx * (bx*bx + by*by)) + (ax*ax + ay*ay) * (bx*cy - by*cx);
-        return det > 0;
-    }
+bool isPointInCircumcircle(const PointD& p, const Triangle& tri) {
+    double ax = tri.a.x - p.x, ay = tri.a.y - p.y;
+    double bx = tri.b.x - p.x, by = tri.b.y - p.y;
+    double cx = tri.c.x - p.x, cy = tri.c.y - p.y;
+    
+    double det = ax * (by * (cx*cx + cy*cy) - cy * (bx*bx + by*by)) 
+               - ay * (bx * (cx*cx + cy*cy) - cx * (bx*bx + by*by)) 
+               + (ax*ax + ay*ay) * (bx*cy - by*cx);
+    return det > 0;
+}
 
-    bool otherHasEdge(const Triangle& tri, const Edge& edge) {
-        return Edge(tri.a, tri.b) == edge 
-            || Edge(tri.b, tri.c) == edge 
-            || Edge(tri.c, tri.a) == edge;
-    }
-
-    bool contains(const Triangle& tri, const PointD& p) {
-        return tri.a == p || tri.b == p || tri.c == p;
-    }
+bool hasEdge(const Triangle& tri, const Edge& edge) {
+    return Edge(tri.a, tri.b) == edge 
+        || Edge(tri.b, tri.c) == edge 
+        || Edge(tri.c, tri.a) == edge;
+}
        
     int incrementAndCollect(std::vector<std::vector<double>>& componenta, std::vector<std::vector<double>>& CopyPole, int x, int y, int i, int& pixelCount) {
     if (x < 1 || y < 1 || x > (int)componenta[0].size() - 2 || 
@@ -1487,84 +2027,6 @@ struct ClusterResult {
 }
 };
 
-// Класс для работы с сеткой рельефа
-class TerrainGrid {
-public:
-    std::vector<std::vector<GridCell>> cells;
-
-    // Инициализация сетки на основе размеров поля
-    void initialize(int width, int height) {
-         // 1. Изменение размера двумерного вектора cells
-    //    - height строк
-    //    - width столбцов в каждой строке
-    cells.resize(height, std::vector<GridCell>(width));
-
-    // 2. Двойной цикл для итерации по всем ячейкам сетки
-    for (int y = 0; y < height; ++y) {         // Проход по строкам (ось Y)
-        for (int x = 0; x < width; ++x) {      // Проход по столбцам (ось X)
-            
-            // 3. Расчет координат центра ячейки:
-            cells[y][x].position = PointD(
-                // Ось X: 
-                x + 0.5,                       // Центр ячейки по X
-                
-                // Ось Y (инверсия):
-                (height - y - 1) + 0.5         // Центр ячейки по Y с инверсией
-            );
-            
-            // Пример для сетки 3x3:
-            // y=0 -> Y = (3-0-1)+0.5 = 2.5 (верхний ряд)
-            // y=1 -> Y = (3-1-1)+0.5 = 1.5 (средний ряд)
-            // y=2 -> Y = (3-2-1)+0.5 = 0.5 (нижний ряд)
-        }
-    }
-    }
-
-    // Расчет углов наклона на основе данных высот
-    void calculateSlopes(const Pole& elevationData) {
-        if (elevationData.field.empty() || 
-            cells.size() != elevationData.field.size() || 
-            cells[0].size() != elevationData.field[0].size()) {
-            throw std::invalid_argument("TerrainGrid and Pole size mismatch");
-        }
-
-        const int height = cells.size();
-        const int width = cells[0].size();
-
-        for (int y = 0; y < height; ++y) {
-            for (int x = 0; x < width; ++x) {
-                // Вычисляем производные по X и Y с помощью центральных разностей
-                double dzdx, dzdy;
-
-                // Обработка граничных условий
-                if (x == 0 || x == width - 1) {
-                    dzdx = 0; // Игнорируем края по X
-                } else {
-                    dzdx = (elevationData.field[y][x+1] - elevationData.field[y][x-1]) / 2.0;
-                }
-
-                if (y == 0 || y == height - 1) {
-                    dzdy = 0; // Игнорируем края по Y
-                } else {
-                    dzdy = (elevationData.field[y+1][x] - elevationData.field[y-1][x]) / 2.0;
-                }
-
-                // Вычисляем угол наклона (в градусах)
-                cells[y][x].slopeAngle = std::atan(std::hypot(dzdx, dzdy)) * 180.0 / M_PI;
-            }
-        }
-    }
-
-    // Сброс флагов посещения
-    void resetVisited() {
-        for (auto& row : cells) {
-            for (auto& cell : row) {
-                cell.visited = false;
-            }
-        }
-    }
-};
-
 class Control {
 private:
     bool b = true; 
@@ -1582,18 +2044,21 @@ public:
     BmpHandler bmpHandler;
     GnuplotInterface gnuplotInterface;
     ComponentCalculator componentCalculator;
+    TerrainGrid terrainGrid;
     std::unique_ptr<Pole> p= nullptr; // Pointer to Pole
     std::unique_ptr<KMeans> kMeans = nullptr; // Используем умный указатель
     std::vector<std::vector<double>> kMeansData;
     std::vector<Triangle> lastTriangulation; // Результат триангуляции
-    PathFinder pathFinder;
-    VoronoiDiagram voronoi{pathFinder}; // Инициализируем через конструктор;
-    TerrainGrid terrainGrid;
+    std::vector<VoronoiEdge> voronoiEdges;  // Храним ребра здесь
+    PathFinder pathFinder{config};
+    VoronoiDiagram voronoi;
+    std::vector<std::vector<PointD>> paths;
     
     std::vector<PointD> clusterCenters;      // Центры кластеров
     std::vector<PointD> path;                // Найденный путь 
     
-    Control(Config& cfg, Logger& log) : config(cfg), loggercontrol(log), gnuplotInterface(cfg), pathFinder(cfg.vehicleRadius) {
+    Control(Config& cfg, Logger& log) : config(cfg), loggercontrol(log), terrainGrid(cfg.fieldWidth, cfg.fieldHeight),  // Инициализация с параметрами
+                    pathFinder(cfg) {
      kMeans = std::make_unique<KMeans>(); // Инициализация
         if (config.loggingControlEnabled) {
             
@@ -1682,7 +2147,7 @@ void Dispetcher(DispatcherParams& params) {
     }
     
     if (params.s == "PlotVoronoi") {
-    gnuplotInterface.plotVoronoi(p, voronoi.edges, clusterCenters, params.filename);
+    gnuplotInterface.plotVoronoi(p, voronoiEdges, clusterCenters, params.filename);
     loggercontrol.logMessage("PlotVoronoi used", b);
     }
     
@@ -1692,7 +2157,7 @@ void Dispetcher(DispatcherParams& params) {
     }
     
     if (params.s == "PlotPath") {
-    gnuplotInterface.plotPath(path, p, params.filename); // Вызов метода визуализации
+    gnuplotInterface.plotPath(path, p, params.filename, params); // Вызов метода визуализации
     loggercontrol.logMessage("PlotPath used", b);
     }
 
@@ -1770,46 +2235,48 @@ void Dispetcher(DispatcherParams& params) {
     }
         
     if (params.s == "triangulate") {
-        clusterCenters = getClusterCenters();
-    
-    // Добавляем точки A и B, если их ещё нет
-    PointD pointA(config.pointA_x, config.pointA_y);
-    PointD pointB(config.pointB_x, config.pointB_y);
-
-if (std::find(clusterCenters.begin(), clusterCenters.end(), pointA) == clusterCenters.end()) {
-    clusterCenters.push_back(pointA);
-}
-if (std::find(clusterCenters.begin(), clusterCenters.end(), pointB) == clusterCenters.end()) {
-    clusterCenters.push_back(pointB);
-}
-    
-    // Проверить, что точки внутри поля
-    for (const auto& p : clusterCenters) {
-        if (p.x < 0 || p.x >= config.fieldWidth || p.y < 0 || p.y >= config.fieldHeight) {
-            std::cerr << "Точка (" << p.x << ", " << p.y << ") вне поля!\n";
-            return;
-        }
-    }
-    
-    lastTriangulation = componentCalculator.bowyerWatson(clusterCenters, *p);
-    voronoi.buildFromDelaunay(lastTriangulation, pathFinder, p);
+        clusterCenters = getClusterCenters();     
+    lastTriangulation = componentCalculator.bowyerWatson(clusterCenters);
+    voronoi.buildFromDelaunay(lastTriangulation, pathFinder, p, voronoiEdges);
 }
 
         // Новая команда для поиска пути
    if (params.s == "find_path") {
-        PointD start(config.pointA_x, config.pointA_y); // Добавлено
-    PointD goal(config.pointB_x, config.pointB_y);  // Добавлено
+       if (p) {
+    terrainGrid.calculateSlopes(*p);
+} else {
+    loggercontrol.logMessage("Error: Pole is not initialized!", b);
+}
+        PointD start(params.pointA_x, params.pointA_y); // Добавлено
+    PointD goal(params.pointB_x, params.pointB_y);  // Добавлено
     if (lastTriangulation.empty()) {
         std::cerr << "Error: Triangulation not performed yet! Run 'triangulate' first.\n";
         return;
     }
-    path = pathFinder.findPathAStar(start, goal, lastTriangulation);
+    copier.removeNoise(CopyPole, componenti);//копия без шума
+    
+    path = pathFinder.findPathAStar(start, goal, lastTriangulation, terrainGrid, CopyPole, loggercontrol, b);
     
     if (path.empty()) {
         std::cerr << "Путь не найден! Проверьте триангуляцию и параметры." << std::endl;
+    } else paths.push_back(path);
+    
     }
-          }
-     }
+    
+    if (params.s == "Plot3DPath") {
+    PointD start(params.pointA_x, params.pointA_y);
+    PointD end(params.pointB_x, params.pointB_y);
+    gnuplotInterface.plot3DPath(path, p, params.filename, start, end);
+    loggercontrol.logMessage("Plot3DPath used", b);
+    }
+    
+    if (params.s == "plotInteractive3DPath") {
+    PointD start(params.pointA_x, params.pointA_y);
+    PointD end(params.pointB_x, params.pointB_y);
+    gnuplotInterface.plotInteractive3DPath(path, p, start, end);
+    loggercontrol.logMessage("plotInteractive3DPath used", b);
+    }
+  }
 };
 
 class Interface {
@@ -1979,7 +2446,8 @@ make
         ├── delaunay_triangulation.png  # Триангуляция Делоне
         ├── voronoi_diagram.png         # Диаграмма Вороного
         ├── landscape.png               # 3D-вид поля (GNUPLOT)
-        ├── path_plot.png               # Маршрут
+        ├── path_plot2D.png             # Маршрут 2D
+        ├── path_plot3D.png             # Маршрут 3D
         ├── output_kmeans.bmp           # K-means
         ├── output_kmeans_kern.bmp      # K-means с ядрами
         ├── slice.bmp                   # Бинаризированная карта
@@ -1990,26 +2458,28 @@ make
 
 ## 🛠 Команды управления
 
-| Команда            | Параметры                      | Описание                                                                 |
-|--------------------|--------------------------------|--------------------------------------------------------------------------|
-| help               | -                              | Создание файла с пояснением команд                                       |
-| init               | -                              | Инициализация поля                                                       |
-| g                  | x y sx sy h                    | Создает гаусс с центром (x,y), размерами (sx,sy) и высотой h             |
-| generate           | -                              | Складывает все добавленные гауссы в итоговое поле                        |
-| gnuplot            | filename.png                   | Сохраняет 3D-визуализацию поля в PNG файл                                |
-| PlotMetedata       | filename.png                   | Визуализирует метаданные компонент с границами и центрами                |
-| PlotVoronoi        | filename.png                   | Строит диаграмму Вороного по текущей триангуляции                        |
-| PlotDelaunay       | filename.png                   | Визуализирует триангуляцию Делоне                                        |
-| PlotPath           | filename.png                   | Отображает найденный путь между точками A и B                            |
-| bmp_write          | filename.bmp [Full/Binary]     | Сохраняет поле в BMP: Full - полное, Binary - бинаризованное             |
-| bmp_read           | filename.bmp                   | Загружает поле из BMP файла                                              |
-| bin                | slice [Peaks/Valleys/All]      | Бинаризация: Peaks - только пики, Valleys - впадины, All - по модулю     |
-| wave               | noisy                          | Удаляет компоненты размером ≤ noisy как шум                              |
-| k_means            | k                              | Кластеризует данные в k кластеров                                        |
-| k_means_kern       | kk                             | Кластеризация с ядрами размера kk                                        |
-| triangulate        | -                              | Строит триангуляцию Делоне по центрам компонент                          |
-| find_path          | -                              | Ищет путь между точками A и B через триангуляцию                         |
-| end                | -                              | Завершает работу программы                                               |
+| Команда              | Параметры                      | Описание                                                                 |
+|----------------------|--------------------------------|--------------------------------------------------------------------------|
+| help                 | -                              | Создание файла с пояснением команд                                       |
+| init                 | -                              | Инициализация поля                                                       |
+| g                    | x y sx sy h                    | Создает гаусс с центром (x,y), размерами (sx,sy) и высотой h             |
+| generate             | -                              | Складывает все добавленные гауссы в итоговое поле                        |
+| gnuplot              | filename.png                   | Сохраняет 3D-визуализацию поля в PNG файл                                |
+| PlotMetedata         | filename.png                   | Визуализирует метаданные компонент с границами и центрами                |
+| PlotVoronoi          | filename.png                   | Строит диаграмму Вороного по текущей триангуляции                        |
+| PlotDelaunay         | filename.png                   | Визуализирует триангуляцию Делоне                                        |
+| PlotPath             | filename.png                   | Отображает найденный путь между точками A и B                            |
+| bmp_write            | filename.bmp [Full/Binary]     | Сохраняет поле в BMP: Full - полное, Binary - бинаризованное             |
+| bmp_read             | filename.bmp                   | Загружает поле из BMP файла                                              |
+| bin                  | slice [Peaks/Valleys/All]      | Бинаризация: Peaks - только пики, Valleys - впадины, All - по модулю     |
+| wave                 | noisy                          | Удаляет компоненты размером ≤ noisy как шум                              |
+| k_means              | k                              | Кластеризует данные в k кластеров                                        |
+| k_means_kern         | kk                             | Кластеризация с ядрами размера kk                                        |
+| triangulate          | -                              | Строит триангуляцию Делоне по центрам компонент                          |
+| find_path            | Ax Ay Bx By                    | Ищет путь между точками A и B через триангуляцию                         |
+| Plot3DPath           | filename.png                   | Сохраняет 3D-визуализацию путя в PNG файл                                |
+| plotInteractive3DPath| -                              | Интерактвный 3D режим с путем                                            |
+| end                  | -                              | Завершает работу программы                                               |
 
 
 ## ⚠️ Важно
@@ -2021,9 +2491,9 @@ make
 6. Путь к файлу пишем полностью
 7. Важен порядок команд, не забывайте делать картинки после команд
 8. Для команды bmp_write не полагайтесь на значения по умолчанию
-9. В триангуляцию сейчас добавляются точки (A и B), это имеет только плюсы (точки всегда в триангуляции, а значит маршрут всегда будет строиться)
+9. Точки A и B должны попадать в триангуляцию
 10. Уровень "равнины" = 127, чтобы метод записи поля по гаусам согласовался с записью по картике
-
+11. Условия проходимости: 1)Если угол наклона в любом пикселе путя превосходит допустимый (по направлению или вбок) 2) Расстояние до препятсвия на срезе меньше радиуса
 
 ## 📜 Командный файл (примеры)
 1) Если нужно прочитать данные с файла Read.bmp
@@ -2131,7 +2601,7 @@ git push origin v2.0.0
 
 ### 6️⃣ Очистка
 ```
-git branch -d feature/improved-structure
+git branch -D feature/improved-structure
 git push origin --delete feature/improved-structure
 ```
 
@@ -2355,21 +2825,42 @@ Developed with ❤️ by **DebugDestroy**
                     
                     c.Dispetcher(params);
                     loggerinterface.logMessage("Cluster kern worked", b);
-                }
-                 else if (params.s == "triangulate") {
-                 /*
+                } else if (params.s == "triangulate") {
+                     loggerinterface.logMessage("triangulate worke", b);
+                     c.Dispetcher(params);
+                 
+                } else if (params.s == "find_path") {
+                    std::getline(file, line);
+                    std::istringstream iss(line);
+                       
+                    // Установка значений по умолчанию
+                    params.pointA_x = config.defaultpointA_x;
+                    params.pointA_y = config.defaultpointA_y;
+                    params.pointB_x = config.defaultpointB_x;
+                    params.pointB_y = config.defaultpointB_y;
+                    // Чтение параметров команды
+                    iss >> params.pointA_x;  // Если не прочитается, останется defaultpointA_x
+                    iss >> params.pointA_y;  // Аналогично для остальных параметров
+                    iss >> params.pointB_x; //...
+                    iss >> params.pointB_y; 
+                    
+                    c.Dispetcher(params);
+                    loggerinterface.logMessage("find_path worked", b);
+                } else if (params.s == "Plot3DPath") {
                     std::getline(file, line);
                     std::istringstream iss(line);
                     
                     // Установка значений по умолчанию
+                    params.filename = config.defaultPlot3DPath;
                     
-                    // Чтение параметров команды*/
-                    loggerinterface.logMessage("triangulate worke", b);
+                    // Чтение параметров команды
+                    iss >> params.filename;
+                    
                     c.Dispetcher(params);
-                }
-                else if (params.s == "find_path") {
-                    loggerinterface.logMessage("find_path worke", b);
+                    loggerinterface.logMessage("Called Plot3DPath:" + params.filename, b);
+                } else if (params.s == "plotInteractive3DPath") {
                     c.Dispetcher(params);
+                    loggerinterface.logMessage("Worked plotInteractive3DPath", b);
                 }
             }
         } else {
@@ -2494,7 +2985,8 @@ make
         ├── delaunay_triangulation.png  # Триангуляция Делоне
         ├── voronoi_diagram.png         # Диаграмма Вороного
         ├── landscape.png               # 3D-вид поля (GNUPLOT)
-        ├── path_plot.png               # Маршрут
+        ├── path_plot2D.png             # Маршрут 2D
+        ├── path_plot3D.png             # Маршрут 3D
         ├── output_kmeans.bmp           # K-means
         ├── output_kmeans_kern.bmp      # K-means с ядрами
         ├── slice.bmp                   # Бинаризированная карта
@@ -2505,26 +2997,28 @@ make
 
 ## 🛠 Команды управления
 
-| Команда            | Параметры                      | Описание                                                                 |
-|--------------------|--------------------------------|--------------------------------------------------------------------------|
-| help               | -                              | Создание файла с пояснением команд                                       |
-| init               | -                              | Инициализация поля                                                       |
-| g                  | x y sx sy h                    | Создает гаусс с центром (x,y), размерами (sx,sy) и высотой h             |
-| generate           | -                              | Складывает все добавленные гауссы в итоговое поле                        |
-| gnuplot            | filename.png                   | Сохраняет 3D-визуализацию поля в PNG файл                                |
-| PlotMetedata       | filename.png                   | Визуализирует метаданные компонент с границами и центрами                |
-| PlotVoronoi        | filename.png                   | Строит диаграмму Вороного по текущей триангуляции                        |
-| PlotDelaunay       | filename.png                   | Визуализирует триангуляцию Делоне                                        |
-| PlotPath           | filename.png                   | Отображает найденный путь между точками A и B                            |
-| bmp_write          | filename.bmp [Full/Binary]     | Сохраняет поле в BMP: Full - полное, Binary - бинаризованное             |
-| bmp_read           | filename.bmp                   | Загружает поле из BMP файла                                              |
-| bin                | slice [Peaks/Valleys/All]      | Бинаризация: Peaks - только пики, Valleys - впадины, All - по модулю     |
-| wave               | noisy                          | Удаляет компоненты размером ≤ noisy как шум                              |
-| k_means            | k                              | Кластеризует данные в k кластеров                                        |
-| k_means_kern       | kk                             | Кластеризация с ядрами размера kk                                        |
-| triangulate        | -                              | Строит триангуляцию Делоне по центрам компонент                          |
-| find_path          | -                              | Ищет путь между точками A и B через триангуляцию                         |
-| end                | -                              | Завершает работу программы                                               |
+| Команда              | Параметры                      | Описание                                                                 |
+|----------------------|--------------------------------|--------------------------------------------------------------------------|
+| help                 | -                              | Создание файла с пояснением команд                                       |
+| init                 | -                              | Инициализация поля                                                       |
+| g                    | x y sx sy h                    | Создает гаусс с центром (x,y), размерами (sx,sy) и высотой h             |
+| generate             | -                              | Складывает все добавленные гауссы в итоговое поле                        |
+| gnuplot              | filename.png                   | Сохраняет 3D-визуализацию поля в PNG файл                                |
+| PlotMetedata         | filename.png                   | Визуализирует метаданные компонент с границами и центрами                |
+| PlotVoronoi          | filename.png                   | Строит диаграмму Вороного по текущей триангуляции                        |
+| PlotDelaunay         | filename.png                   | Визуализирует триангуляцию Делоне                                        |
+| PlotPath             | filename.png                   | Отображает найденный путь между точками A и B                            |
+| bmp_write            | filename.bmp [Full/Binary]     | Сохраняет поле в BMP: Full - полное, Binary - бинаризованное             |
+| bmp_read             | filename.bmp                   | Загружает поле из BMP файла                                              |
+| bin                  | slice [Peaks/Valleys/All]      | Бинаризация: Peaks - только пики, Valleys - впадины, All - по модулю     |
+| wave                 | noisy                          | Удаляет компоненты размером ≤ noisy как шум                              |
+| k_means              | k                              | Кластеризует данные в k кластеров                                        |
+| k_means_kern         | kk                             | Кластеризация с ядрами размера kk                                        |
+| triangulate          | -                              | Строит триангуляцию Делоне по центрам компонент                          |
+| find_path            | Ax Ay Bx By                    | Ищет путь между точками A и B через триангуляцию                         |
+| Plot3DPath           | filename.png                   | Сохраняет 3D-визуализацию путя в PNG файл                                |
+| plotInteractive3DPath| -                              | Интерактвный 3D режим с путем                                            |
+| end                  | -                              | Завершает работу программы                                               |
 
 
 ## ⚠️ Важно
@@ -2536,9 +3030,9 @@ make
 6. Путь к файлу пишем полностью
 7. Важен порядок команд, не забывайте делать картинки после команд
 8. Для команды bmp_write не полагайтесь на значения по умолчанию
-9. В триангуляцию сейчас добавляются точки (A и B), это имеет только плюсы (точки всегда в триангуляции, а значит маршрут всегда будет строиться)
+9. Точки A и B должны попадать в триангуляцию
 10. Уровень "равнины" = 127, чтобы метод записи поля по гаусам согласовался с записью по картике
-
+11. Условия проходимости: 1)Если угол наклона в любом пикселе путя превосходит допустимый (по направлению или вбок) 2) Расстояние до препятсвия на срезе меньше радиуса
 
 ## 📜 Командный файл (примеры)
 1) Если нужно прочитать данные с файла Read.bmp
@@ -2646,7 +3140,7 @@ git push origin v2.0.0
 
 ### 6️⃣ Очистка
 ```
-git branch -d feature/improved-structure
+git branch -D feature/improved-structure
 git push origin --delete feature/improved-structure
 ```
 
@@ -2825,21 +3319,41 @@ Developed with ❤️ by **DebugDestroy**
                         loggerinterface.logMessage("Cluster count", b);
                 }
                     if (params.s == "k_means_kern") {
-                      std::cout << "Enter amount kern:" << std::endl;
-                      std::cin >> params.kk;
-                      c.Dispetcher(params);
-                      std::cout << "Cluster kern worked" << std::endl;
-                      loggerinterface.logMessage("Cluster kern worked", b);
+                        std::cout << "Enter amount kern:" << std::endl;
+                        std::cin >> params.kk;
+                        c.Dispetcher(params);
+                        std::cout << "Cluster kern worked" << std::endl;
+                        loggerinterface.logMessage("Cluster kern worked", b);
                 }
                     if (params.s == "triangulate") {
-                    loggerinterface.logMessage("triangulate worke", b);
-                    c.Dispetcher(params);
-                    std::cout << "Triangulation completed" << std::endl;
+                        loggerinterface.logMessage("triangulate worke", b);
+                        c.Dispetcher(params);
+                        std::cout << "Triangulation completed" << std::endl;
                 }
-                if (params.s == "find_path") {
-                    loggerinterface.logMessage("find_path worke", b);
+                    if (params.s == "find_path") {
+                        std::cout << "Enter amount pointA_x:" << std::endl;
+                        std::cin >> params.pointA_x;
+                        std::cout << "Enter amount pointA_y:" << std::endl;
+                        std::cin >> params.pointA_y;
+                        std::cout << "Enter amount pointB_x:" << std::endl;
+                        std::cin >> params.pointB_x;
+                        std::cout << "Enter amount pointB_y:" << std::endl;
+                        std::cin >> params.pointB_y;
+                        
+                        c.Dispetcher(params);
+                        std::cout << "Path search completed" << std::endl;
+                        loggerinterface.logMessage("find_path worked", b);
+                }
+                    if (params.s == "Plot3DPath") {
+                        std::cout << "Enter the filename(full path) to draw:" << std::endl;
+                        std::cin >> params.filename;//имя для файла
+                        c.Dispetcher(params);
+                        std::cout << "Called Plot3DPath:" + params.filename << std::endl;
+                        loggerinterface.logMessage("Called Plot3DPath:" + params.filename, b);
+                }
+                    if (params.s == "plotInteractive3DPath") {
                     c.Dispetcher(params);
-                    std::cout << "Path search completed" << std::endl;
+                    loggerinterface.logMessage("Worked plotInteractive3DPath", b);
                 }
             }
 
