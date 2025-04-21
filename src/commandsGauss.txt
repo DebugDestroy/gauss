@@ -18,6 +18,8 @@ bmp_write /home/log/Gauss/results/visualizations/kmeans.bmp Binary
 triangulate
 PlotVoronoi /home/log/Gauss/results/visualizations/Diagramma_Voronova.png
 PlotDelaunay /home/log/Gauss/results/visualizations/Triangulation_Delone.png
-find_path
+find_path 100 100 160 160
 PlotPath /home/log/Gauss/results/visualizations/Path.png
+Plot3DPath /home/log/Gauss/results/visualizations/Plot3DPath.png
+plotInteractive3DPath
 end
