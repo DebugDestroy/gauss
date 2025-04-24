@@ -1,11 +1,11 @@
 init
 help
-g 99 50 25 25 -50
-g 50 50 20 20 50
-g 200 50 20 20 -50
-g 50 200 20 20 50
-g 189 180 20 20 -50
-g 130 130 20 20 50
+g 99 50 25 25 -25
+g 50 50 20 20 25
+g 200 50 20 20 -25
+g 50 200 20 20 25
+g 189 180 20 20 -25
+
 generate
 gnuplot /home/log/Gauss/results/visualizations/gnuplot.png
 bmp_write /home/log/Gauss/results/visualizations/Pole.bmp Full
@@ -13,12 +13,12 @@ bin 147 All
 bmp_write /home/log/Gauss/results/visualizations/Slice.bmp Binary
 wave 10
 PlotMetedata /home/log/Gauss/results/visualizations/Metadata.png
-k_means 5
+k_means 10
 bmp_write /home/log/Gauss/results/visualizations/kmeans.bmp Binary
 triangulate
 PlotVoronoi /home/log/Gauss/results/visualizations/Diagramma_Voronova.png
 PlotDelaunay /home/log/Gauss/results/visualizations/Triangulation_Delone.png
-find_path 100 100 160 160
+find_path 60 130 150 135
 PlotPath /home/log/Gauss/results/visualizations/Path.png
 Plot3DPath /home/log/Gauss/results/visualizations/Plot3DPath.png
 plotInteractive3DPath
