@@ -23,10 +23,10 @@ defaultpointA_y 150.0
 defaultpointB_x 160.0
 defaultpointB_y 160.0
 defaultPlot3DPath /home/log/Gauss/results/visualizations/Plot3DPath.png
-vehicleRadius 0.05
-maxSideAngle 70.0
-maxUpDownAngle 70.0
+vehicleRadius 5
+maxSideAngle 90.0
+maxUpDownAngle 90.0
 logFileNameInterface /home/log/Gauss/results/docs/loginterface.txt
 logFileNameControl /home/log/Gauss/results/docs/logcontrol.txt
-loggingInterfaceEnabled true
-loggingControlEnabled true
+FiltrationLogLevelInterface INFO
+FiltrationLogLevelControl INFO
