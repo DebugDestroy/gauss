@@ -11,7 +11,7 @@
 - Поиск пути с ограничениями по углу наклона тележки и ее радиуса
   
 
-## ⚙️ Системные требования
+## 💻️ Системные требования
 
 ### Обязательные компоненты
 1. **Компилятор C++17**  
@@ -119,7 +119,7 @@ make
 ```
 
 
-## 🛠 Команды управления
+## 🛠 Команды управления (для командного файла command.txt)
 
 | Команда              | Параметры                      | Описание                                                                 |
 |----------------------|--------------------------------|--------------------------------------------------------------------------|
@@ -143,6 +143,44 @@ make
 | Plot3DPath           | filename.png                   | Сохраняет 3D-визуализацию путя в PNG файл                                |
 | plotInteractive3DPath| -                              | Интерактвный 3D режим с путем                                            |
 | end                  | -                              | Завершает работу программы                                               |
+
+
+## ⚙️ Параметры конфигурационного файла (config.txt)
+
+| Параметр                     | Значение                                       | Описание                                                                         |
+|------------------------------|------------------------------------------------|----------------------------------------------------------------------------------|
+| fieldWidth                   | `fieldWidth`                                   | Ширина рабочего поля в пикселях                                                  |  
+| fieldHeight                  | `fieldHeight`                                  | Высота рабочего поля в пикселях                                                  |
+| defaultX                     | `defaultX`                                     | Стандартная X-координата центра гауссова распределения по умолчанию              |
+| defaultY                     | `defaultY`                                     | Стандартная Y-координата центра гауссова распределения по умолчанию              |
+| defaultSx                    | `defaultSx`                                    | Стандартное отклонение по оси X по умолчанию                                     |
+| defaultSy                    | `defaultSy`                                    | Стандартное отклонение по оси Y по умолчанию                                     |
+| defaultH                     | `defaultH`                                     | Стандартная высота гауссова распределения по умолчанию                           |
+| defaultGnuplot               | `filename_gnuplot.png`                         | Путь к файлу для сохранения 3D-визуализации по умолчанию                         |
+| defaultPlotMetedata          | `filename_metadata.png`                        | Путь к файлу для визуализации метаданных компонент по умолчанию                  |
+| defaultPlotVoronoi           | `filename_voronoi.png`                         | Путь к файлу для диаграммы Вороного по умолчанию                                 |
+| defaultPlotDelaunay          | `filename_delaunay.png`                        | Путь к файлу для триангуляции Делоне по умолчанию                                |
+| defaultPlotPath              | `filename_path.png`                            | Путь к файлу для визуализации маршрута по умолчанию                              |
+| defaultWrite                 | `filename_write.bmp`                           | Путь к файлу для сохранения BMP-изображения по умолчанию                         |
+| defaultWriteModeImage        | `writeMode`                                    | Режим сохранения BMP (Full/Binary) по умолчанию                                  |
+| defaultRead                  | `filename_read.bmp`                            | Путь к файлу для загрузки BMP-изображения по умолчанию                           |
+| defaultSlice                 | `defaultSlice`                                 | Порог бинаризации по умолчанию                                                   |
+| defaultBinMode               | `binMode`                                      | Режим бинаризации (Peaks/Valleys/All) по умолчанию                               |
+| defaultNoisy                 | `defaultNoisy`                                 | Порог для удаления шумовых компонент по умолчанию                                |
+| defaultKlaster               | `defaultKlaster`                               | Количество кластеров для k-mean по умолчанию                                     |
+| defaultKlasterKern           | `defaultKlasterKern`                           | Размер ядра для кластеризации по умолчанию                                       |
+| defaultpointA_x              | `pointA_x`                                     | X-координата точки A для поиска пути по умолчанию                                |
+| defaultpointA_y              | `pointA_y`                                     | Y-координата точки A для поиска пути по умолчанию                                |
+| defaultpointB_x              | `pointB_x`                                     | X-координата точки B для поиска пути по умолчанию                                |
+| defaultpointB_y              | `pointB_y`                                     | Y-координата точки B для поиска пути по умолчанию                                |
+| defaultPlot3DPath            | `filename_plot3dpath.png`                      | Путь к файлу для 3D-визуализации маршрута по умолчанию                           |
+| vehicleRadius                | `vehicleRadius`                                | Радиус транспортного средства                                                    |
+| maxSideAngle                 | `maxSideAngle`                                 | Максимальный угол поворота вбок (градусы)                                        |
+| maxUpDownAngle               | `maxUpDownAngle`                               | Максимальный угол наклона вверх/вниз (градусы)                                   |
+| logFileNameInterface         | `filename_log_interface.txt`                   | Путь к лог-файлу интерфейса                                                      |
+| logFileNameControl           | `filename_log_control.txt`                     | Путь к лог-файлу управления                                                      |
+| FiltrationLogLevelInterface  | `logLevelInterface`                            | Уровень логирования интерфейса (TRACE/DEBUG/INFO/WARNING/ERROR/CRITICAL/OFF)     |
+| FiltrationLogLevelControl    | `logLevelControl`                              | Уровень логирования управления (TRACE/DEBUG/INFO/WARNING/ERROR/CRITICAL/OFF)     |
 
 
 ## ⚠️ Важно
@@ -204,6 +242,42 @@ PlotDelaunay /home/log/Gauss/results/visualizations/Triangulation_Delone.png
 find_path
 PlotPath /home/log/Gauss/results/visualizations/Path.png
 end
+```
+
+## 📃️ Конфигурационный файл (пример)
+```
+fieldWidth 250
+fieldHeight 250
+defaultX 50.0
+defaultY 50.0
+defaultSx 20.0
+defaultSy 20.0
+defaultH 200.0
+defaultGnuplot /home/log/Gauss/results/visualizations/Gnuplot.png
+defaultPlotMetedata /home/log/Gauss/results/visualizations/Metadata.png
+defaultPlotVoronoi /home/log/Gauss/results/visualizations/Voronoi.png
+defaultPlotDelaunay /home/log/Gauss/results/visualizations/Delaunay.png
+defaultPlotPath /home/log/Gauss/results/visualizations/Path.png
+defaultWrite /home/log/Gauss/results/visualizations/Write.bmp
+defaultWriteModeImage Full
+defaultRead /home/log/Gauss/results/visualizations/Read.bmp
+defaultSlice 127
+defaultBinMode All
+defaultNoisy 10
+defaultKlaster 5
+defaultKlasterKern 5
+defaultpointA_x 150.0
+defaultpointA_y 150.0
+defaultpointB_x 160.0
+defaultpointB_y 160.0
+defaultPlot3DPath /home/log/Gauss/results/visualizations/Plot3DPath.png
+vehicleRadius 5
+maxSideAngle 90.0
+maxUpDownAngle 90.0
+logFileNameInterface /home/log/Gauss/results/docs/loginterface.txt
+logFileNameControl /home/log/Gauss/results/docs/logcontrol.txt
+FiltrationLogLevelInterface INFO
+FiltrationLogLevelControl INFO
 ```
 
 ##### ======================================
@@ -282,4 +356,3 @@ git push origin --delete feature/improved-structure
 
 Developed with ❤️ by **DebugDestroy**  
 [GitHub Profile](https://github.com/DebugDestroy)
-
