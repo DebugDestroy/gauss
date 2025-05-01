@@ -179,6 +179,7 @@ make
 | maxUpDownAngle               | `maxUpDownAngle`                               | Максимальный угол наклона вверх/вниз (градусы)                                   |
 | logFileNameInterface         | `filename_log_interface.txt`                   | Путь к лог-файлу интерфейса                                                      |
 | logFileNameControl           | `filename_log_control.txt`                     | Путь к лог-файлу управления                                                      |
+| defaultHelp                  | `/home/log/Gauss/results/docs/help.txt`        | Путь где сохранить help файл                                                     |
 | FiltrationLogLevelInterface  | `logLevelInterface`                            | Уровень логирования интерфейса (TRACE/DEBUG/INFO/WARNING/ERROR/CRITICAL/OFF)     |
 | FiltrationLogLevelControl    | `logLevelControl`                              | Уровень логирования управления (TRACE/DEBUG/INFO/WARNING/ERROR/CRITICAL/OFF)     |
 
@@ -276,6 +277,7 @@ maxSideAngle 90.0
 maxUpDownAngle 90.0
 logFileNameInterface /home/log/Gauss/results/docs/loginterface.txt
 logFileNameControl /home/log/Gauss/results/docs/logcontrol.txt
+defaultHelp /home/log/Gauss/results/docs/help.txt
 FiltrationLogLevelInterface INFO
 FiltrationLogLevelControl INFO
 ```
