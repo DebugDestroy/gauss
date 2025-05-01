@@ -58,64 +58,58 @@ cmake --version
 
 ## 🚀 Запуск программы
 
-### Способ 1: Ручная компиляция и запуск
+### Способ 1: Автоматический скрипт (рекомендуется)
 ```bash
-# Переход в папку проекта
-cd Gauss
+# Даем права на выполнение (только при первом запуске)
+chmod +x run.sh
 
-# Компиляция
-g++ -std=c++17 main.cpp -o terrain_navigator
+# Запуск с интерфейсом командной строки
+./run.sh
 
-# Запуск 
-./terrain_navigator
+# Запуск с файлом команд (commandsGauss.cmd)
+./run.sh commands
 ```
 
-### Способ 2: Автоматический скрипт (рекомендуется)
+### Способ 2: С CMake (опционально)
 ```bash
-cd Gauss
-chmod +x auto.sh  # Даем права на выполнение (только при первом запуске)
-./auto.sh
-```
-
-### Способ 3: С CMake (опционально)
-```bash
-cd Gauss
 mkdir build && cd build
-cmake ..
-make
-./terrain_navigator
+cmake .. -DCMAKE_BUILD_TYPE=Release
+cmake --build . --parallel $(nproc)
+
+# Запуск из корня проекта
+./run.sh commands
 ```
 
 ## 📂 Файлы проекта
 ```
-~/Gauss/                                # Корневая папка проекта
-├── archive                             # Старые версии
-├── .gitignore                          # Игнорирует файл archive
+~/gauss/                                # Корневая папка проекта
+├── bin/                                # Ресурсы программы
+│   └── etc/
+│       ├── commands/                   # Файлы команд
+│       │   ├── commandsGauss.cmd       # Пример с гауссовыми холмами
+│       │   └── commandsRead.cmd        # Пример с загрузкой BMP
+│       └── config.conf                 # Основные параметры
+├── build/                              # Сборка (генерируется CMake)
+├── src/                                # Исходный код
+│   ├── algorithms/                     # Алгоритмы обработки
+│   ├── app/                            # Главный исполняемый модуль
+│   ├── command/                        # Система команд
+│   ├── core/                           # Ядро программы
+│   ├── io/                             # Ввод-вывод
+│   ├── utils/                          # Вспомогательные утилиты
+│   └── visualization/                  # Визуализация
+├── results/                            # Результаты работы
+│   ├── help.txt                        # Справочник по командам
+│   └── visualizations/                 # Графические результаты
+│       ├── *.png                       # 2D визуализации
+│       ├── *.bmp                       # Бинарные карты
+│       └── Plot3DPath.png              # 3D маршрут
+├── var/                                # Системные файлы
+│   └── logs/                           # Логи программы
+├── .gitignore                          # Игнорируемые файлы
+├── CMakeLists.txt                      # Конфигурация сборки
 ├── LICENSE                             # Лицензия
-├── README.md                           # Документация
-├── src/
-│   ├── config.txt                      # Основные параметры системы
-│   ├── commandsGauss.txt               # Пример командного файла, генерирующий поле гаусами
-│   ├── commandsRead.txt                # Пример командного файла, генерирующий поле картинкой Read.bmp
-│   ├── main.cpp                        # Исходный код программы
-│   └── auto.sh                         # Скрипт, запускающий main.cpp и читающий файл commandsGauss.txt
-└── results/                            # Все результаты работы (внутри Gauss)
-    ├── docs/
-    │   ├── help.txt                    # Справочник
-    │   ├── log_control.txt             # Логи Control
-    │   └── log_interface.txt           # Логи Interface
-    └── visualizations/                 # Все визуализации
-        ├── binary_with_components.png  # Факторы компонент
-        ├── delaunay_triangulation.png  # Триангуляция Делоне
-        ├── voronoi_diagram.png         # Диаграмма Вороного
-        ├── landscape.png               # 3D-вид поля (GNUPLOT)
-        ├── path_plot2D.png             # Маршрут 2D
-        ├── path_plot3D.png             # Маршрут 3D
-        ├── output_kmeans.bmp           # K-means
-        ├── output_kmeans_kern.bmp      # K-means с ядрами
-        ├── slice.bmp                   # Бинаризированная карта
-        ├── Read.bmp                    # Поле для чтения
-        └── output.bmp                  # Сгенерированная карта
+└── run.sh                              # Автоматический скрипт запуска
 ```
 
 
@@ -190,7 +184,7 @@ make
 3. Маршрут будет найден не всегда!
 4. Для триангуляции и построения пути, нужно чтобы количество компонент было больше 3
 5. Если пользуетесь программой, то важно использовать ту же файловую структуру!
-6. Путь к файлу пишем полностью
+6. Путь к файлу пишем относительный
 7. Важен порядок команд, не забывайте делать картинки после команд
 8. Для команды bmp_write не полагайтесь на значения по умолчанию
 9. Точки A и B должны попадать в триангуляцию
@@ -202,46 +196,47 @@ make
 ```
 init
 help
-bmp_read /home/log/Gauss/results/visualizations/Read.bmp
-gnuplot /home/log/Gauss/results/visualizations/gnuplot.png
-bmp_write /home/log/Gauss/results/visualizations/Polew.bmp Full
-bin 20 All
-bmp_write /home/log/Gauss/results/visualizations/Slice.bmp Binary
+bmp_read results/visualizations/Read.bmp
+gnuplot results/visualizations/gnuplot.png
+bmp_write results/visualizations/Polew.bmp Full
+bin 147 All
+bmp_write results/visualizations/Slice.bmp Binary
 wave 10
-PlotMetedata /home/log/Gauss/results/visualizations/Metadata.png
+PlotMetedata results/visualizations/Metadata.png
 k_means 5
-bmp_write /home/log/Gauss/results/visualizations/kmeans.bmp Binary
+bmp_write results/visualizations/kmeans.bmp Binary
 triangulate
-PlotVoronoi /home/log/Gauss/results/visualizations/Diagramma_Voronova.png
-PlotDelaunay /home/log/Gauss/results/visualizations/Triangulation_Delone.png
+PlotVoronoi results/visualizations/Diagramma_Voronova.png
+PlotDelaunay results/visualizations/Triangulation_Delone.png
 find_path
-PlotPath /home/log/Gauss/results/visualizations/Path.png
+PlotPath results/visualizations/Path.png
 end
 ```
 2) Если данные вводятся с помощью гаусов
 ```
 init
 help
-g 99 50 25 25 -50
-g 50 50 20 20 50
-g 200 50 20 20 -50
-g 50 200 20 20 50
-g 189 180 20 20 -50
-g 130 130 20 20 50
+g 99 50 25 25 -25
+g 50 50 20 20 25
+g 200 50 20 20 -25
+g 50 200 20 20 25
+g 189 180 20 20 -25
 generate
-gnuplot /home/log/Gauss/results/visualizations/gnuplot.png
-bmp_write /home/log/Gauss/results/visualizations/Pole.bmp Full
-bin 20 All
-bmp_write /home/log/Gauss/results/visualizations/Slice.bmp Binary
+gnuplot results/visualizations/gnuplot.png
+bmp_write results/visualizations/Pole.bmp Full
+bin 147 All
+bmp_write results/visualizations/Slice.bmp Binary
 wave 10
-PlotMetedata /home/log/Gauss/results/visualizations/Metadata.png
-k_means 5
-bmp_write /home/log/Gauss/results/visualizations/kmeans.bmp Binary
+PlotMetedata results/visualizations/Metadata.png
+k_means 10
+bmp_write results/visualizations/kmeans.bmp Binary
 triangulate
-PlotVoronoi /home/log/Gauss/results/visualizations/Diagramma_Voronova.png
-PlotDelaunay /home/log/Gauss/results/visualizations/Triangulation_Delone.png
-find_path
-PlotPath /home/log/Gauss/results/visualizations/Path.png
+PlotVoronoi results/visualizations/Diagramma_Voronova.png
+PlotDelaunay results/visualizations/Triangulation_Delone.png
+find_path 60 130 150 135
+PlotPath results/visualizations/Path.png
+Plot3DPath results/visualizations/Plot3DPath.png
+plotInteractive3DPath
 end
 ```
 
@@ -254,14 +249,14 @@ defaultY 50.0
 defaultSx 20.0
 defaultSy 20.0
 defaultH 200.0
-defaultGnuplot /home/log/Gauss/results/visualizations/Gnuplot.png
-defaultPlotMetedata /home/log/Gauss/results/visualizations/Metadata.png
-defaultPlotVoronoi /home/log/Gauss/results/visualizations/Voronoi.png
-defaultPlotDelaunay /home/log/Gauss/results/visualizations/Delaunay.png
-defaultPlotPath /home/log/Gauss/results/visualizations/Path.png
-defaultWrite /home/log/Gauss/results/visualizations/Write.bmp
+defaultGnuplot results/visualizations/Gnuplot.png
+defaultPlotMetedata results/visualizations/Metadata.png
+defaultPlotVoronoi results/visualizations/Voronoi.png
+defaultPlotDelaunay results/visualizations/Delaunay.png
+defaultPlotPath results/visualizations/Path.png
+defaultWrite results/visualizations/Write.bmp 
 defaultWriteModeImage Full
-defaultRead /home/log/Gauss/results/visualizations/Read.bmp
+defaultRead results/visualizations/Read.bmp
 defaultSlice 127
 defaultBinMode All
 defaultNoisy 10
@@ -271,13 +266,13 @@ defaultpointA_x 150.0
 defaultpointA_y 150.0
 defaultpointB_x 160.0
 defaultpointB_y 160.0
-defaultPlot3DPath /home/log/Gauss/results/visualizations/Plot3DPath.png
+defaultPlot3DPath results/visualizations/Plot3DPath.png
 vehicleRadius 5
 maxSideAngle 90.0
 maxUpDownAngle 90.0
-logFileNameInterface /home/log/Gauss/results/docs/loginterface.txt
-logFileNameControl /home/log/Gauss/results/docs/logcontrol.txt
-defaultHelp /home/log/Gauss/results/docs/help.txt
+logFileNameInterface var/logs/log_interface.txt
+logFileNameControl var/logs/logcontrol.txt
+defaultHelp results/help.txt
 FiltrationLogLevelInterface INFO
 FiltrationLogLevelControl INFO
 ```
