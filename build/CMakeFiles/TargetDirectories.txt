@@ -1,0 +1,3 @@
+/home/log/gauss/build/CMakeFiles/terrain_navigator.dir
+/home/log/gauss/build/CMakeFiles/edit_cache.dir
+/home/log/gauss/build/CMakeFiles/rebuild_cache.dir
