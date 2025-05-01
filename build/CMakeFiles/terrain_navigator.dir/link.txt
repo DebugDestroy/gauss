@@ -1,0 +1,1 @@
+/usr/bin/c++ -O3 -DNDEBUG CMakeFiles/terrain_navigator.dir/src/app/main.cpp.o -o bin/terrain_navigator 
