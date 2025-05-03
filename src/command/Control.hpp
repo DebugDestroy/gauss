@@ -24,12 +24,12 @@
 #include "algorithms/GaussBuilder.hpp"
 #include "algorithms/KMeans.hpp"
 #include "algorithms/PathFinder.hpp"
-#include "algorithms/TerrainGrid.hpp"
 #include "algorithms/VoronoiDiagram.hpp"
 #include "core/Pole.hpp"
 #include "visualization/GnuplotInterface.hpp"
 #include "io/BmpHandler.hpp"
 #include "algorithms/ComponentCalculator.hpp"
+#include "algorithms/Triangulator.hpp"
 
 class Control {
 private:
@@ -55,7 +55,7 @@ public:
     BmpHandler bmpHandler;
     GnuplotInterface gnuplotInterface;
     ComponentCalculator componentCalculator;
-    TerrainGrid terrainGrid;
+    Triangulator triangulator;
     std::unique_ptr<Pole> p = nullptr;
     std::unique_ptr<KMeans> kMeans = nullptr;
     std::vector<std::vector<double>> kMeansData;
@@ -74,7 +74,7 @@ public:
           bmpHandler(log),
           gnuplotInterface(log),
           componentCalculator(log),
-          terrainGrid(cfg.fieldWidth, cfg.fieldHeight, log),
+          triangulator(log),
           pathFinder(cfg, log),
           voronoi(log) {
         
@@ -251,7 +251,7 @@ public:
         
         if (params.s == "triangulate") {
             clusterCenters = getClusterCenters();     
-            lastTriangulation = componentCalculator.bowyerWatson(clusterCenters);
+            lastTriangulation = triangulator.bowyerWatson(clusterCenters);
             voronoi.buildFromDelaunay(lastTriangulation, pathFinder, p, voronoiEdges);
             logOperation(LogLevel::Info, std::string("triangulate"), 
                 std::string("clusters=") + std::to_string(clusterCenters.size()) + 
@@ -264,7 +264,6 @@ public:
                 return;
             }
             
-            terrainGrid.calculateSlopes(*p);
             PointD start(params.pointA_x, params.pointA_y);
             PointD goal(params.pointB_x, params.pointB_y);
             
@@ -274,7 +273,7 @@ public:
             }
             
             copier.removeNoise(CopyPole, componenti);
-            path = pathFinder.findPathAStar(start, goal, lastTriangulation, terrainGrid, CopyPole, params.slice, p);
+            path = pathFinder.findPathAStar(start, goal, lastTriangulation, CopyPole, params.slice, p);
             
             if (path.empty()) {
                 logger.logMessage(LogLevel::Warning, "Path not found");

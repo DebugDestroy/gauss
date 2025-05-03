@@ -13,6 +13,7 @@
 #   ./run.sh commands # Запуск с файлом commandsGauss.cmd
 # ======================================
 
+
 set -euo pipefail
 
 # --- Конфигурация ---
@@ -20,96 +21,60 @@ BUILD_DIR="build"
 COMMAND_FILE="bin/etc/commands/commandsGauss.cmd"
 EXEC_NAME="terrain_navigator"
 
-# --- Цвета для вывода ---
+# --- Цвета ---
 RED='\033[1;31m'
 GREEN='\033[1;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-# --- Функции ---
-error() {
-    echo -e "${RED}ERROR: $1${NC}" >&2
-    exit 1
+error() { echo -e "${RED}ERROR: $1${NC}" >&2; exit 1; }
+info() { echo -e "${YELLOW}$1${NC}"; }
+
+# --- Определение корня ---
+get_project_root() {
+    local script_dir="$(dirname "$(realpath "$0")")"
+    while [[ "$script_dir" != "/" ]]; do
+        [[ -d "$script_dir/bin/etc" ]] && { echo "$script_dir"; return; }
+        script_dir="$(dirname "$script_dir")"
+    done
+    error "Корень проекта не найден!"
 }
 
-success() {
-    echo -e "${GREEN}$1${NC}"
-}
+PROJECT_ROOT="$(get_project_root)"
+info "📁 Корень проекта: $PROJECT_ROOT"
 
-info() {
-    echo -e "${YELLOW}$1${NC}"
-}
-
-# --- Проверка зависимостей ---
-check_dependencies() {
+# --- Сборка ---
+check_and_build() {
     if ! command -v cmake &>/dev/null; then
-        error "CMake not found! Install with:\n  Ubuntu: sudo apt install cmake\n  macOS: brew install cmake"
+        error "CMake не установлен. Установите:\n  Ubuntu: sudo apt install cmake\n  macOS: brew install cmake"
     fi
 
-    if (( $(cmake --version | grep -oE '[0-9]+\.[0-9]+' | head -1 | awk '{print ($1 < 3.12)}') )); then
-        error "CMake 3.12+ required"
+    if [[ ! -f "$PROJECT_ROOT/$BUILD_DIR/bin/$EXEC_NAME" ]]; then
+        info "🔧 Сборка проекта..."
+        mkdir -p "$PROJECT_ROOT/$BUILD_DIR"
+        cd "$PROJECT_ROOT/$BUILD_DIR"
+        cmake .. -DCMAKE_BUILD_TYPE=Release
+        cmake --build . --parallel $(nproc --all 2>/dev/null || echo 4)
+        cd "$PROJECT_ROOT"
+    else
+        info "✅ Программа уже собрана"
     fi
 }
 
-# --- Сборка проекта ---
-build_project() {
-    info "🔧 Configuring project..."
-    mkdir -p "$BUILD_DIR"
-    cd "$BUILD_DIR"
-    cmake .. -DCMAKE_BUILD_TYPE=Release
-    
-    CPU_CORES=$(nproc --all 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
-    info "🏗  Building with $CPU_CORES cores..."
-    cmake --build . --parallel "$CPU_CORES"
-    
-    cd ..
-}
-
-# --- Запуск программы ---
+# --- Запуск ---
 run_program() {
-    local mode=$1
-    
-    info "🚀 Launching program..."
-    
-    # Получаем абсолютный путь к корню проекта
-    PROJECT_ROOT="$(dirname "$(realpath "$0")")"
-    
-    if [[ "$mode" == "file" ]]; then
-        CMD_FILE="$PROJECT_ROOT/$COMMAND_FILE"
-        if [[ ! -f "$CMD_FILE" ]]; then
-            error "Command file $CMD_FILE not found!"
-        fi
-        # Передаём абсолютные пути в программу
-        echo -e "1\n$CMD_FILE\n$PROJECT_ROOT" | "$PROJECT_ROOT/$BUILD_DIR/bin/$EXEC_NAME"
+    info "🚀 Запуск программы..."
+    if [[ $# -gt 0 && "$1" == "commands" ]]; then
+        [[ ! -f "$PROJECT_ROOT/$COMMAND_FILE" ]] && error "Файл команд не найден: $COMMAND_FILE"
+        echo -e "1\n$PROJECT_ROOT/$COMMAND_FILE" | "$PROJECT_ROOT/$BUILD_DIR/bin/$EXEC_NAME"
     else
-        echo -e "0\n$PROJECT_ROOT" | "$PROJECT_ROOT/$BUILD_DIR/bin/$EXEC_NAME"
-    fi
-    
-    if [[ $? -eq 0 ]]; then
-        success "✅ Program finished successfully"
-        info "📁 Results saved in $PROJECT_ROOT/results/"
-    else
-        error "Program failed"
+        "$PROJECT_ROOT/$BUILD_DIR/bin/$EXEC_NAME"
     fi
 }
 
-# --- Главный скрипт ---
 main() {
-    check_dependencies
-    
-    # Сборка если нужно
-    if [[ ! -f "$BUILD_DIR/bin/$EXEC_NAME" ]]; then
-        build_project
-    else
-        info "✅ Build already exists - skipping"
-    fi
-    
-    # Определение режима запуска
-    if [[ $# -gt 0 && "$1" == "commands" ]]; then
-        run_program "file"
-    else
-        run_program "interactive"
-    fi
+    check_and_build
+    run_program "$@"
 }
 
 main "$@"
