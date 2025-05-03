@@ -68,10 +68,6 @@ public:
 
     double distance(const std::vector<double>& a, const std::vector<double>& b) const {
         double dist = std::hypot(a[0]-b[0], a[1]-b[1]);
-        logger.trace(std::string("[KMeans::distance] Расстояние между (") + 
-                   std::to_string(a[0]) + "," + std::to_string(a[1]) + ") и (" +
-                   std::to_string(b[0]) + "," + std::to_string(b[1]) + ") = " +
-                   std::to_string(dist));
         return dist;
     }
 
@@ -101,8 +97,8 @@ public:
                         labels[i] = j;
                     }
                 }
-                logger.trace(std::string("[KMeans::cluster] Точка ") + std::to_string(i) + 
-                            " отнесена к кластеру " + std::to_string(labels[i]));
+                /*logger.trace(std::string("[KMeans::cluster] Точка ") + std::to_string(i) + 
+                            " отнесена к кластеру " + std::to_string(labels[i]));*/
             }
 
             // Обновление центров
@@ -127,9 +123,9 @@ public:
                     if (centerDist > 1e-6) {
                         changed = true;
                     }
-                    logger.debug(std::string("[KMeans::cluster] Кластер ") + std::to_string(j) + 
+                    /*logger.debug(std::string("[KMeans::cluster] Кластер ") + std::to_string(j) + 
                                ": точек=" + std::to_string(counts[j]) + 
-                               ", смещение центра=" + std::to_string(centerDist));
+                               ", смещение центра=" + std::to_string(centerDist));*/
                 } else {
                     logger.warning(std::string("[KMeans::cluster] Кластер ") + std::to_string(j) + 
                                  " остался без точек!");
