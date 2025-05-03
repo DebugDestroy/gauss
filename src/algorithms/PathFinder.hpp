@@ -12,7 +12,6 @@
 #include "core/Config.hpp"
 #include "core/Logger.hpp"
 #include "core/Geometry.hpp" // для PointD, Triangle, Edge
-#include "algorithms/TerrainGrid.hpp" // для TerrainGrid
 #include "core/Pole.hpp" // для std::unique_ptr<Pole>
 
 struct AStarNode {
@@ -23,8 +22,9 @@ struct AStarNode {
     double h;              // Эвристическая оценка до цели
     double f;              // Общая стоимость: f = g + h
 
-    AStarNode(PointD pos, const Triangle* triangle, AStarNode* p = nullptr)
-        : position(pos), tri(triangle), parent(p), g(0), h(0), f(0) {}
+    AStarNode(PointD pos, const Triangle* triangle, AStarNode* p = nullptr, double cost = 0, double heuristic_val = 0)
+    : position(pos), tri(triangle), parent(p), 
+      g(cost), h(heuristic_val), f(g + h) {}
 
     // Для сравнения в priority_queue
     bool operator<(const AStarNode& other) const { return f > other.f; }
@@ -59,6 +59,21 @@ private:
             << edge.b.x << "," << edge.b.y << "), длина: " << edge.length();
         logger.trace(oss.str());
     }
+
+std::vector<PointD> reconstructPath(const AStarNode& endNode, 
+                                   const PointD& start, 
+                                   const PointD& goal) const {
+    std::vector<PointD> path;
+    const AStarNode* current = &endNode;
+    while (current) {
+        path.push_back(current->position);
+        current = current->parent;
+    }
+    std::reverse(path.begin(), path.end());
+    path.insert(path.begin(), start);
+    path.push_back(goal);
+    return path;
+}
 
 public:
     PathFinder(const Config& cfg, Logger& lg) : config(cfg), logger(lg) {
@@ -108,26 +123,6 @@ public:
         return result;
     }
     
-    bool isNavigable(const Edge& edge, const TerrainGrid& terrainGrid) const {
-        logEdge(edge);
-        auto [forwardAngle, sideAngle] = terrainGrid.getEdgeSlopes(edge);
-        
-        bool navigable = abs(forwardAngle) <= config.maxUpDownAngle && 
-               abs(sideAngle) <= config.maxSideAngle &&
-               edge.length() > config.vehicleRadius * 2;
-        
-        if (!navigable) {
-            std::ostringstream oss;
-            oss << "[PathFinder::isNavigable] Ребро НЕ проходимо:\n"
-                << "  Уклон вперед: " << forwardAngle << "° (макс. " << config.maxUpDownAngle << "°)\n"
-                << "  Боковой уклон: " << sideAngle << "° (макс. " << config.maxSideAngle << "°)\n"
-                << "  Длина: " << edge.length() << " (мин. " << config.vehicleRadius * 2 << ")";
-            logger.debug(oss.str());
-        }
-        
-        return navigable;
-    }
-    
     std::vector<const Triangle*> findNeighbors(const Triangle& tri, const std::vector<Triangle>& allTriangles) const {
         logger.trace("[PathFinder::findNeighbors] Поиск соседей треугольника");
         std::vector<const Triangle*> neighbors;
@@ -145,141 +140,64 @@ public:
     }
 
     std::vector<PointD> findPathAStar(const PointD& start, const PointD& goal, 
-                                      const std::vector<Triangle>& triangles, 
-                                      const TerrainGrid& terrainGrid,
-                                      const std::vector<std::vector<double>>& binaryMap,
-                                      double slice, const std::unique_ptr<Pole>& p) {
-        logger.info("[PathFinder::findPathAStar] Начало поиска пути");
-        logPoint("Стартовая точка:", start);
-        logPoint("Целевая точка:", goal);
-        
-        std::vector<PointD> path;
-        const Triangle* startTri = findContainingTriangle(start, triangles);
-        const Triangle* goalTri = findContainingTriangle(goal, triangles);
-        
-        if (!startTri || !goalTri) {
-            logger.error("[PathFinder::findPathAStar] Старт или цель вне триангуляции");
-            logTriangle("Стартовый треугольник:", startTri);
-            logTriangle("Целевой треугольник:", goalTri);
-            return {};
-        }
-
-        if (startTri == goalTri) {
-            logger.info("[PathFinder::findPathAStar] Старт и цель в одном треугольнике");
-            path = {start, goal};
-            if (!checkPathFeasibility(path, terrainGrid, binaryMap, slice, p)) {
-                logger.warning("[PathFinder::findPathAStar] Прямой путь непроходим");
-                return {};
-            }
-            logger.info("[PathFinder::findPathAStar] Прямой путь проходим");
-            return path;
-        }
-
-        logger.debug("[PathFinder::findPathAStar] Запуск алгоритма A*");
-        std::priority_queue<AStarNode> openSet;
-        std::unordered_map<const Triangle*, double> costSoFar;
-
-        PointD startCenter = startTri->calculateCircumcenter();
-        openSet.emplace(startCenter, startTri);
-        costSoFar[startTri] = 0;
-        
-        logger.debug("[PathFinder::findPathAStar] Начальный узел добавлен в очередь");
-
-        while (!openSet.empty()) {
-            AStarNode current = openSet.top();
-            openSet.pop();
-
-            if (current.tri == goalTri) {
-                logger.info("[PathFinder::findPathAStar] Достигнут целевой треугольник");
-                while (current.parent) {
-                    path.push_back(current.position);
-                    current = *current.parent;
-                }
-                std::reverse(path.begin(), path.end());
-                
-                if (!path.empty()) {
-                    path.insert(path.begin(), start);
-                    path.push_back(goal);
-                    
-                    logger.debug(std::string("[PathFinder::findPathAStar] Найден путь из ") + 
-                               std::to_string(path.size()) + " точек");
-                    
-                    if (!checkPathFeasibility(path, terrainGrid, binaryMap, slice, p)) {
-                        logger.warning("[PathFinder::findPathAStar] Путь непроходим");
-                        return {};
-                    }
-                    logger.info("[PathFinder::findPathAStar] Путь проходим");
-                }
-                return path;
-            }
-
-            for (const auto& neighbor : getNeighbors(*current.tri, triangles)) {
-                Edge edgeToCheck(current.position, neighbor->calculateCircumcenter());
-                
-                if (!isNavigable(edgeToCheck, terrainGrid)) {
-                    logger.trace("[PathFinder::findPathAStar] Ребро непроходимо, пропускаем");
-                    continue;
-                }
-
-                PointD neighborCenter = neighbor->calculateCircumcenter();
-                double newCost = current.g + heuristic(current.position, neighborCenter);
-
-                if (!costSoFar.count(neighbor) || newCost < costSoFar[neighbor]) {
-                    costSoFar[neighbor] = newCost;
-                    //double priority = newCost + heuristic(neighborCenter, goal); !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
-                    openSet.emplace(neighborCenter, neighbor, new AStarNode(current));
-                    
-                    logger.trace(std::string("[PathFinder::findPathAStar] Добавлен новый узел в очередь: (") +
-                               std::to_string(neighborCenter.x) + "," + 
-                               std::to_string(neighborCenter.y) + ")");
-                }
-            }
-        }
-
-        logger.warning("[PathFinder::findPathAStar] Путь не найден");
+                                 const std::vector<Triangle>& triangles,
+                                 const std::vector<std::vector<double>>& binaryMap,
+                                 double slice, const std::unique_ptr<Pole>& p) {
+    logger.info("[PathFinder::findPathAStar] Начало поиска пути");
+    
+    const Triangle* startTri = findContainingTriangle(start, triangles);
+    const Triangle* goalTri = findContainingTriangle(goal, triangles);
+    
+    if (!startTri || !goalTri) {
+        logger.error("Старт или цель вне триангуляции");
         return {};
     }
 
-    bool checkPathFeasibility(const std::vector<PointD>& path,
-                              const TerrainGrid& terrainGrid,
-                              const std::vector<std::vector<double>>& binaryMap,
-                              double slice, const std::unique_ptr<Pole>& p) const {
-        logger.info("[PathFinder::checkPathFeasibility] Проверка проходимости пути");
-        logger.debug(std::string("Сегментов пути: ") + std::to_string(path.size()-1));
+    // Проверка для точек в одном треугольнике
+    if (startTri == goalTri) {
+        Edge directEdge(start, goal);
+        if (!isEdgeNavigable(directEdge, p, binaryMap, slice)) {
+            logger.warning("Прямой путь в треугольнике непроходим");
+            return {};
+        }
+        return {start, goal};
+    }
 
-        for (size_t i = 0; i < path.size() - 1; ++i) {
-            std::ostringstream segInfo;
-            segInfo << "Сегмент " << i+1 << ": (" 
-                   << path[i].x << "," << path[i].y << ") -> (" 
-                   << path[i+1].x << "," << path[i+1].y << ")";
-            logger.trace(segInfo.str());
-            
-            const auto linePixels = bresenhamLine(path[i], path[i+1]);
-            
-            for (const auto& pixel : linePixels) {
-                auto [forwardAngle, sideAngle] = getVehicleSlopeAngles(pixel, path[i+1], terrainGrid);
-                
-                if (forwardAngle > config.maxUpDownAngle || sideAngle > config.maxSideAngle) {
-                    std::ostringstream oss;
-                    oss << "Превышены углы наклона в точке (" << pixel.x << "," << pixel.y << "):\n"
-                        << "  Уклон вперед: " << forwardAngle << "° (макс. " << config.maxUpDownAngle << "°)\n"
-                        << "  Боковой уклон: " << sideAngle << "° (макс. " << config.maxSideAngle << "°)";
-                    logger.debug(oss.str());
-                    return false;
-                }
+    // Основной алгоритм A*
+    std::priority_queue<AStarNode> openSet;
+    std::unordered_map<const Triangle*, double> costSoFar;
+    openSet.emplace(startTri->calculateCircumcenter(), startTri);
+    costSoFar[startTri] = 0;
 
-                if (!isVehicleRadiusValid(pixel, binaryMap, p, slice)) {
-                    logger.debug(std::string("Столкновение в точке (") + 
-                               std::to_string(pixel.x) + "," + 
-                               std::to_string(pixel.y) + ")");
-                    return false;
-                }
+    while (!openSet.empty()) {
+        AStarNode current = openSet.top();
+        openSet.pop();
+
+        if (current.tri == goalTri) {
+            std::vector<PointD> path = reconstructPath(current, start, goal);
+            logger.info("Путь найден. Длина: " + std::to_string(path.size()));
+            return path;
+        }
+
+        for (const auto& neighbor : getNeighbors(*current.tri, triangles)) {
+            Edge edge(current.position, neighbor->calculateCircumcenter());
+            
+            if (!isEdgeNavigable(edge, p, binaryMap, slice)) {
+                continue; // Непроходимые рёбра отсекаются
+            }
+
+            double newCost = current.g + edge.length();
+            if (!costSoFar.count(neighbor) || newCost < costSoFar[neighbor]) {
+                costSoFar[neighbor] = newCost;
+                double priority = newCost + heuristic(neighbor->calculateCircumcenter(), goal);
+                openSet.emplace(neighbor->calculateCircumcenter(), neighbor, new AStarNode(current), priority);
             }
         }
-        
-        logger.info("[PathFinder::checkPathFeasibility] Путь проходим");
-        return true;
     }
+
+    logger.warning("Путь не найден");
+    return {};
+}
 
 std::vector<PointD> bresenhamLine(const PointD& start, const PointD& end) const {
     logger.trace(std::string("[PathFinder::bresenhamLine] Построение линии от (") + 
@@ -296,8 +214,8 @@ std::vector<PointD> bresenhamLine(const PointD& start, const PointD& end) const 
                std::to_string(x0) + "," + std::to_string(y0) + ") -> (" +
                std::to_string(x1) + "," + std::to_string(y1) + ")");
 
-    int dx = abs(x1 - x0);
-    int dy = -abs(y1 - y0);
+    int dx = std::abs(x1 - x0);
+    int dy = -std::abs(y1 - y0);
     int sx = x0 < x1 ? 1 : -1;
     int sy = y0 < y1 ? 1 : -1;
     int err = dx + dy;
@@ -331,66 +249,6 @@ std::vector<PointD> bresenhamLine(const PointD& start, const PointD& end) const 
     return linePoints;
 }
 
-std::pair<double, double> getVehicleSlopeAngles(
-    const PointD& pixel, 
-    const PointD& nextPixel, 
-    const TerrainGrid& grid
-) const {
-    logger.trace(std::string("[PathFinder::getVehicleSlopeAngles] Расчет углов наклона для точки (") +
-               std::to_string(pixel.x) + "," + std::to_string(pixel.y) + ")");
-
-    if (pixel == nextPixel) {
-        logger.debug("[PathFinder::getVehicleSlopeAngles] Точки совпадают, углы = 0");
-        return {0, 0};
-    }
-
-    int x = static_cast<int>(pixel.x);
-    int y = static_cast<int>(pixel.y);
-    
-    if (x <= 0 || y <= 0 || x >= static_cast<int>(grid.cells[0].size()-1) || y >= static_cast<int>(grid.cells.size()-1)) {
-        logger.warning(std::string("[PathFinder::getVehicleSlopeAngles] Точка на границе сетки (") +
-                     std::to_string(x) + "," + std::to_string(y) + "), помечаем как непроходимую");
-        return {config.maxUpDownAngle + 1, config.maxSideAngle + 1};
-    }
-
-    PointD dir = {nextPixel.x - pixel.x, nextPixel.y - pixel.y};
-    double length = std::hypot(dir.x, dir.y);
-    
-    if (length < 1e-6) {
-        logger.debug("[PathFinder::getVehicleSlopeAngles] Нулевой вектор направления");
-        return {0, 0};
-    }
-    
-    dir.x /= length;
-    dir.y /= length;
-    logger.trace(std::string("[PathFinder::getVehicleSlopeAngles] Нормализованный вектор направления: (") +
-               std::to_string(dir.x) + "," + std::to_string(dir.y) + ")");
-
-    double z = grid.cells[y][x].height;
-    double z_right = grid.cells[y][x+1].height;
-    double z_left = grid.cells[y][x-1].height;
-    double z_top = grid.cells[y-1][x].height;
-    double z_bottom = grid.cells[y+1][x].height;
-
-    logger.trace(std::string("[PathFinder::getVehicleSlopeAngles] Высоты вокруг точки: центр=") + std::to_string(z) +
-               ", слева=" + std::to_string(z_left) + ", справа=" + std::to_string(z_right) +
-               ", сверху=" + std::to_string(z_top) + ", снизу=" + std::to_string(z_bottom));
-
-    double dzdx = (z_right - z_left) / 2.0;
-    double dzdy = (z_bottom - z_top) / 2.0;
-    logger.trace(std::string("[PathFinder::getVehicleSlopeAngles] Градиенты: dzdx=") + std::to_string(dzdx) +
-               ", dzdy=" + std::to_string(dzdy));
-
-    double forwardAngle = std::atan(dzdx * dir.x + dzdy * dir.y) * 180.0 / M_PI;
-    PointD perp = {-dir.y, dir.x};
-    double sideAngle = std::atan(dzdx * perp.x + dzdy * perp.y) * 180.0 / M_PI;
-
-    logger.debug(std::string("[PathFinder::getVehicleSlopeAngles] Результат: forward=") + std::to_string(forwardAngle) +
-               "°, side=" + std::to_string(sideAngle) + "°");
-    
-    return {std::abs(forwardAngle), std::abs(sideAngle)};
-}
-
 bool isVehicleRadiusValid(const PointD& pixel, 
                          const std::vector<std::vector<double>>& binaryMap,
                          const std::unique_ptr<Pole>& elevationData,
@@ -405,9 +263,9 @@ bool isVehicleRadiusValid(const PointD& pixel,
     logger.debug(std::string("[PathFinder::isVehicleRadiusValid] Высота в точке: ") + std::to_string(currentHeight) +
                ", уровень среза: " + std::to_string(sliceLevel));
 
-    const double heightDiff = std::abs(currentHeight - sliceLevel);
+    const double heightDiff = std::fabs(currentHeight - sliceLevel);
     if (heightDiff >= config.vehicleRadius) {
-        logger.debug(std::string("[PathFinder::isVehicleRadiusValid] Высота вне радиуса (") + 
+        logger.debug(std::string("[PathFinder::isVehicleRadiusValid] Тележка ниже среза (") + 
                    std::to_string(heightDiff) + " >= " + std::to_string(config.vehicleRadius) + 
                    "), столкновений нет");
         return true;
@@ -527,4 +385,117 @@ bool otherHasEdge(const Triangle& other, const Edge& edge) const {
     logger.trace("[PathFinder::otherHasEdge] Ребро отсутствует в треугольнике");
     return false;
 }
+
+bool isEdgeNavigable(const Edge& edge, 
+                    const std::unique_ptr<Pole>& p,
+                    const std::vector<std::vector<double>>& binaryMap,
+                    double sliceLevel) const {
+    const auto line = bresenhamLine(edge.a, edge.b);
+    const double r = config.vehicleRadius;
+    
+    // Вектор пути и ортогональный ему
+    const PointD dir = {line.back().x - line.front().x, line.back().y - line.front().y};
+    PointD perp = {-dir.y, dir.x};
+    double perpLen = std::hypot(perp.x, perp.y);
+    perp.x = perp.x / perpLen * r;
+    perp.y = perp.y / perpLen * r;
+
+    logger.debug("--- Начало проверки ребра ---");
+    logger.debug("Параметры тележки: радиус=" + std::to_string(r) + 
+                ", max_уклон=" + std::to_string(config.maxUpDownAngle) + 
+                "°, max_крен=" + std::to_string(config.maxSideAngle) + "°");
+    
+    for (size_t i = 0; i < line.size(); ++i) {
+        const PointD& center = line[i];
+        double h_center = p->field[static_cast<int>(center.y)][static_cast<int>(center.x)];
+        
+        std::ostringstream pointHeader;
+        pointHeader << "Точка [" << i << "/" << line.size()-1 << "] (" 
+                   << center.x << "," << center.y << "): "
+                   << "высота=" << h_center << ", slice=" << sliceLevel;
+        logger.trace(pointHeader.str());
+
+        // Проверка переднего колеса
+        if (i + r < line.size()) {
+            const PointD& frontWheel = line[i + static_cast<size_t>(r)];
+            double h_front = p->field[static_cast<int>(frontWheel.y)][static_cast<int>(frontWheel.x)];
+            double frontAngle = calculateWheelAngle(center, frontWheel, p);
+            
+            logger.trace("  Переднее колесо (" + 
+                        std::to_string(frontWheel.x) + "," + std::to_string(frontWheel.y) + 
+                        "): угол=" + std::to_string(frontAngle) + 
+                        "°, высота=" + std::to_string(h_front));
+            
+            if (std::fabs(frontAngle) > config.maxUpDownAngle) {
+                logger.debug("  ! ПРЕВЫШЕНИЕ: передний угол " + std::to_string(frontAngle) + 
+                           "° > допустимого " + std::to_string(config.maxUpDownAngle) + "°");
+                return false;
+            }
+        }
+
+        // Боковые колеса
+        PointD leftWheel = {std::round(center.x + perp.x), std::round(center.y + perp.y)};
+        PointD rightWheel = {std::round(center.x - perp.x), std::round(center.y - perp.y)};
+
+        double leftAngle = 0, rightAngle = 0;
+        if (leftWheel.x >= 0 && leftWheel.y >= 0 && 
+            leftWheel.x < p->field[0].size() && leftWheel.y < p->field.size()) {
+            double h_left = p->field[static_cast<int>(leftWheel.y)][static_cast<int>(leftWheel.x)];
+            leftAngle = calculateWheelAngle(center, leftWheel, p);
+            logger.trace("  Левое колесо (" + 
+                        std::to_string(leftWheel.x) + "," + std::to_string(leftWheel.y) + 
+                        "): угол=" + std::to_string(leftAngle) + 
+                        "°, высота=" + std::to_string(h_left));
+        }
+
+        if (rightWheel.x >= 0 && rightWheel.y >= 0 && 
+            rightWheel.x < p->field[0].size() && rightWheel.y < p->field.size()) {
+            double h_right = p->field[static_cast<int>(rightWheel.y)][static_cast<int>(rightWheel.x)];
+            rightAngle = calculateWheelAngle(center, rightWheel, p);
+            logger.trace("  Правое колесо (" + 
+                        std::to_string(rightWheel.x) + "," + std::to_string(rightWheel.y) + 
+                        "): угол=" + std::to_string(rightAngle) + 
+                        "°, высота=" + std::to_string(h_right));
+        }
+
+        if (std::fabs(leftAngle) > config.maxSideAngle || 
+            std::fabs(rightAngle) > config.maxSideAngle) {
+            logger.debug("  ! ПРЕВЫШЕНИЕ: боковые углы L=" + std::to_string(leftAngle) + 
+                       "° R=" + std::to_string(rightAngle) + 
+                       " > допустимого " + std::to_string(config.maxSideAngle) + "°");
+            return false;
+        }
+
+        // Проверка коллизий
+        bool collisionCheck = isVehicleRadiusValid(center, binaryMap, p, sliceLevel);
+        logger.trace("  Коллизия: " + std::string(collisionCheck ? "нет" : "есть"));
+        
+        if (!collisionCheck) {
+            logger.debug("  ! СТОЛКНОВЕНИЕ в точке (" + 
+                       std::to_string(center.x) + "," + std::to_string(center.y) + ")");
+            return false;
+        }
+    }
+    
+    logger.debug("--- Ребро проходимо ---");
+    return true;
+}
+
+double calculateWheelAngle(const PointD& center, 
+                          const PointD& wheel,
+                          const std::unique_ptr<Pole>& p) const {
+    // Получаем высоты в точках
+    double h_center = p->field[static_cast<int>(center.y)][static_cast<int>(center.x)];
+    double h_wheel = p->field[static_cast<int>(wheel.y)][static_cast<int>(wheel.x)];
+    
+    if (wheel.x < 0 || wheel.y < 0 || 
+    wheel.x >= p->field[0].size() || 
+    wheel.y >= p->field.size()) {
+    return std::numeric_limits<double>::max(); // Помечаем как непроходимое
+}
+    // Расчет угла в градусах
+    return std::atan2(h_wheel - h_center, 
+                     std::hypot(wheel.x - center.x, wheel.y - center.y)) * 180.0 / M_PI;
+}
+
 };
