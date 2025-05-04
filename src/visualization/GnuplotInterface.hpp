@@ -346,7 +346,7 @@ void plotPath(const std::vector<PointD>& path,
         const int x = static_cast<int>(pixel.x);
         const int y = static_cast<int>(pixel.y);
         const double currentHeight = p->field[y][x];
-        const double heightDiff = std::abs(currentHeight - params.slice);
+        const double heightDiff = std::abs(currentHeight - params.threshold);
         
         if (heightDiff < Radius) {
             const double radius = std::sqrt(
@@ -361,9 +361,9 @@ void plotPath(const std::vector<PointD>& path,
     
     // 3. Подписи START/END
     fprintf(gnuplotPipe, "set label 'START' at %d,%d front\n", 
-            static_cast<int>(params.pointA_x), static_cast<int>(transformY(params.pointA_y, height)));
+            static_cast<int>(params.startPointX), static_cast<int>(transformY(params.startPointY, height)));
     fprintf(gnuplotPipe, "set label 'END' at %d,%d front\n",
-            static_cast<int>(params.pointB_x), static_cast<int>(transformY(params.pointB_y, height)));
+            static_cast<int>(params.endPointX), static_cast<int>(transformY(params.endPointY, height)));
     
     // Многослойный график: фон + путь + точки
     fprintf(gnuplotPipe, "plot '-' matrix with image, \\\n");
@@ -390,14 +390,14 @@ void plotPath(const std::vector<PointD>& path,
 
     // 6. Точка A (синяя)
     fprintf(gnuplotPipe, "%f %f\n", 
-            params.pointA_x, 
-            transformY(params.pointA_y, height));
+            params.startPointX, 
+            transformY(params.startPointY, height));
     fprintf(gnuplotPipe, "e\n");
 
     // 7. Точка B (фиолетовая)
     fprintf(gnuplotPipe, "%f %f\n", 
-            params.pointB_x, 
-            transformY(params.pointB_y, height));
+            params.endPointX, 
+            transformY(params.endPointY, height));
     fprintf(gnuplotPipe, "e\n");
 
     pclose(gnuplotPipe);
