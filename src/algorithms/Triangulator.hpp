@@ -2,7 +2,6 @@
 #include <vector>
 #include <algorithm> // для std::remove_if, std::find, std::all_of
 #include <cmath> // для std::isnan, std::sqrt
-#include <numeric> // для std::iota
 #include <string>
 #include <sstream>
 #include <limits> // для std::numeric_limits
@@ -10,7 +9,6 @@
 // Локальные заголовки
 #include "core/Logger.hpp"
 #include "core/Geometry.hpp" // для PointD, Triangle, Edge
-#include "core/Pole.hpp" // для std::unique_ptr<Pole>
 
 class Triangulator {
 private:
