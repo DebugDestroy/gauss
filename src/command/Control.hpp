@@ -134,85 +134,85 @@ public:
     }
     
     void Dispetcher(DispatcherParams& params) {     
-            logger.logMessage(LogLevel::Info, std::string("Processing command: ") + params.s);
+            logger.logMessage(LogLevel::Info, std::string("Processing command: ") + params.command);
                
-        if (params.s == "init") {
-            gaussBuilder.init(params.A, params.B, p);
-            logOperation(LogLevel::Info, std::string("init"), std::string("size: ") + std::to_string(params.A) + "x" + std::to_string(params.B));
+        if (params.command == "init") {
+            gaussBuilder.init(params.fieldWidth, params.fieldHeight, p);
+            logOperation(LogLevel::Info, std::string("init"), std::string("size: ") + std::to_string(params.fieldWidth) + "x" + std::to_string(params.fieldHeight));
         }
 
-        if (params.s == "g") {
-            gaussBuilder.addgauss(params.h, params.x, params.y, params.sx, params.sy, gaussi);
+        if (params.command == "g") {
+            gaussBuilder.addgauss(params.height, params.centerX, params.centerY, params.sigmaX, params.sigmaY, gaussi);
             logOperation(LogLevel::Info, std::string("addgauss"), 
-                std::string("x=") + std::to_string(params.x) + 
-                ", y=" + std::to_string(params.y) + 
-                ", h=" + std::to_string(params.h));
+                std::string("x=") + std::to_string(params.centerX) + 
+                ", y=" + std::to_string(params.centerY) + 
+                ", h=" + std::to_string(params.height));
         }
         
-        if (params.s == "generate") {
+        if (params.command == "generate") {
             gaussBuilder.generate(p, gaussi);
             logOperation(LogLevel::Info, std::string("generate"));
         }
         
-        if (params.s == "gnuplot") {
+        if (params.command == "gnuplot") {
             gnuplotInterface.gnuplot(p, params.filename);
             logOperation(LogLevel::Info, std::string("gnuplot"), std::string("file: ") + params.filename);
         }
 
-        if (params.s == "PlotMetedata") {
+        if (params.command == "PlotMetedata") {
             gnuplotInterface.plotBinaryWithComponents(CopyPole, componenti, params.filename);
             logOperation(LogLevel::Info, std::string("PlotMetedata"), std::string("file: ") + params.filename);
         }
         
-        if (params.s == "PlotVoronoi") {
+        if (params.command == "PlotVoronoi") {
             gnuplotInterface.plotVoronoi(p, voronoiEdges, clusterCenters, params.filename);
             logOperation(LogLevel::Info, std::string("PlotVoronoi"), std::string("file: ") + params.filename);
         }
         
-        if (params.s == "PlotDelaunay") {
+        if (params.command == "PlotDelaunay") {
             gnuplotInterface.plotDelaunay(lastTriangulation, p, params.filename);
             logOperation(LogLevel::Info, std::string("PlotDelaunay"), std::string("file: ") + params.filename);
         }
         
-        if (params.s == "PlotPath") {
+        if (params.command == "PlotPath") {
             gnuplotInterface.plotPath(path, p, params.filename, params, pathFinder, config.vehicleRadius);
             logOperation(LogLevel::Info, std::string("PlotPath"), std::string("file: ") + params.filename);
         }
 
-        if (params.s == "bmp_write") {
-            if (params.bmp_mode == BmpWriteMode::Full) {
+        if (params.command == "bmp_write") {
+            if (params.bmpWriteMode == BmpWriteMode::Full) {
                 bmpHandler.bmp_write(p->field, params.filename);
             } else {
                 bmpHandler.bmp_write(CopyPole, params.filename);
             }
             logOperation(LogLevel::Info, std::string("bmp_write"), 
-                std::string("mode: ") + std::string(params.bmp_mode == BmpWriteMode::Full ? "full" : "binary") +
+                std::string("mode: ") + std::string(params.bmpWriteMode == BmpWriteMode::Full ? "full" : "binary") +
                 ", file: " + params.filename);
         }
 
-        if (params.s == "bmp_read") {
+        if (params.command == "bmp_read") {
             bmpHandler.bmp_read(gaussBuilder, params.filename, CopyPole, p);
             logOperation(LogLevel::Info, std::string("bmp_read"), std::string("file: ") + params.filename);
         }
 
-        if (params.s == "bin") {
-            componentCalculator.bin(CopyPole, params.slice, p, params.bin_mode);
+        if (params.command == "bin") {
+            componentCalculator.bin(CopyPole, params.threshold, p, params.thresholdMode);
             logOperation(LogLevel::Info, std::string("bin"), 
-                std::string("slice=") + std::to_string(params.slice) + 
-                ", mode=" + (params.bin_mode == ThresholdMode::Peaks ? "peaks" : 
-                            params.bin_mode == ThresholdMode::Valleys ? "valleys" : "all"));
+                std::string("threshold=") + std::to_string(params.threshold) + 
+                ", mode=" + (params.thresholdMode == ThresholdMode::Peaks ? "peaks" : 
+                            params.thresholdMode == ThresholdMode::Valleys ? "valleys" : "all"));
         }
         
-        if (params.s == "wave") {
-            componentCalculator.wave(params.noisy, componenti, CopyPole, p);
+        if (params.command == "wave") {
+            componentCalculator.wave(params.noiseLevel, componenti, CopyPole, p);
             logOperation(LogLevel::Info, std::string("wave"), 
-                std::string("noisy=") + std::to_string(params.noisy) + 
+                std::string("noiseLevel=") + std::to_string(params.noiseLevel) + 
                 ", components=" + std::to_string(componenti.size()));
             copier.removeNoise(CopyPole, componenti);
         }
          
-        if (params.s == "k_means") {
-            if (params.k <= 0 || p == nullptr) {
+        if (params.command == "k_means") {
+            if (params.clusterCount <= 0 || p == nullptr) {
                 logger.logMessage(LogLevel::Error, "Invalid parameters for k_means");
                 return;
             }
@@ -224,13 +224,13 @@ public:
                 return;
             }
 
-            auto result = kMeans->cluster(kMeansData, params.k);
+            auto result = kMeans->cluster(kMeansData, params.clusterCount);
             applyClusterResults(result, CopyPole);
-            logOperation(LogLevel::Info, std::string("k_means"), std::string("k=") + std::to_string(params.k));
+            logOperation(LogLevel::Info, std::string("k_means"), std::string("clusterCount=") + std::to_string(params.clusterCount));
         }
         
-        if (params.s == "k_means_kern") {
-            if (!kMeans || params.k <= 0 || params.kk <= 0 || p == nullptr) {
+        if (params.command == "k_means_kern") {
+            if (!kMeans || params.clusterCount <= 0 || params.kernelSize <= 0 || p == nullptr) {
                 logger.logMessage(LogLevel::Error, "Invalid parameters for k_means_kern");
                 return;
             }
@@ -242,14 +242,14 @@ public:
                 return;
             }
 
-            auto result = kMeans->kmeansWithKernels(kMeansData, params.k, params.kk);
+            auto result = kMeans->kmeansWithKernels(kMeansData, params.clusterCount, params.kernelSize);
             applyClusterResults(result, CopyPole);
             logOperation(LogLevel::Info, std::string("k_means_kern"), 
-                std::string("k=") + std::to_string(params.k) + 
-                ", kk=" + std::to_string(params.kk));
+                std::string("clusterCount=") + std::to_string(params.clusterCount) + 
+                ", kernelSize=" + std::to_string(params.kernelSize));
         }
         
-        if (params.s == "triangulate") {
+        if (params.command == "triangulate") {
             clusterCenters = getClusterCenters();     
             lastTriangulation = triangulator.bowyerWatson(clusterCenters);
             voronoi.buildFromDelaunay(lastTriangulation, pathFinder, p, voronoiEdges);
@@ -258,14 +258,14 @@ public:
                 ", triangles=" + std::to_string(lastTriangulation.size()));
         }
 
-        if (params.s == "find_path") {
+        if (params.command == "find_path") {
             if (!p) {
                 logger.logMessage(LogLevel::Error, "Pole not initialized for find_path");
                 return;
             }
             
-            PointD start(params.pointA_x, params.pointA_y);
-            PointD goal(params.pointB_x, params.pointB_y);
+            PointD start(params.startPointX, params.startPointY);
+            PointD goal(params.endPointX, params.endPointY);
             
             if (lastTriangulation.empty()) {
                 logger.logMessage(LogLevel::Error, "No triangulation for find_path");
@@ -273,7 +273,7 @@ public:
             }
             
             copier.removeNoise(CopyPole, componenti);
-            path = pathFinder.findPathAStar(start, goal, lastTriangulation, CopyPole, params.slice, p);
+            path = pathFinder.findPathAStar(start, goal, lastTriangulation, CopyPole, params.threshold, p);
             
             if (path.empty()) {
                 logger.logMessage(LogLevel::Warning, "Path not found");
@@ -285,16 +285,16 @@ public:
             }
         }
         
-        if (params.s == "Plot3DPath") {
-            PointD start(params.pointA_x, params.pointA_y);
-            PointD end(params.pointB_x, params.pointB_y);
+        if (params.command == "Plot3DPath") {
+            PointD start(params.startPointX, params.startPointY);
+            PointD end(params.endPointX, params.endPointY);
             gnuplotInterface.plot3DPath(path, p, params.filename, start, end, pathFinder, config.vehicleRadius);
             logOperation(LogLevel::Info, std::string("Plot3DPath"), std::string("file: ") + params.filename);
         }
         
-        if (params.s == "plotInteractive3DPath") {
-            PointD start(params.pointA_x, params.pointA_y);
-            PointD end(params.pointB_x, params.pointB_y);
+        if (params.command == "plotInteractive3DPath") {
+            PointD start(params.startPointX, params.startPointY);
+            PointD end(params.endPointX, params.endPointY);
             gnuplotInterface.plotInteractive3DPath(path, p, start, end, pathFinder, config.vehicleRadius);
             logOperation(LogLevel::Info, std::string("plotInteractive3DPath"));
         }

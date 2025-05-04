@@ -254,16 +254,16 @@ FiltrationLogLevelControl INFO
     void processFileCommands(std::ifstream& file) {
         int commandCount = 0;
         
-        while (file >> params.s) {
+        while (file >> params.command) {
             commandCount++;
-            logger.info(std::string("Processing command #") + std::to_string(commandCount) + ": " + params.s);
+            logger.info(std::string("Processing command #") + std::to_string(commandCount) + ": " + params.command);
             
-            if (params.s == "help") {
+            if (params.command == "help") {
                 showHelp();
                 continue;
             }
             
-            if (params.s == "end") {
+            if (params.command == "end") {
                 logger.info("Ending the program.");
                 break;
             }
@@ -281,16 +281,16 @@ FiltrationLogLevelControl INFO
             const std::string commandshow = R"(Enter the command and its parameters immediately (help, init, g, generate, gnuplot, bmp_write, bmp_read, bin, wave,
              PlotMetedata, PlotVoronoi, PlotDelaunay, PlotPath, k_means, k_means_kern, triangulate, find_path, Plot3DPath, plotInteractive3DPath, end):)";
             std::cout << commandshow;
-            std::cin >> params.s;
+            std::cin >> params.command;
             std::cout << "\n";
-            logger.info(std::string("Received command: ") + params.s);
+            logger.info(std::string("Received command: ") + params.command);
             
-            if (params.s == "help") {
+            if (params.command == "help") {
                 showHelp();
                 continue;
             }
             
-            if (params.s == "end") {
+            if (params.command == "end") {
                 std::cout << "Ending the program" << std::endl;
                 logger.info("Ending the program.");
                 break;
@@ -308,14 +308,14 @@ FiltrationLogLevelControl INFO
     std::string showInfo;
     std::string modeWrite, modeBin;
     
-    if (params.s == "init") {
+    if (params.command == "init") {
         if (n != 0) {
             std::cout << "The init command has already been called.\nError\n";
             logger.error("Error: Multiple init commands.");
             return false;
         }
         n = 1;
-        showInfo = std::string("Initializing field with size: ") + std::to_string(params.A) + " x " + std::to_string(params.B);
+        showInfo = std::string("Initializing field with size: ") + std::to_string(params.fieldWidth) + " x " + std::to_string(params.fieldHeight);
         
         if (fromKeyboard) {
             std::cout << "\n";
@@ -331,22 +331,22 @@ FiltrationLogLevelControl INFO
         logger.error("Error: The init command was not used.");
         return false;
     }
-    else if (params.s == "g") {      
-        params.x = config.defaultX;
-        params.y = config.defaultY;
-        params.sx = config.defaultSx;
-        params.sy = config.defaultSy;
-        params.h = config.defaultH;
+    else if (params.command == "g") {      
+        params.centerX = config.defaultX;
+        params.centerY = config.defaultY;
+        params.sigmaX = config.defaultSx;
+        params.sigmaY = config.defaultSy;
+        params.height = config.defaultH;
 
             std::getline(input, line);
             std::istringstream iss(line);
-            iss >> params.x >> params.y >> params.sx >> params.sy >> params.h;
+            iss >> params.centerX >> params.centerY >> params.sigmaX >> params.sigmaY >> params.height;
       
-         showInfo = std::string("Adding Gaussian: x=") + std::to_string(params.x) + 
-                  ", y=" + std::to_string(params.y) + 
-                  ", sx=" + std::to_string(params.sx) + 
-                  ", sy=" + std::to_string(params.sy) + 
-                  ", h=" + std::to_string(params.h);
+         showInfo = std::string("Adding Gaussian: x=") + std::to_string(params.centerX) + 
+                  ", y=" + std::to_string(params.centerY) + 
+                  ", sx=" + std::to_string(params.sigmaX) + 
+                  ", sy=" + std::to_string(params.sigmaY) + 
+                  ", h=" + std::to_string(params.height);
                   
          if (fromKeyboard) {
             std::cout << "\n";
@@ -355,7 +355,7 @@ FiltrationLogLevelControl INFO
         logger.info(showInfo);
         control.Dispetcher(params);
     }
-    else if (params.s == "generate") {
+    else if (params.command == "generate") {
         showInfo = "Generating field by summing all Gaussians";
         logger.info(showInfo);
         control.Dispetcher(params);
@@ -365,7 +365,7 @@ FiltrationLogLevelControl INFO
          }
         logger.info("Field generation completed");
     }
-    else if (params.s == "gnuplot") {
+    else if (params.command == "gnuplot") {
         params.filename = config.defaultGnuplot;
 
             std::getline(input, line);
@@ -383,7 +383,7 @@ FiltrationLogLevelControl INFO
         control.Dispetcher(params);
         logger.info("Gnuplot visualization completed");
     }
-    else if (params.s == "PlotMetedata") {
+    else if (params.command == "PlotMetedata") {
         params.filename = config.defaultPlotMetedata;
         
             std::getline(input, line);
@@ -401,7 +401,7 @@ FiltrationLogLevelControl INFO
         control.Dispetcher(params);
         logger.info("Metadata plotting completed");
     }
-    else if (params.s == "PlotVoronoi") {
+    else if (params.command == "PlotVoronoi") {
         params.filename = config.defaultPlotVoronoi;
         
             std::getline(input, line);
@@ -419,7 +419,7 @@ FiltrationLogLevelControl INFO
         control.Dispetcher(params);
         logger.info("Voronoi diagram plotting completed");
     }
-    else if (params.s == "PlotDelaunay") {
+    else if (params.command == "PlotDelaunay") {
         params.filename = config.defaultPlotDelaunay;
         
             std::getline(input, line);
@@ -437,7 +437,7 @@ FiltrationLogLevelControl INFO
         control.Dispetcher(params);
         logger.info("Delaunay triangulation plotting completed");
     }
-    else if (params.s == "PlotPath") {
+    else if (params.command == "PlotPath") {
         params.filename = config.defaultPlotPath;
         
             std::getline(input, line);
@@ -455,7 +455,7 @@ FiltrationLogLevelControl INFO
         control.Dispetcher(params);
         logger.info("Path plotting completed");
     }
-    else if (params.s == "bmp_write") {
+    else if (params.command == "bmp_write") {
         params.filename = config.defaultWrite;
         modeWrite = config.defaultWriteModeImage;
         
@@ -464,9 +464,9 @@ FiltrationLogLevelControl INFO
             iss >> params.filename >> modeWrite;
          
         if (modeWrite == "Full") {
-            params.bmp_mode = BmpWriteMode::Full;
+            params.bmpWriteMode = BmpWriteMode::Full;
         } else {
-            params.bmp_mode = BmpWriteMode::Binary;
+            params.bmpWriteMode = BmpWriteMode::Binary;
         }
                     
         showInfo = std::string("Writing BMP file: ") + params.filename + " with mode: " + modeWrite;
@@ -480,7 +480,7 @@ FiltrationLogLevelControl INFO
         control.Dispetcher(params);
         logger.info("BMP writing completed");
     }
-    else if (params.s == "bmp_read") {
+    else if (params.command == "bmp_read") {
         params.filename = config.defaultRead;
         
             std::getline(input, line);
@@ -498,23 +498,23 @@ FiltrationLogLevelControl INFO
         control.Dispetcher(params);
         logger.info("BMP reading completed");
     }
-    else if (params.s == "bin") {
-        params.slice = config.defaultSlice;
+    else if (params.command == "bin") {
+        params.threshold = config.defaultSlice;
         modeBin = config.defaultBinMode;
         
             std::getline(input, line);
             std::istringstream iss(line);
-            iss >> params.slice >> modeBin;
+            iss >> params.threshold >> modeBin;
 
         if (modeBin == "Peaks") {
-            params.bin_mode = ThresholdMode::Peaks;
+            params.thresholdMode = ThresholdMode::Peaks;
         } else if (modeBin == "Valleys") {
-            params.bin_mode = ThresholdMode::Valleys;
+            params.thresholdMode = ThresholdMode::Valleys;
         } else {
-            params.bin_mode = ThresholdMode::All;
+            params.thresholdMode = ThresholdMode::All;
         }
                   
-        showInfo = std::string("Applying binary filter with slice: ") + std::to_string(params.slice) + " and mode: " + modeBin;
+        showInfo = std::string("Applying binary filter with slice: ") + std::to_string(params.threshold) + " and mode: " + modeBin;
             
             if (fromKeyboard) {
             std::cout << "\n";
@@ -525,14 +525,14 @@ FiltrationLogLevelControl INFO
         control.Dispetcher(params);
         logger.info("Binary filtering completed");
     }
-    else if (params.s == "wave") {
-        params.noisy = config.defaultNoisy;
+    else if (params.command == "wave") {
+        params.noiseLevel = config.defaultNoisy;
         
             std::getline(input, line);
             std::istringstream iss(line);
-            iss >> params.noisy;
+            iss >> params.noiseLevel;
                   
-        showInfo = std::string("Applying wave filter with noisy level: ") + std::to_string(params.noisy);
+        showInfo = std::string("Applying wave filter with noisy level: ") + std::to_string(params.noiseLevel);
             
             if (fromKeyboard) {
             std::cout << "\n";
@@ -544,14 +544,14 @@ FiltrationLogLevelControl INFO
         logger.info(std::string("Wave filtering completed. Components count: ") + 
                    std::to_string(control.componenti.size()));
     }
-    else if (params.s == "k_means") {
-        params.k = config.defaultKlaster;
+    else if (params.command == "k_means") {
+        params.clusterCount = config.defaultKlaster;
         
             std::getline(input, line);
             std::istringstream iss(line);
-            iss >> params.k;
+            iss >> params.clusterCount;
                   
-        showInfo = std::string("Running k-means with k: ") + std::to_string(params.k);
+        showInfo = std::string("Running k-means with k: ") + std::to_string(params.clusterCount);
             
             if (fromKeyboard) {
             std::cout << "\n";
@@ -562,14 +562,14 @@ FiltrationLogLevelControl INFO
         control.Dispetcher(params);
         logger.info("k-means clustering completed");
     }
-    else if (params.s == "k_means_kern") {
-        params.kk = config.defaultKlasterKern;
+    else if (params.command == "k_means_kern") {
+        params.kernelSize = config.defaultKlasterKern;
         
             std::getline(input, line);
             std::istringstream iss(line);
-            iss >> params.kk;
+            iss >> params.kernelSize;
                   
-        showInfo = std::string("Running k-means with kernel size: ") + std::to_string(params.kk);
+        showInfo = std::string("Running k-means with kernel size: ") + std::to_string(params.kernelSize);
             
             if (fromKeyboard) {
             std::cout << "\n";
@@ -580,7 +580,7 @@ FiltrationLogLevelControl INFO
         control.Dispetcher(params);
         logger.info("k-means with kernels completed");
     }
-    else if (params.s == "triangulate") {              
+    else if (params.command == "triangulate") {              
         showInfo = "Starting Delaunay triangulation";
             
             if (fromKeyboard) {
@@ -592,20 +592,20 @@ FiltrationLogLevelControl INFO
         control.Dispetcher(params);
         logger.info("Delaunay triangulation completed");
     }
-    else if (params.s == "find_path") {
-        params.pointA_x = config.defaultpointA_x;
-        params.pointA_y = config.defaultpointA_y;
-        params.pointB_x = config.defaultpointB_x;
-        params.pointB_y = config.defaultpointB_y;
+    else if (params.command == "find_path") {
+        params.startPointX = config.defaultstartPointX;
+        params.startPointY = config.defaultstartPointY;
+        params.endPointX = config.defaultendPointX;
+        params.endPointY = config.defaultendPointY;
         
             std::getline(input, line);
             std::istringstream iss(line);
-            iss >> params.pointA_x >> params.pointA_y >> params.pointB_x >> params.pointB_y;
+            iss >> params.startPointX >> params.startPointY >> params.endPointX >> params.endPointY;
             
-        showInfo = std::string("Finding path from (") + std::to_string(params.pointA_x) + "," + 
-                   std::to_string(params.pointA_y) + ") to (" + 
-                   std::to_string(params.pointB_x) + "," + 
-                   std::to_string(params.pointB_y) + ")";
+        showInfo = std::string("Finding path from (") + std::to_string(params.startPointX) + "," + 
+                   std::to_string(params.startPointY) + ") to (" + 
+                   std::to_string(params.endPointX) + "," + 
+                   std::to_string(params.endPointY) + ")";
             
             if (fromKeyboard) {
             std::cout << "\n";
@@ -616,7 +616,7 @@ FiltrationLogLevelControl INFO
         control.Dispetcher(params);
         logger.info("Path finding completed");
     }
-    else if (params.s == "Plot3DPath") {
+    else if (params.command == "Plot3DPath") {
         params.filename = config.defaultPlot3DPath;
         
             std::getline(input, line);
@@ -634,7 +634,7 @@ FiltrationLogLevelControl INFO
         control.Dispetcher(params);
         logger.info("3D path plotting completed");
     }
-    else if (params.s == "plotInteractive3DPath") {
+    else if (params.command == "plotInteractive3DPath") {
         showInfo = "Starting interactive 3D path visualization";
         
         if (fromKeyboard) {
@@ -647,8 +647,8 @@ FiltrationLogLevelControl INFO
         logger.info("Interactive 3D visualization completed");
     }
     else {
-        std::cout << "Unknown command: " << params.s << std::endl;
-        logger.warning(std::string("Unknown command received: ") + params.s);
+        std::cout << "Unknown command: " << params.command << std::endl;
+        logger.warning(std::string("Unknown command received: ") + params.command);
         return false;
     }
     
@@ -662,8 +662,8 @@ public:
         logger.debug(std::string("Field dimensions: ") + std::to_string(config.fieldWidth) + 
                    "x" + std::to_string(config.fieldHeight));
         
-        params.A = config.fieldWidth;
-        params.B = config.fieldHeight;
+        params.fieldWidth = config.fieldWidth;
+        params.fieldHeight = config.fieldHeight;
     }
     
     void print() {

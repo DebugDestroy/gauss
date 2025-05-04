@@ -14,7 +14,7 @@ public:
     std::string defaultHelp;
     std::string defaultGnuplot, defaultPlotMetedata, defaultPlotVoronoi, defaultPlotDelaunay, defaultPlotPath, defaultWrite, defaultRead, defaultWriteModeImage, defaultBinMode, defaultPlot3DPath;
     int defaultSlice, defaultNoisy, defaultKlaster, defaultKlasterKern;
-    double defaultpointA_x, defaultpointA_y, defaultpointB_x, defaultpointB_y;
+    double defaultstartPointX, defaultstartPointY, defaultendPointX, defaultendPointY;
     double vehicleRadius, maxSideAngle, maxUpDownAngle;
 
     Config(const std::string& filename) {
@@ -52,10 +52,10 @@ while (configFile >> key) { // Считываем ключи
     else if (key == "logFileNameControl") configFile >> logFileNameControl;
     else if (key == "FiltrationLogLevelInterface") configFile >> FiltrationLogLevelInterface;
     else if (key == "FiltrationLogLevelControl") configFile >> FiltrationLogLevelControl;
-    else if (key == "defaultpointA_x") configFile >> defaultpointA_x;
-    else if (key == "defaultpointA_y") configFile >> defaultpointA_y;
-    else if (key == "defaultpointB_x") configFile >> defaultpointB_x;
-    else if (key == "defaultpointB_y") configFile >> defaultpointB_y;
+    else if (key == "defaultstartPointX") configFile >> defaultstartPointX;
+    else if (key == "defaultstartPointY") configFile >> defaultstartPointY;
+    else if (key == "defaultendPointX") configFile >> defaultendPointX;
+    else if (key == "defaultendPointY") configFile >> defaultendPointY;
     else if (key == "vehicleRadius") configFile >> vehicleRadius;    
     else if (key == "maxSideAngle") configFile >> maxSideAngle;
     else if (key == "maxUpDownAngle") configFile >> maxUpDownAngle;
