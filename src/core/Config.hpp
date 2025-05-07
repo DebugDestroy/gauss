@@ -7,13 +7,13 @@
 class Config {
 public:
     int fieldWidth, fieldHeight;
-    double defaultX, defaultY, defaultSx, defaultSy, defaultH;
+    double defaultCenterX, defaultCenterY, defaultSigmaX, defaultSigmaY, defaultHeight;
     std::string FiltrationLogLevelInterface, FiltrationLogLevelControl;
     std::string logFileNameInterface;
     std::string logFileNameControl;
     std::string defaultHelp;
     std::string defaultGnuplot, defaultPlotMetedata, defaultPlotVoronoi, defaultPlotDelaunay, defaultPlotPath, defaultWrite, defaultRead, defaultWriteModeImage, defaultBinMode, defaultPlot3DPath;
-    int defaultSlice, defaultNoisy, defaultKlaster, defaultKlasterKern;
+    int defaultThreshold, defaultNoisy, defaultKlaster, defaultKlasterKern;
     double defaultstartPointX, defaultstartPointY, defaultendPointX, defaultendPointY;
     double vehicleRadius, maxSideAngle, maxUpDownAngle;
 
@@ -29,11 +29,11 @@ public:
 while (configFile >> key) { // Считываем ключи
     if (key == "fieldWidth") configFile >> fieldWidth;
     else if (key == "fieldHeight") configFile >> fieldHeight;
-    else if (key == "defaultX") configFile >> defaultX;
-    else if (key == "defaultY") configFile >> defaultY;
-    else if (key == "defaultSx") configFile >> defaultSx;
-    else if (key == "defaultSy") configFile >> defaultSy;
-    else if (key == "defaultH") configFile >> defaultH;  
+    else if (key == "defaultCenterX") configFile >> defaultCenterX;
+    else if (key == "defaultCenterY") configFile >> defaultCenterY;
+    else if (key == "defaultSigmaX") configFile >> defaultSigmaX;
+    else if (key == "defaultSigmaY") configFile >> defaultSigmaY;
+    else if (key == "defaultHeight") configFile >> defaultHeight;  
     else if (key == "defaultGnuplot") configFile >> defaultGnuplot;  
     else if (key == "defaultPlotMetedata") configFile >> defaultPlotMetedata;
     else if (key == "defaultPlotVoronoi") configFile >> defaultPlotVoronoi;
@@ -42,7 +42,7 @@ while (configFile >> key) { // Считываем ключи
     else if (key == "defaultWrite") configFile >> defaultWrite;
     else if (key == "defaultWriteModeImage") configFile >> defaultWriteModeImage;
     else if (key == "defaultRead") configFile >> defaultRead;
-    else if (key == "defaultSlice") configFile >> defaultSlice;
+    else if (key == "defaultThreshold") configFile >> defaultThreshold;
     else if (key == "defaultBinMode") configFile >> defaultBinMode;
     else if (key == "defaultNoisy") configFile >> defaultNoisy;
     else if (key == "defaultKlaster") configFile >> defaultKlaster;

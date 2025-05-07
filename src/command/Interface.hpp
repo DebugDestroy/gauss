@@ -101,11 +101,11 @@ cmake --build . --parallel $(nproc)
 |------------------------------|------------------------------------------------|----------------------------------------------------------------------------------|
 | fieldWidth                   | `fieldWidth`                                   | Ширина рабочего поля в пикселях                                                  |  
 | fieldHeight                  | `fieldHeight`                                  | Высота рабочего поля в пикселях                                                  |
-| defaultX                     | `defaultX`                                     | Стандартная X-координата центра гауссова распределения по умолчанию              |
-| defaultY                     | `defaultY`                                     | Стандартная Y-координата центра гауссова распределения по умолчанию              |
-| defaultSx                    | `defaultSx`                                    | Стандартное отклонение по оси X по умолчанию                                     |
-| defaultSy                    | `defaultSy`                                    | Стандартное отклонение по оси Y по умолчанию                                     |
-| defaultH                     | `defaultH`                                     | Стандартная высота гауссова распределения по умолчанию                           |
+| defaultCenterX               | `defaultCenterX`                               | Стандартная X-координата центра гауссова распределения по умолчанию              |
+| defaultCenterY               | `defaultCenterY`                               | Стандартная Y-координата центра гауссова распределения по умолчанию              |
+| defaultSigmaX                | `defaultSigmaX`                                | Стандартное отклонение по оси X по умолчанию                                     |
+| defaultSigmaY                | `defaultSigmaY`                                | Стандартное отклонение по оси Y по умолчанию                                     |
+| defaultHeight                | `defaultHeight`                                | Стандартная высота гауссова распределения по умолчанию                           |
 | defaultGnuplot               | `filename_gnuplot.png`                         | Путь к файлу для сохранения 3D-визуализации по умолчанию                         |
 | defaultPlotMetedata          | `filename_metadata.png`                        | Путь к файлу для визуализации метаданных компонент по умолчанию                  |
 | defaultPlotVoronoi           | `filename_voronoi.png`                         | Путь к файлу для диаграммы Вороного по умолчанию                                 |
@@ -114,7 +114,7 @@ cmake --build . --parallel $(nproc)
 | defaultWrite                 | `filename_write.bmp`                           | Путь к файлу для сохранения BMP-изображения по умолчанию                         |
 | defaultWriteModeImage        | `writeMode`                                    | Режим сохранения BMP (Full/Binary) по умолчанию                                  |
 | defaultRead                  | `filename_read.bmp`                            | Путь к файлу для загрузки BMP-изображения по умолчанию                           |
-| defaultSlice                 | `defaultSlice`                                 | Порог бинаризации по умолчанию                                                   |
+| defaultThreshold             | `defaultThreshold`                             | Порог бинаризации по умолчанию                                                   |
 | defaultBinMode               | `binMode`                                      | Режим бинаризации (Peaks/Valleys/All) по умолчанию                               |
 | defaultNoisy                 | `defaultNoisy`                                 | Порог для удаления шумовых компонент по умолчанию                                |
 | defaultKlaster               | `defaultKlaster`                               | Количество кластеров для k-mean по умолчанию                                     |
@@ -200,11 +200,11 @@ end
 ```
 fieldWidth 250
 fieldHeight 250
-defaultX 50.0
-defaultY 50.0
-defaultSx 20.0
-defaultSy 20.0
-defaultH 200.0
+defaultCenterX 50.0
+defaultCenterY 50.0
+defaultSigmaX 20.0
+defaultSigmaY 20.0
+defaultHeight 200.0
 defaultGnuplot results/visualizations/Gnuplot.png
 defaultPlotMetedata results/visualizations/Metadata.png
 defaultPlotVoronoi results/visualizations/Voronoi.png
@@ -213,17 +213,17 @@ defaultPlotPath results/visualizations/Path.png
 defaultWrite results/visualizations/Write.bmp 
 defaultWriteModeImage Full
 defaultRead results/visualizations/Read.bmp
-defaultSlice 127
+defaultThreshold 130
 defaultBinMode All
 defaultNoisy 10
 defaultKlaster 5
 defaultKlasterKern 5
-defaultpointA_x 150.0
-defaultpointA_y 150.0
-defaultpointB_x 160.0
-defaultpointB_y 160.0
+defaultstartPointX 150.0
+defaultstartPointY 150.0
+defaultendPointX 160.0
+defaultendPointY 160.0
 defaultPlot3DPath results/visualizations/Plot3DPath.png
-vehicleRadius 5
+vehicleRadius 1
 maxSideAngle 90.0
 maxUpDownAngle 90.0
 logFileNameInterface var/logs/log_interface.txt
@@ -332,11 +332,11 @@ FiltrationLogLevelControl INFO
         return false;
     }
     else if (params.command == "g") {      
-        params.centerX = config.defaultX;
-        params.centerY = config.defaultY;
-        params.sigmaX = config.defaultSx;
-        params.sigmaY = config.defaultSy;
-        params.height = config.defaultH;
+        params.centerX = config.defaultCenterX;
+        params.centerY = config.defaultCenterY;
+        params.sigmaX = config.defaultSigmaX;
+        params.sigmaY = config.defaultSigmaY;
+        params.height = config.defaultHeight;
 
             std::getline(input, line);
             std::istringstream iss(line);
@@ -499,7 +499,7 @@ FiltrationLogLevelControl INFO
         logger.info("BMP reading completed");
     }
     else if (params.command == "bin") {
-        params.threshold = config.defaultSlice;
+        params.threshold = config.defaultThreshold;
         modeBin = config.defaultBinMode;
         
             std::getline(input, line);
