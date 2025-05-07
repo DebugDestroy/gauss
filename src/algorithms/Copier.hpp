@@ -4,6 +4,7 @@
 #include <string>
 
 // Локальные заголовки
+#include "core/Constants.hpp"  // Подключаем константы
 #include "core/Logger.hpp"
 #include "algorithms/Component.hpp"
 
@@ -27,7 +28,7 @@ public:
         size_t total_zeroed = 0;
         for (auto& row : field) {
             total_zeroed += row.size();
-            std::fill(row.begin(), row.end(), 0.0);
+            std::fill(row.begin(), row.end(), Constants::BLACK);
         }
         logger.debug(std::string("[Copier::removeNoise] Zeroed ") + std::to_string(total_zeroed) + std::string(" pixels"));
 
@@ -41,8 +42,8 @@ public:
             
             for (size_t i = 0; i < compData.size(); ++i) {
                 for (size_t j = 0; j < compData[i].size(); ++j) {
-                    if (compData[i][j] <= 255 && compData[i][j] >= 255) {
-                        field[i][j] = 255;
+                    if (std::fabs(compData[i][j] - Constants::WHITE) < Constants::EPSILON) {
+                        field[i][j] = Constants::WHITE;
                         component_pixels++;
                         total_copied++;
                     }

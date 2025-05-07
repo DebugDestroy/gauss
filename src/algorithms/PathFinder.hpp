@@ -9,10 +9,11 @@
 #include <array>
 
 // Локальные заголовки
+#include "core/Constants.hpp"  // Подключаем константы
 #include "core/Config.hpp"
 #include "core/Logger.hpp"
-#include "core/Geometry.hpp" // для PointD, Triangle, Edge
-#include "core/Pole.hpp" // для std::unique_ptr<Pole>
+#include "services/Geometry.hpp" // для PointD, Triangle, Edge
+#include "services/Pole.hpp" // для std::unique_ptr<Pole>
 
 struct AStarNode {
     PointD position;       // Позиция узла (центр треугольника)
@@ -75,11 +76,6 @@ std::vector<PointD> reconstructPath(const AStarNode& endNode,
     return path;
 }
 
-public:
-    PathFinder(const Config& cfg, Logger& lg) : config(cfg), logger(lg) {
-        logger.trace("[PathFinder] Инициализация поисковика пути");
-    }
-    
     double heuristic(const PointD& a, const PointD& b) {
         double dist = std::hypot(a.x - b.x, a.y - b.y);
         logger.trace(std::string("[PathFinder::heuristic] Расстояние между (") + 
@@ -88,7 +84,7 @@ public:
                    std::to_string(dist));
         return dist;
     }
-
+    
     const Triangle* findContainingTriangle(const PointD& p, const std::vector<Triangle>& triangles) {
         logger.trace(std::string("[PathFinder::findContainingTriangle] Поиск треугольника для точки (") + 
                    std::to_string(p.x) + "," + std::to_string(p.y) + ")");
@@ -113,8 +109,8 @@ public:
         double d2 = sign(p, tri.b, tri.c);
         double d3 = sign(p, tri.c, tri.a);
         
-        bool has_neg = (d1 < -1e-6) || (d2 < -1e-6) || (d3 < -1e-6);
-        bool has_pos = (d1 > 1e-6) || (d2 > 1e-6) || (d3 > 1e-6);
+        bool has_neg = (d1 < -Constants::EPSILON) || (d2 < -Constants::EPSILON) || (d3 < -Constants::EPSILON);
+        bool has_pos = (d1 > Constants::EPSILON) || (d2 > Constants::EPSILON) || (d3 > Constants::EPSILON);
         
         bool result = !(has_neg && has_pos);
         logger.trace(std::string("[PathFinder::isPointInTriangle] Точка (") + 
@@ -123,6 +119,260 @@ public:
         return result;
     }
     
+    bool isVehicleRadiusValid(const PointD& pixel, 
+                         const std::vector<std::vector<double>>& binaryMap,
+                         const std::unique_ptr<Pole>& elevationData,
+                         double sliceLevel) const {
+    logger.trace(std::string("[PathFinder::isVehicleRadiusValid] Проверка радиуса в точке (") +
+               std::to_string(pixel.x) + "," + std::to_string(pixel.y) + ")");
+    
+    const double x = pixel.x;
+    const double y = pixel.y;
+    const double currentHeight = elevationData->field[static_cast<int>(y)][static_cast<int>(x)];
+    
+    logger.debug(std::string("[PathFinder::isVehicleRadiusValid] Высота в точке: ") + std::to_string(currentHeight) +
+               ", уровень среза: " + std::to_string(sliceLevel));
+
+    const double heightDiff = std::fabs(currentHeight - sliceLevel);
+    if (heightDiff >= config.vehicleRadius) {
+        logger.debug(std::string("[PathFinder::isVehicleRadiusValid] Тележка ниже среза (") + 
+                   std::to_string(heightDiff) + " >= " + std::to_string(config.vehicleRadius) + 
+                   "), столкновений нет");
+        return true;
+    }
+
+    const double effectiveRadius = std::sqrt(config.vehicleRadius * config.vehicleRadius - heightDiff * heightDiff);
+    const int radiusPixels = static_cast<int>(std::ceil(effectiveRadius));
+    
+    logger.trace(std::string("[PathFinder::isVehicleRadiusValid] Эффективный радиус: ") + 
+               std::to_string(effectiveRadius) + " пикселей (" + 
+               std::to_string(radiusPixels) + " целых)");
+
+    const double radiusSquared = effectiveRadius * effectiveRadius;
+    size_t checkedPixels = 0;
+    size_t collisionPixels = 0;
+
+    for (int dy = -radiusPixels; dy <= radiusPixels; ++dy) {
+        for (int dx = -radiusPixels; dx <= radiusPixels; ++dx) {
+            if (dx*dx + dy*dy > radiusSquared) continue;
+            
+            const int nx = static_cast<int>(x) + dx;
+            const int ny = static_cast<int>(y) + dy;
+            checkedPixels++;
+            
+            if (nx >= 0 && ny >= 0 && 
+                nx < static_cast<int>(binaryMap[0].size()) && 
+                ny < static_cast<int>(binaryMap.size()) &&
+                std::fabs(binaryMap[ny][nx] - Constants::WHITE) < Constants::EPSILON) {
+                collisionPixels++;
+                logger.trace(std::string("[PathFinder::isVehicleRadiusValid] Столкновение в (") +
+                           std::to_string(nx) + "," + std::to_string(ny) + ")");
+            }
+        }
+    }
+
+    bool result = (collisionPixels == 0);
+    logger.debug(std::string("[PathFinder::isVehicleRadiusValid] Результат проверки: ") + 
+               std::string(result ? "проходимо" : "столкновение") + 
+               ", проверено пикселей: " + std::to_string(checkedPixels) +
+               ", столкновений: " + std::to_string(collisionPixels));
+    
+    return result;
+}
+
+   std::vector<const Triangle*> getNeighbors(const Triangle& tri, const std::vector<Triangle>& triangles) {
+    logger.trace(std::string("[PathFinder::getNeighbors] Поиск соседей треугольника [") +
+               "A(" + std::to_string(tri.a.x) + "," + std::to_string(tri.a.y) + "), " +
+               "B(" + std::to_string(tri.b.x) + "," + std::to_string(tri.b.y) + "), " +
+               "C(" + std::to_string(tri.c.x) + "," + std::to_string(tri.c.y) + ")]");
+    
+    std::vector<const Triangle*> neighbors;
+    size_t totalChecked = 0;
+    size_t edgesMatched = 0;
+
+    for (const auto& other : triangles) {
+        if (&tri == &other) {
+            logger.trace("[PathFinder::getNeighbors] Пропуск самосравнения");
+            continue;
+        }
+        
+        totalChecked++;
+        if (shareEdge(tri, other)) {
+            neighbors.push_back(&other);
+            edgesMatched++;
+            logger.debug(std::string("[PathFinder::getNeighbors] Найдено общее ребро с треугольником [") +
+                       "A(" + std::to_string(other.a.x) + "," + std::to_string(other.a.y) + "), " +
+                       "B(" + std::to_string(other.b.x) + "," + std::to_string(other.b.y) + "), " +
+                       "C(" + std::to_string(other.c.x) + "," + std::to_string(other.c.y) + ")]");
+        }
+    }
+
+    logger.info(std::string("[PathFinder::getNeighbors] Результаты поиска: ") +
+              std::to_string(neighbors.size()) + " соседей из " +
+              std::to_string(totalChecked) + " проверенных треугольников, " +
+              std::to_string(edgesMatched) + " общих ребер");
+    
+    return neighbors;
+}
+
+bool isEdgeNavigable(const Edge& edge, 
+                    const std::unique_ptr<Pole>& p,
+                    const std::vector<std::vector<double>>& binaryMap,
+                    double sliceLevel) const {
+    const auto line = bresenhamLine(edge.a, edge.b);
+    const double r = config.vehicleRadius;
+    
+    // Вектор пути и ортогональный ему
+    const PointD dir = {line.back().x - line.front().x, line.back().y - line.front().y};
+    PointD perp = {-dir.y, dir.x};
+    double perpLen = std::hypot(perp.x, perp.y);
+    perp.x = perp.x / perpLen * r;
+    perp.y = perp.y / perpLen * r;
+
+    logger.debug("--- Начало проверки ребра ---");
+    logger.debug("Параметры тележки: радиус=" + std::to_string(r) + 
+                ", max_уклон=" + std::to_string(config.maxUpDownAngle) + 
+                "°, max_крен=" + std::to_string(config.maxSideAngle) + "°");
+    
+    for (size_t i = 0; i < line.size(); ++i) {
+        const PointD& center = line[i];
+        double h_center = p->field[static_cast<int>(center.y)][static_cast<int>(center.x)];
+        
+        std::ostringstream pointHeader;
+        pointHeader << "Точка [" << i << "/" << line.size()-1 << "] (" 
+                   << center.x << "," << center.y << "): "
+                   << "высота=" << h_center << ", slice=" << sliceLevel;
+        logger.trace(pointHeader.str());
+
+        // Проверка переднего колеса
+        if (i + r < line.size()) {
+            const PointD& frontWheel = line[i + static_cast<size_t>(r)];
+            double h_front = p->field[static_cast<int>(frontWheel.y)][static_cast<int>(frontWheel.x)];
+            double frontAngle = calculateWheelAngle(center, frontWheel, p);
+            
+            logger.trace("  Переднее колесо (" + 
+                        std::to_string(frontWheel.x) + "," + std::to_string(frontWheel.y) + 
+                        "): угол=" + std::to_string(frontAngle) + 
+                        "°, высота=" + std::to_string(h_front));
+            
+            if (std::fabs(frontAngle) > config.maxUpDownAngle) {
+                logger.debug("  ! ПРЕВЫШЕНИЕ: передний угол " + std::to_string(frontAngle) + 
+                           "° > допустимого " + std::to_string(config.maxUpDownAngle) + "°");
+                return false;
+            }
+        }
+
+        // Боковые колеса
+        PointD leftWheel = {std::round(center.x + perp.x), std::round(center.y + perp.y)};
+        PointD rightWheel = {std::round(center.x - perp.x), std::round(center.y - perp.y)};
+
+        double leftAngle = 0, rightAngle = 0;
+        if (leftWheel.x >= 0 && leftWheel.y >= 0 && 
+            leftWheel.x < p->field[0].size() && leftWheel.y < p->field.size()) {
+            double h_left = p->field[static_cast<int>(leftWheel.y)][static_cast<int>(leftWheel.x)];
+            leftAngle = calculateWheelAngle(center, leftWheel, p);
+            logger.trace("  Левое колесо (" + 
+                        std::to_string(leftWheel.x) + "," + std::to_string(leftWheel.y) + 
+                        "): угол=" + std::to_string(leftAngle) + 
+                        "°, высота=" + std::to_string(h_left));
+        }
+
+        if (rightWheel.x >= 0 && rightWheel.y >= 0 && 
+            rightWheel.x < p->field[0].size() && rightWheel.y < p->field.size()) {
+            double h_right = p->field[static_cast<int>(rightWheel.y)][static_cast<int>(rightWheel.x)];
+            rightAngle = calculateWheelAngle(center, rightWheel, p);
+            logger.trace("  Правое колесо (" + 
+                        std::to_string(rightWheel.x) + "," + std::to_string(rightWheel.y) + 
+                        "): угол=" + std::to_string(rightAngle) + 
+                        "°, высота=" + std::to_string(h_right));
+        }
+
+        if (std::fabs(leftAngle) > config.maxSideAngle || 
+            std::fabs(rightAngle) > config.maxSideAngle) {
+            logger.debug("  ! ПРЕВЫШЕНИЕ: боковые углы L=" + std::to_string(leftAngle) + 
+                       "° R=" + std::to_string(rightAngle) + 
+                       " > допустимого " + std::to_string(config.maxSideAngle) + "°");
+            return false;
+        }
+
+        // Проверка коллизий
+        bool collisionCheck = isVehicleRadiusValid(center, binaryMap, p, sliceLevel);
+        logger.trace("  Коллизия: " + std::string(collisionCheck ? "нет" : "есть"));
+        
+        if (!collisionCheck) {
+            logger.debug("  ! СТОЛКНОВЕНИЕ в точке (" + 
+                       std::to_string(center.x) + "," + std::to_string(center.y) + ")");
+            return false;
+        }
+    }
+    
+    logger.debug("--- Ребро проходимо ---");
+    return true;
+}
+
+double calculateWheelAngle(const PointD& center, 
+                          const PointD& wheel,
+                          const std::unique_ptr<Pole>& p) const {
+    // Получаем высоты в точках
+    double h_center = p->field[static_cast<int>(center.y)][static_cast<int>(center.x)];
+    double h_wheel = p->field[static_cast<int>(wheel.y)][static_cast<int>(wheel.x)];
+    
+    if (wheel.x < 0 || wheel.y < 0 || 
+    wheel.x >= p->field[0].size() || 
+    wheel.y >= p->field.size()) {
+    return std::numeric_limits<double>::max(); // Помечаем как непроходимое
+}
+    // Расчет угла в градусах
+    return std::atan2(h_wheel - h_center, 
+                     std::hypot(wheel.x - center.x, wheel.y - center.y)) * 180.0 / M_PI;
+}
+
+public:
+    PathFinder(const Config& cfg, Logger& lg) : config(cfg), logger(lg) {
+        logger.trace("[PathFinder] Инициализация поисковика пути");
+    }
+    
+    bool shareEdge(const Triangle& a, const Triangle& b) const {
+    logger.trace("[PathFinder::shareEdge] Проверка общего ребра между треугольниками");
+    
+    const std::array<Edge, 3> edgesA = { Edge(a.a, a.b), Edge(a.b, a.c), Edge(a.c, a.a) };
+    const std::array<Edge, 3> edgesB = { Edge(b.a, b.b), Edge(b.b, b.c), Edge(b.c, b.a) };
+
+    for (size_t i = 0; i < 3; ++i) {
+        const Edge& edgeA = edgesA[i];
+        for (size_t j = 0; j < 3; ++j) {
+            const Edge& edgeB = edgesB[j];
+            if (edgeA == edgeB) {
+                logger.debug(std::string("[PathFinder::shareEdge] Найдено общее ребро: (") +
+                           std::to_string(edgeA.a.x) + "," + std::to_string(edgeA.a.y) + ")-(" +
+                           std::to_string(edgeA.b.x) + "," + std::to_string(edgeA.b.y) + ")");
+                return true;
+            }
+        }
+    }
+
+    logger.trace("[PathFinder::shareEdge] Общих ребер не обнаружено");
+    return false;
+}
+
+bool otherHasEdge(const Triangle& other, const Edge& edge) const {
+    logger.trace("[PathFinder::otherHasEdge] Проверка наличия ребра в треугольнике");
+    
+    const Edge edges[3] = { Edge(other.a, other.b), Edge(other.b, other.c), Edge(other.c, other.a) };
+    
+    for (int i = 0; i < 3; ++i) {
+        if (edges[i] == edge) {
+            logger.debug(std::string("[PathFinder::otherHasEdge] Ребро найдено: (") +
+                       std::to_string(edge.a.x) + "," + std::to_string(edge.a.y) + ")-(" +
+                       std::to_string(edge.b.x) + "," + std::to_string(edge.b.y) + ")");
+            return true;
+        }
+    }
+
+    logger.trace("[PathFinder::otherHasEdge] Ребро отсутствует в треугольнике");
+    return false;
+}
+
     std::vector<const Triangle*> findNeighbors(const Triangle& tri, const std::vector<Triangle>& allTriangles) const {
         logger.trace("[PathFinder::findNeighbors] Поиск соседей треугольника");
         std::vector<const Triangle*> neighbors;
@@ -247,255 +497,6 @@ std::vector<PointD> bresenhamLine(const PointD& start, const PointD& end) const 
     }
     
     return linePoints;
-}
-
-bool isVehicleRadiusValid(const PointD& pixel, 
-                         const std::vector<std::vector<double>>& binaryMap,
-                         const std::unique_ptr<Pole>& elevationData,
-                         double sliceLevel) const {
-    logger.trace(std::string("[PathFinder::isVehicleRadiusValid] Проверка радиуса в точке (") +
-               std::to_string(pixel.x) + "," + std::to_string(pixel.y) + ")");
-    
-    const double x = pixel.x;
-    const double y = pixel.y;
-    const double currentHeight = elevationData->field[static_cast<int>(y)][static_cast<int>(x)];
-    
-    logger.debug(std::string("[PathFinder::isVehicleRadiusValid] Высота в точке: ") + std::to_string(currentHeight) +
-               ", уровень среза: " + std::to_string(sliceLevel));
-
-    const double heightDiff = std::fabs(currentHeight - sliceLevel);
-    if (heightDiff >= config.vehicleRadius) {
-        logger.debug(std::string("[PathFinder::isVehicleRadiusValid] Тележка ниже среза (") + 
-                   std::to_string(heightDiff) + " >= " + std::to_string(config.vehicleRadius) + 
-                   "), столкновений нет");
-        return true;
-    }
-
-    const double effectiveRadius = std::sqrt(config.vehicleRadius * config.vehicleRadius - heightDiff * heightDiff);
-    const int radiusPixels = static_cast<int>(std::ceil(effectiveRadius));
-    
-    logger.trace(std::string("[PathFinder::isVehicleRadiusValid] Эффективный радиус: ") + 
-               std::to_string(effectiveRadius) + " пикселей (" + 
-               std::to_string(radiusPixels) + " целых)");
-
-    const double radiusSquared = effectiveRadius * effectiveRadius;
-    size_t checkedPixels = 0;
-    size_t collisionPixels = 0;
-
-    for (int dy = -radiusPixels; dy <= radiusPixels; ++dy) {
-        for (int dx = -radiusPixels; dx <= radiusPixels; ++dx) {
-            if (dx*dx + dy*dy > radiusSquared) continue;
-            
-            const int nx = static_cast<int>(x) + dx;
-            const int ny = static_cast<int>(y) + dy;
-            checkedPixels++;
-            
-            if (nx >= 0 && ny >= 0 && 
-                nx < static_cast<int>(binaryMap[0].size()) && 
-                ny < static_cast<int>(binaryMap.size()) &&
-                binaryMap[ny][nx] <= 255 && binaryMap[ny][nx] >= 255) {
-                collisionPixels++;
-                logger.trace(std::string("[PathFinder::isVehicleRadiusValid] Столкновение в (") +
-                           std::to_string(nx) + "," + std::to_string(ny) + ")");
-            }
-        }
-    }
-
-    bool result = (collisionPixels == 0);
-    logger.debug(std::string("[PathFinder::isVehicleRadiusValid] Результат проверки: ") + 
-               std::string(result ? "проходимо" : "столкновение") + 
-               ", проверено пикселей: " + std::to_string(checkedPixels) +
-               ", столкновений: " + std::to_string(collisionPixels));
-    
-    return result;
-}
-
-   std::vector<const Triangle*> getNeighbors(const Triangle& tri, const std::vector<Triangle>& triangles) {
-    logger.trace(std::string("[PathFinder::getNeighbors] Поиск соседей треугольника [") +
-               "A(" + std::to_string(tri.a.x) + "," + std::to_string(tri.a.y) + "), " +
-               "B(" + std::to_string(tri.b.x) + "," + std::to_string(tri.b.y) + "), " +
-               "C(" + std::to_string(tri.c.x) + "," + std::to_string(tri.c.y) + ")]");
-    
-    std::vector<const Triangle*> neighbors;
-    size_t totalChecked = 0;
-    size_t edgesMatched = 0;
-
-    for (const auto& other : triangles) {
-        if (&tri == &other) {
-            logger.trace("[PathFinder::getNeighbors] Пропуск самосравнения");
-            continue;
-        }
-        
-        totalChecked++;
-        if (shareEdge(tri, other)) {
-            neighbors.push_back(&other);
-            edgesMatched++;
-            logger.debug(std::string("[PathFinder::getNeighbors] Найдено общее ребро с треугольником [") +
-                       "A(" + std::to_string(other.a.x) + "," + std::to_string(other.a.y) + "), " +
-                       "B(" + std::to_string(other.b.x) + "," + std::to_string(other.b.y) + "), " +
-                       "C(" + std::to_string(other.c.x) + "," + std::to_string(other.c.y) + ")]");
-        }
-    }
-
-    logger.info(std::string("[PathFinder::getNeighbors] Результаты поиска: ") +
-              std::to_string(neighbors.size()) + " соседей из " +
-              std::to_string(totalChecked) + " проверенных треугольников, " +
-              std::to_string(edgesMatched) + " общих ребер");
-    
-    return neighbors;
-}
-
-bool shareEdge(const Triangle& a, const Triangle& b) const {
-    logger.trace("[PathFinder::shareEdge] Проверка общего ребра между треугольниками");
-    
-    const std::array<Edge, 3> edgesA = { Edge(a.a, a.b), Edge(a.b, a.c), Edge(a.c, a.a) };
-    const std::array<Edge, 3> edgesB = { Edge(b.a, b.b), Edge(b.b, b.c), Edge(b.c, b.a) };
-
-    for (size_t i = 0; i < 3; ++i) {
-        const Edge& edgeA = edgesA[i];
-        for (size_t j = 0; j < 3; ++j) {
-            const Edge& edgeB = edgesB[j];
-            if (edgeA == edgeB) {
-                logger.debug(std::string("[PathFinder::shareEdge] Найдено общее ребро: (") +
-                           std::to_string(edgeA.a.x) + "," + std::to_string(edgeA.a.y) + ")-(" +
-                           std::to_string(edgeA.b.x) + "," + std::to_string(edgeA.b.y) + ")");
-                return true;
-            }
-        }
-    }
-
-    logger.trace("[PathFinder::shareEdge] Общих ребер не обнаружено");
-    return false;
-}
-
-bool otherHasEdge(const Triangle& other, const Edge& edge) const {
-    logger.trace("[PathFinder::otherHasEdge] Проверка наличия ребра в треугольнике");
-    
-    const Edge edges[3] = { Edge(other.a, other.b), Edge(other.b, other.c), Edge(other.c, other.a) };
-    
-    for (int i = 0; i < 3; ++i) {
-        if (edges[i] == edge) {
-            logger.debug(std::string("[PathFinder::otherHasEdge] Ребро найдено: (") +
-                       std::to_string(edge.a.x) + "," + std::to_string(edge.a.y) + ")-(" +
-                       std::to_string(edge.b.x) + "," + std::to_string(edge.b.y) + ")");
-            return true;
-        }
-    }
-
-    logger.trace("[PathFinder::otherHasEdge] Ребро отсутствует в треугольнике");
-    return false;
-}
-
-bool isEdgeNavigable(const Edge& edge, 
-                    const std::unique_ptr<Pole>& p,
-                    const std::vector<std::vector<double>>& binaryMap,
-                    double sliceLevel) const {
-    const auto line = bresenhamLine(edge.a, edge.b);
-    const double r = config.vehicleRadius;
-    
-    // Вектор пути и ортогональный ему
-    const PointD dir = {line.back().x - line.front().x, line.back().y - line.front().y};
-    PointD perp = {-dir.y, dir.x};
-    double perpLen = std::hypot(perp.x, perp.y);
-    perp.x = perp.x / perpLen * r;
-    perp.y = perp.y / perpLen * r;
-
-    logger.debug("--- Начало проверки ребра ---");
-    logger.debug("Параметры тележки: радиус=" + std::to_string(r) + 
-                ", max_уклон=" + std::to_string(config.maxUpDownAngle) + 
-                "°, max_крен=" + std::to_string(config.maxSideAngle) + "°");
-    
-    for (size_t i = 0; i < line.size(); ++i) {
-        const PointD& center = line[i];
-        double h_center = p->field[static_cast<int>(center.y)][static_cast<int>(center.x)];
-        
-        std::ostringstream pointHeader;
-        pointHeader << "Точка [" << i << "/" << line.size()-1 << "] (" 
-                   << center.x << "," << center.y << "): "
-                   << "высота=" << h_center << ", slice=" << sliceLevel;
-        logger.trace(pointHeader.str());
-
-        // Проверка переднего колеса
-        if (i + r < line.size()) {
-            const PointD& frontWheel = line[i + static_cast<size_t>(r)];
-            double h_front = p->field[static_cast<int>(frontWheel.y)][static_cast<int>(frontWheel.x)];
-            double frontAngle = calculateWheelAngle(center, frontWheel, p);
-            
-            logger.trace("  Переднее колесо (" + 
-                        std::to_string(frontWheel.x) + "," + std::to_string(frontWheel.y) + 
-                        "): угол=" + std::to_string(frontAngle) + 
-                        "°, высота=" + std::to_string(h_front));
-            
-            if (std::fabs(frontAngle) > config.maxUpDownAngle) {
-                logger.debug("  ! ПРЕВЫШЕНИЕ: передний угол " + std::to_string(frontAngle) + 
-                           "° > допустимого " + std::to_string(config.maxUpDownAngle) + "°");
-                return false;
-            }
-        }
-
-        // Боковые колеса
-        PointD leftWheel = {std::round(center.x + perp.x), std::round(center.y + perp.y)};
-        PointD rightWheel = {std::round(center.x - perp.x), std::round(center.y - perp.y)};
-
-        double leftAngle = 0, rightAngle = 0;
-        if (leftWheel.x >= 0 && leftWheel.y >= 0 && 
-            leftWheel.x < p->field[0].size() && leftWheel.y < p->field.size()) {
-            double h_left = p->field[static_cast<int>(leftWheel.y)][static_cast<int>(leftWheel.x)];
-            leftAngle = calculateWheelAngle(center, leftWheel, p);
-            logger.trace("  Левое колесо (" + 
-                        std::to_string(leftWheel.x) + "," + std::to_string(leftWheel.y) + 
-                        "): угол=" + std::to_string(leftAngle) + 
-                        "°, высота=" + std::to_string(h_left));
-        }
-
-        if (rightWheel.x >= 0 && rightWheel.y >= 0 && 
-            rightWheel.x < p->field[0].size() && rightWheel.y < p->field.size()) {
-            double h_right = p->field[static_cast<int>(rightWheel.y)][static_cast<int>(rightWheel.x)];
-            rightAngle = calculateWheelAngle(center, rightWheel, p);
-            logger.trace("  Правое колесо (" + 
-                        std::to_string(rightWheel.x) + "," + std::to_string(rightWheel.y) + 
-                        "): угол=" + std::to_string(rightAngle) + 
-                        "°, высота=" + std::to_string(h_right));
-        }
-
-        if (std::fabs(leftAngle) > config.maxSideAngle || 
-            std::fabs(rightAngle) > config.maxSideAngle) {
-            logger.debug("  ! ПРЕВЫШЕНИЕ: боковые углы L=" + std::to_string(leftAngle) + 
-                       "° R=" + std::to_string(rightAngle) + 
-                       " > допустимого " + std::to_string(config.maxSideAngle) + "°");
-            return false;
-        }
-
-        // Проверка коллизий
-        bool collisionCheck = isVehicleRadiusValid(center, binaryMap, p, sliceLevel);
-        logger.trace("  Коллизия: " + std::string(collisionCheck ? "нет" : "есть"));
-        
-        if (!collisionCheck) {
-            logger.debug("  ! СТОЛКНОВЕНИЕ в точке (" + 
-                       std::to_string(center.x) + "," + std::to_string(center.y) + ")");
-            return false;
-        }
-    }
-    
-    logger.debug("--- Ребро проходимо ---");
-    return true;
-}
-
-double calculateWheelAngle(const PointD& center, 
-                          const PointD& wheel,
-                          const std::unique_ptr<Pole>& p) const {
-    // Получаем высоты в точках
-    double h_center = p->field[static_cast<int>(center.y)][static_cast<int>(center.x)];
-    double h_wheel = p->field[static_cast<int>(wheel.y)][static_cast<int>(wheel.x)];
-    
-    if (wheel.x < 0 || wheel.y < 0 || 
-    wheel.x >= p->field[0].size() || 
-    wheel.y >= p->field.size()) {
-    return std::numeric_limits<double>::max(); // Помечаем как непроходимое
-}
-    // Расчет угла в градусах
-    return std::atan2(h_wheel - h_center, 
-                     std::hypot(wheel.x - center.x, wheel.y - center.y)) * 180.0 / M_PI;
 }
 
 };

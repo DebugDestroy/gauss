@@ -5,8 +5,9 @@
 #include <string>
 
 // Локальные заголовки
+#include "core/Constants.hpp"  // Подключаем константы
 #include "core/Logger.hpp"
-#include "core/Pole.hpp" // для std::unique_ptr<Pole>
+#include "services/Pole.hpp" // для std::unique_ptr<Pole>
 
 //Классы для построения гаусса
 struct Gaus { // Структура, хранящая Гауссы
@@ -70,9 +71,9 @@ public:
 
         // Заполнение базовым значением
         for (auto& row : p->field) {
-            std::fill(row.begin(), row.end(), 127);
+            std::fill(row.begin(), row.end(), Constants::MID_GRAY);
         }
-        logger.debug("[GaussBuilder::generate] Base level set to 127");
+        logger.debug(std::string("[GaussBuilder::generate] Base level set to Constants::MID_GRAY = ") + std::to_string(Constants::MID_GRAY));
 
         // Применение гауссиан
         size_t total_pixels = 0;
@@ -89,12 +90,14 @@ public:
                     p->field[y][x] += value;
                     
                     // Логирование clamping
-                    if (p->field[y][x] <= 0.0 || p->field[y][x] >= 255.0) {
+                    if (p->field[y][x] <= Constants::BLACK || p->field[y][x] >= Constants::WHITE) {
                         clamped_pixels++;
                     }
                     total_pixels++;
                     
-                    p->field[y][x] = std::clamp(p->field[y][x], 0.0, 255.0);
+                    p->field[y][x] = std::clamp(p->field[y][x], 
+                           static_cast<double>(Constants::BLACK), 
+                           static_cast<double>(Constants::WHITE));
                 }
             }
         }
