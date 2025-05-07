@@ -8,9 +8,9 @@
 
 // Локальные заголовки
 #include "core/Logger.hpp"          // Для Logger
-#include "core/Pole.hpp"            // Для Pole
+#include "services/Pole.hpp"            // Для Pole
 #include "algorithms/Component.hpp" // Для Component
-#include "core/Geometry.hpp"        // Для PointD, Triangle, VoronoiEdge
+#include "services/Geometry.hpp"        // Для PointD, Triangle, VoronoiEdge
 #include "command/DispatcherParams.hpp"  // Новый include
 #include "algorithms/PathFinder.hpp"    // Для PathFinder
 

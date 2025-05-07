@@ -10,7 +10,7 @@
 #include "core/Constants.hpp"  // Подключаем константы
 #include "core/Logger.hpp"       // Для Logger
 #include "algorithms/GaussBuilder.hpp"  // Для GaussBuilder
-#include "core/Pole.hpp"         // Для Pole
+#include "services/Pole.hpp"         // Для Pole
 
 enum class BmpWriteMode {//для bmp_write
     Binary,  // Бинарное изображение

@@ -10,19 +10,13 @@
 // Локальные заголовки
 #include "core/Constants.hpp"  // Подключаем константы
 #include "core/Logger.hpp"
-#include "core/Pole.hpp" // для std::unique_ptr<Pole>
+#include "services/Pole.hpp" // для std::unique_ptr<Pole>
 #include "algorithms/Component.hpp" // для Component, ThresholdMode
 
 class ComponentCalculator {
 private:
     Logger& logger;
 
-public:
-    ComponentCalculator(Logger& lg) : logger(lg) {
-        logger.trace("[ComponentCalculator] Инициализация калькулятора компонент");
-    }
-
-       
     int incrementAndCollect(std::vector<std::vector<double>>& componenta, 
                           std::vector<std::vector<double>>& CopyPole, 
                           int x, int y, int i, int& pixelCount) {
@@ -54,6 +48,10 @@ public:
         }
         
         return pixelCount;
+    }
+public:
+    ComponentCalculator(Logger& lg) : logger(lg) {
+        logger.trace("[ComponentCalculator] Инициализация калькулятора компонент");
     }
 
     void bin(std::vector<std::vector<double>>& CopyPole, 

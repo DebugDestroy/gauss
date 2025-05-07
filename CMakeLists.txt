@@ -47,7 +47,7 @@ file(GLOB_RECURSE SOURCES
     "${SOURCE_DIR}/command/*.cpp"
     "${SOURCE_DIR}/core/*.cpp"
     "${SOURCE_DIR}/io/*.cpp"
-    "${SOURCE_DIR}/utils/*.cpp"
+    "${SOURCE_DIR}/services/*.cpp"
     "${SOURCE_DIR}/visualization/*.cpp"
 )
 
@@ -61,7 +61,7 @@ target_include_directories(terrain_navigator PRIVATE
     ${INCLUDE_DIR}/command
     ${INCLUDE_DIR}/core
     ${INCLUDE_DIR}/io
-    ${INCLUDE_DIR}/utils
+    ${INCLUDE_DIR}/services
     ${INCLUDE_DIR}/visualization
 )
 
