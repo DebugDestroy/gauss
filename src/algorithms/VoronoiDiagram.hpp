@@ -5,6 +5,7 @@
 #include <cmath> // для std::hypot, std::fabs
 
 // Локальные заголовки
+#include "core/Constants.hpp"  // Подключаем константы
 #include "core/Logger.hpp"
 #include "core/Geometry.hpp" // для PointD, Edge, Triangle
 #include "core/Pole.hpp" // для std::unique_ptr<Pole>
@@ -226,7 +227,7 @@ private:
         PointD normal = { -edgeDir.y, edgeDir.x };
         double length = std::hypot(normal.x, normal.y);
         
-        if (std::fabs(length) < 1e-9) {
+        if (std::fabs(length) < Constants::EPSILON) {
             logger.warning("[VoronoiDiagram::calculateBoundaryIntersection] Нулевая длина нормали!");
             return circumCenter;
         }
@@ -235,11 +236,11 @@ private:
         normal.y /= length;
 
         double t = std::numeric_limits<double>::max();
-        if (std::fabs(normal.x) > 1e-6) {
+        if (std::fabs(normal.x) > Constants::EPSILON) {
             t = std::min(t, (width - circumCenter.x) / normal.x);
             t = std::min(t, -circumCenter.x / normal.x);
         }
-        if (std::fabs(normal.y) > 1e-6) {
+        if (std::fabs(normal.y) > Constants::EPSILON) {
             t = std::min(t, (height - circumCenter.y) / normal.y);
             t = std::min(t, -circumCenter.y / normal.y);
         }

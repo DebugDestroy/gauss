@@ -9,6 +9,7 @@
 #include <stdexcept>    // Для std::invalid_argument
 
 // Локальные заголовки
+#include "core/Constants.hpp"  // Подключаем константы
 #include "core/Logger.hpp"  // Для Logger
 
 struct Color{ // структура для хранения rgb цвета
@@ -17,18 +18,28 @@ struct Color{ // структура для хранения rgb цвета
 
 class ColorGenerator {
 private:
+    static constexpr double MIN_COLOR_VALUE = 50.0;
+    
     static void logColorConversion(double hue, const std::array<int, 3>& rgb, Logger& logger) {
         logger.debug(std::string("[ColorGenerator] Generated color - HSL: ") + 
-                    std::to_string(hue) + "°, RGB: (" +
-                    std::to_string(rgb[0]) + ", " +
-                    std::to_string(rgb[1]) + ", " +
-                    std::to_string(rgb[2]) + ")");
+                   std::to_string(hue) + "°, RGB: (" +
+                   std::to_string(rgb[0]) + ", " +
+                   std::to_string(rgb[1]) + ", " +
+                   std::to_string(rgb[2]) + ")");
+    }
+
+    static uint8_t clampColorComponent(double value) {
+        return static_cast<uint8_t>(std::clamp(
+            value,
+            MIN_COLOR_VALUE,
+            static_cast<double>(Constants::WHITE)
+        ));
     }
 
 public:
     static std::vector<std::array<int, 3>> generateColors(int numColors, Logger& logger) {
         logger.trace(std::string("[ColorGenerator::generateColors] Starting color generation for ") + 
-                   std::to_string(numColors) + " colors");
+                     std::to_string(numColors) + " colors");
 
         if (numColors <= 0) {
             logger.error(std::string("[ColorGenerator::generateColors] Invalid number of colors: ") + 
@@ -65,11 +76,11 @@ public:
                 r = C; g = 0; b = X;
             }
 
-            // Scale to 50-255 range
+            // Scale to MIN_COLOR_VALUE-Constants::WHITE range
             std::array<int, 3> rgb = {
-                std::min(255, static_cast<int>(std::max(50.0, (r + m) * 255))),
-                std::min(255, static_cast<int>(std::max(50.0, (g + m) * 255))),
-                std::min(255, static_cast<int>(std::max(50.0, (b + m) * 255)))
+                clampColorComponent((r + m) * Constants::WHITE),
+                clampColorComponent((g + m) * Constants::WHITE),
+                clampColorComponent((b + m) * Constants::WHITE)
             };
 
             colors.push_back(rgb);
