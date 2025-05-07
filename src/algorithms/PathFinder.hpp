@@ -9,6 +9,7 @@
 #include <array>
 
 // Локальные заголовки
+#include "core/Constants.hpp"  // Подключаем константы
 #include "core/Config.hpp"
 #include "core/Logger.hpp"
 #include "core/Geometry.hpp" // для PointD, Triangle, Edge
@@ -113,8 +114,8 @@ public:
         double d2 = sign(p, tri.b, tri.c);
         double d3 = sign(p, tri.c, tri.a);
         
-        bool has_neg = (d1 < -1e-6) || (d2 < -1e-6) || (d3 < -1e-6);
-        bool has_pos = (d1 > 1e-6) || (d2 > 1e-6) || (d3 > 1e-6);
+        bool has_neg = (d1 < -Constants::EPSILON) || (d2 < -Constants::EPSILON) || (d3 < -Constants::EPSILON);
+        bool has_pos = (d1 > Constants::EPSILON) || (d2 > Constants::EPSILON) || (d3 > Constants::EPSILON);
         
         bool result = !(has_neg && has_pos);
         logger.trace(std::string("[PathFinder::isPointInTriangle] Точка (") + 
@@ -293,7 +294,7 @@ bool isVehicleRadiusValid(const PointD& pixel,
             if (nx >= 0 && ny >= 0 && 
                 nx < static_cast<int>(binaryMap[0].size()) && 
                 ny < static_cast<int>(binaryMap.size()) &&
-                binaryMap[ny][nx] <= 255 && binaryMap[ny][nx] >= 255) {
+                std::fabs(binaryMap[ny][nx] - Constants::WHITE) < Constants::EPSILON) {
                 collisionPixels++;
                 logger.trace(std::string("[PathFinder::isVehicleRadiusValid] Столкновение в (") +
                            std::to_string(nx) + "," + std::to_string(ny) + ")");

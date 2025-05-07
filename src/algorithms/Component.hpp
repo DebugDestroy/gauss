@@ -5,6 +5,7 @@
 #include <cmath> // для std::fabs, std::sqrt
 
 // Локальные заголовки
+#include "core/Constants.hpp"  // Подключаем константы
 #include "core/Logger.hpp"
 
 enum class ThresholdMode {// Для bin
@@ -61,7 +62,7 @@ public:
     logger.debug("[Component::calculate_metadata] Scanning component pixels...");
     for (int y = 0; y < static_cast<int>(componenta.size()); ++y) {
         for (int x = 0; x < static_cast<int>(componenta[0].size()); ++x) {
-            if (componenta[y][x] <= 255 && componenta[y][x] >= 255) {
+            if (std::fabs(componenta[y][x] - Constants::WHITE) < Constants::EPSILON) {
                 min_x = std::min(min_x, x);
                 min_y = std::min(min_y, y);
                 max_x = std::max(max_x, x);
@@ -91,7 +92,7 @@ public:
     logger.trace("[Component::calculate_metadata] Calculating covariance matrix...");
     for (int y = min_y; y <= max_y; ++y) {
         for (int x = min_x; x <= max_x; ++x) {
-            if (componenta[y][x] <= 255 && componenta[y][x] >= 255) {  // Исправлено условие
+            if (std::fabs(componenta[y][x] - Constants::WHITE) < Constants::EPSILON) {  // Исправлено условие
                 double dx = x - center_x;
                 double dy = y - center_y;
                 cov_xx += dx * dx;
@@ -120,7 +121,7 @@ public:
                     std::string(", λ2=") + std::to_string(eigenvalue2));
                     
     // Корректный расчет собственных векторов
-    if (fabs(cov_xy) > 1e-10) {
+    if (fabs(cov_xy) > Constants::EPSILON) {
         logger.trace("[Component::calculate_metadata] Calculating eigenvectors for non-diagonal matrix");
         // Первый собственный вектор (для eigenvalue1)
         eigenvec1_x = cov_xy;
