@@ -7,9 +7,10 @@
 #include <cstdint>      // Для uint32_t, uint16_t и других целочисленных типов фиксированного размера
 
 // Локальные заголовки
+#include "core/Constants.hpp"  // Подключаем константы
 #include "core/Logger.hpp"       // Для Logger
 #include "algorithms/GaussBuilder.hpp"  // Для GaussBuilder
-#include "core/Pole.hpp"         // Для Pole
+#include "services/Pole.hpp"         // Для Pole
 
 enum class BmpWriteMode {//для bmp_write
     Binary,  // Бинарное изображение
@@ -95,9 +96,11 @@ public:
         for (int y = height - 1; y >= 0; --y) {
             for (int x = 0; x < width; ++x) {
                 double pixelValue = pixelMatrix[y][x];
-                if (pixelValue < 0.0 || pixelValue > 255.0) {
+                if (pixelValue < Constants::BLACK || pixelValue > Constants::WHITE) {
                     clamped_pixels++;
-                    pixelValue = std::clamp(pixelValue, 0.0, 255.0);
+                    pixelValue = std::clamp(pixelValue,
+                       static_cast<double>(Constants::BLACK),
+                       static_cast<double>(Constants::WHITE));
                 }
                 unsigned char color = static_cast<unsigned char>(pixelValue);
                 bmpFile.put(color).put(color).put(color);
@@ -146,7 +149,7 @@ public:
 
         // Read pixel data
         size_t pixels_read = 0;
-        double min_val = 255.0, max_val = 0.0;
+        double min_val = Constants::WHITE, max_val = Constants::BLACK;
         logger.trace("[BmpHandler::bmp_read] Reading pixel data (bottom-to-top)");
         
         for (int y = height - 1; y >= 0; --y) {
