@@ -9,6 +9,7 @@
 #include <array>
 
 // Локальные заголовки
+#include "core/Constants.hpp"  // Подключаем константы
 #include "core/Logger.hpp"
 #include "utils/ColorGenerator.hpp" // для ColorGenerator
 
@@ -120,7 +121,7 @@ public:
                     newCenters[j][0] /= counts[j];
                     newCenters[j][1] /= counts[j];
                     double centerDist = distance(newCenters[j], centers[j]);
-                    if (centerDist > 1e-6) {
+                    if (centerDist > Constants::EPSILON) {
                         changed = true;
                     }
                     /*logger.debug(std::string("[KMeans::cluster] Кластер ") + std::to_string(j) + 

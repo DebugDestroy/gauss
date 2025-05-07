@@ -8,6 +8,7 @@
 #include <limits> // для std::numeric_limits
 
 // Локальные заголовки
+#include "core/Constants.hpp"  // Подключаем константы
 #include "core/Logger.hpp"
 #include "core/Pole.hpp" // для std::unique_ptr<Pole>
 #include "algorithms/Component.hpp" // для Component, ThresholdMode
@@ -31,15 +32,15 @@ public:
                 "текущий_счетчик=" + std::to_string(pixelCount));
 
         if (x < 1 || y < 1 || x > (int)componenta[0].size() - 2 || 
-            y > (int)componenta.size() - 2 || CopyPole[y][x] < 250) {
+            y > (int)componenta.size() - 2 || std::fabs(CopyPole[y][x] - Constants::WHITE) > Constants::EPSILON) {
             logger.trace("[ComponentCalculator::incrementAndCollect] Выход за границы или неподходящее значение");
             return pixelCount;
         }
 
-        if (CopyPole[y][x] >= 255 && CopyPole[y][x] <= 255) {
-            CopyPole[y][x] = 0;
+        if (std::fabs(CopyPole[y][x] - Constants::WHITE) < Constants::EPSILON) {
+            CopyPole[y][x] = Constants::BLACK;
             pixelCount++;
-            componenta[y][x] = 255;
+            componenta[y][x] = Constants::WHITE;
             
             logger.trace("[ComponentCalculator::incrementAndCollect] Обработан пиксель: "
                    "координаты=(" + std::to_string(x) + "," + std::to_string(y) + "), "
@@ -70,23 +71,23 @@ public:
         }
         
         CopyPole = p->field;
-        int symmetric_slice = 2*127 - slice;
+        int symmetric_slice = 2*Constants::MID_GRAY - slice;
 
         for (int x = 0; x < (int)p->field[0].size(); ++x) {
             for (int y = 0; y < (int)p->field.size(); ++y) {
                 double value = p->field[y][x];
                 switch (mode) {
                     case ThresholdMode::All: {
-                        bool is_peak = (slice >= 127) ? (value > slice) : (value > symmetric_slice);
-                        bool is_valley = (slice >= 127) ? (value < symmetric_slice) : (value < slice);
-                        CopyPole[y][x] = (is_peak || is_valley) ? 255 : 0;
+                        bool is_peak = (slice >= Constants::MID_GRAY) ? (value > slice) : (value > symmetric_slice);
+                        bool is_valley = (slice >= Constants::MID_GRAY) ? (value < symmetric_slice) : (value < slice);
+                        CopyPole[y][x] = (is_peak || is_valley) ? Constants::WHITE : Constants::BLACK;
                         break;
                     }
                     case ThresholdMode::Peaks:
-                        CopyPole[y][x] = (slice >= 127) ? (value > slice) : (value > symmetric_slice);
+                        CopyPole[y][x] = (slice >= Constants::MID_GRAY) ? (value > slice) : (value > symmetric_slice);
                         break;
                     case ThresholdMode::Valleys:
-                        CopyPole[y][x] = (slice >= 127) ? (value < symmetric_slice) : (value < slice);
+                        CopyPole[y][x] = (slice >= Constants::MID_GRAY) ? (value < symmetric_slice) : (value < slice);
                         break;
                 }
             } 
@@ -115,8 +116,8 @@ public:
 
         for (int y = 2; y < rows - 2; ++y) {
             for (int x = 2; x < cols - 2; ++x) {
-                if (CopyPole[y][x] <= 255 && CopyPole[y][x] >= 255) {
-                    std::vector<std::vector<double>> componentData(rows, std::vector<double>(cols, 0));
+                if (std::fabs(CopyPole[y][x] - Constants::WHITE) < Constants::EPSILON) {
+                    std::vector<std::vector<double>> componentData(rows, std::vector<double>(cols, Constants::BLACK));
                     int pixelCount = 0;
                     incrementAndCollect(componentData, CopyPole, x, y, 0, pixelCount);
 
@@ -142,8 +143,8 @@ public:
                         // Удаляем шум из основного поля
                         for (int i = 0; i < rows; ++i) {
                             for (int j = 0; j < cols; ++j) {
-                                if (componentData[i][j] <= 255 && componentData[i][j] >= 255) {
-                                    p->field[i][j] = 127;
+                                if (std::fabs(componentData[i][j] - Constants::WHITE) < Constants::EPSILON) {
+                                    p->field[i][j] = Constants::MID_GRAY;
                                 }
                             }
                         }
