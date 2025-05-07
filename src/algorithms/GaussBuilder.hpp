@@ -7,7 +7,7 @@
 // Локальные заголовки
 #include "core/Constants.hpp"  // Подключаем константы
 #include "core/Logger.hpp"
-#include "core/Pole.hpp" // для std::unique_ptr<Pole>
+#include "services/Pole.hpp" // для std::unique_ptr<Pole>
 
 //Классы для построения гаусса
 struct Gaus { // Структура, хранящая Гауссы

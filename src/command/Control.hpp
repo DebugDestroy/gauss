@@ -19,13 +19,14 @@
 #include "core/Config.hpp"
 #include "core/Logger.hpp"
 #include "command/DispatcherParams.hpp"  // Добавляем include
+#include "services/ClusterService.hpp"
 #include "algorithms/Copier.hpp"
 #include "algorithms/Component.hpp"
 #include "algorithms/GaussBuilder.hpp"
 #include "algorithms/KMeans.hpp"
 #include "algorithms/PathFinder.hpp"
 #include "algorithms/VoronoiDiagram.hpp"
-#include "core/Pole.hpp"
+#include "services/Pole.hpp"
 #include "visualization/GnuplotInterface.hpp"
 #include "io/BmpHandler.hpp"
 #include "algorithms/ComponentCalculator.hpp"
@@ -57,8 +58,7 @@ public:
     ComponentCalculator componentCalculator;
     Triangulator triangulator;
     std::unique_ptr<Pole> p = nullptr;
-    std::unique_ptr<KMeans> kMeans = nullptr;
-    std::vector<std::vector<double>> kMeansData;
+    ClusterService clusterService;
     std::vector<Triangle> lastTriangulation;
     std::vector<VoronoiEdge> voronoiEdges;
     PathFinder pathFinder;
@@ -75,62 +75,13 @@ public:
           gnuplotInterface(log),
           componentCalculator(log),
           triangulator(log),
+          clusterService(log),
           pathFinder(cfg, log),
           voronoi(log) {
-        
-        kMeans = std::make_unique<KMeans>(log);
         
         logger.info("Control system initialized");
         logger.debug(std::string("Field dimensions: ") + std::to_string(cfg.fieldWidth) + "x" + 
                     std::to_string(cfg.fieldHeight));
-    }
-
-    std::vector<PointD> getClusterCenters() const {
-        std::vector<PointD> centers;
-        for (const auto& component : componenti) {
-            if (std::isnan(component.center_x) || std::isnan(component.center_y)) {
-                logger.logMessage(LogLevel::Warning, "Skipping invalid cluster center (NaN)");
-                continue;
-            }
-            if (component.center_x >= 0 && component.center_x < config.fieldWidth &&
-                component.center_y >= 0 && component.center_y < config.fieldHeight) {
-                centers.emplace_back(component.center_x, component.center_y);
-            } else {
-                logger.logMessage(LogLevel::Error, 
-                    std::string("Invalid cluster center: (") + std::to_string(component.center_x) + 
-                    ", " + std::to_string(component.center_y) + ")");
-            }
-        }
-        return centers;
-    }
-
-    void applyClusterResults(const KMeans::ClusterResult& result, 
-                           std::vector<std::vector<double>>& pixelMatrix) {
-        for (size_t i = 0; i < result.labels.size(); ++i) {
-            int label = result.labels[i];
-            if (label >= 0 && label < static_cast<int>(result.colors.size())) {
-                int x = static_cast<int>(kMeansData[i][0]);
-                int y = static_cast<int>(kMeansData[i][1]);
-                const auto& color = result.colors[label];
-                pixelMatrix[y][x] = (color[0] + color[1] + color[2]) / 3.0;
-            }
-        }
-    }
-
-    void prepareKMeansData(const std::vector<std::vector<double>>& copyPole) {
-        kMeansData.clear();
-        size_t validPoints = 0;
-        
-        for (size_t y = 0; y < copyPole.size(); ++y) {
-            for (size_t x = 0; x < copyPole[0].size(); ++x) {
-                if (copyPole[y][x] > 0) { 
-                    kMeansData.push_back({static_cast<double>(x), static_cast<double>(y)});
-                    validPoints++;
-                }
-            }
-        }
-            logger.logMessage(LogLevel::Debug, 
-                std::string("Prepared ") + std::to_string(validPoints) + " points for K-means");
     }
     
     void Dispetcher(DispatcherParams& params) {     
@@ -218,39 +169,43 @@ public:
             }
             
             copier.removeNoise(CopyPole, componenti);
-            prepareKMeansData(CopyPole);
-            if (kMeansData.empty()) {
+            clusterService.prepareKMeansData(CopyPole);
+            if (clusterService.getKMeansData().empty()) {
                 logger.logMessage(LogLevel::Warning, "No data for k_means clustering");
                 return;
             }
-
-            auto result = kMeans->cluster(kMeansData, params.clusterCount);
-            applyClusterResults(result, CopyPole);
+            auto result = clusterService.getKMeans().cluster(clusterService.getKMeansData(), params.clusterCount);
+            clusterService.applyClusterResults(result, CopyPole);
             logOperation(LogLevel::Info, std::string("k_means"), std::string("clusterCount=") + std::to_string(params.clusterCount));
         }
         
-        if (params.command == "k_means_kern") {
-            if (!kMeans || params.clusterCount <= 0 || params.kernelSize <= 0 || p == nullptr) {
-                logger.logMessage(LogLevel::Error, "Invalid parameters for k_means_kern");
-                return;
-            }
-            
-            copier.removeNoise(CopyPole, componenti);
-            prepareKMeansData(CopyPole);
-            if (kMeansData.empty()) {
-                logger.logMessage(LogLevel::Warning, "No data for k_means_kern clustering");
-                return;
-            }
+       if (params.command == "k_means_kern") {
+           if (params.clusterCount <= 0 || params.kernelSize <= 0 || p == nullptr) {
+               logger.logMessage(LogLevel::Error, "Invalid parameters for k_means_kern");
+               return;
+           }
+    
+             copier.removeNoise(CopyPole, componenti);
+             clusterService.prepareKMeansData(CopyPole);
+             if (clusterService.getKMeansData().empty()) {
+                 logger.logMessage(LogLevel::Warning, "No data for k_means_kern clustering");
+                 return;
+             }
 
-            auto result = kMeans->kmeansWithKernels(kMeansData, params.clusterCount, params.kernelSize);
-            applyClusterResults(result, CopyPole);
+    auto result = clusterService.getKMeans().kmeansWithKernels(
+        clusterService.getKMeansData(), 
+        params.clusterCount, 
+        params.kernelSize
+    );
+    
+            clusterService.applyClusterResults(result, CopyPole);
             logOperation(LogLevel::Info, std::string("k_means_kern"), 
-                std::string("clusterCount=") + std::to_string(params.clusterCount) + 
-                ", kernelSize=" + std::to_string(params.kernelSize));
+            std::string("clusterCount=") + std::to_string(params.clusterCount) + 
+            ", kernelSize=" + std::to_string(params.kernelSize));
         }
         
         if (params.command == "triangulate") {
-            clusterCenters = getClusterCenters();     
+            clusterCenters = clusterService.getClusterCenters(componenti, config);  
             lastTriangulation = triangulator.bowyerWatson(clusterCenters);
             voronoi.buildFromDelaunay(lastTriangulation, pathFinder, p, voronoiEdges);
             logOperation(LogLevel::Info, std::string("triangulate"), 

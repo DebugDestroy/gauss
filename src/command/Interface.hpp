@@ -10,10 +10,6 @@
 #include "core/Config.hpp"          // Для Config
 #include "core/Logger.hpp"          // Для Logger
 #include "command/DispatcherParams.hpp"  // Новый include
-#include "io/BmpHandler.hpp"        // Для BmpWriteMode
-#include "algorithms/Component.hpp" // Для Component
-#include "core/Geometry.hpp"        // Для PointD
-#include "algorithms/PathFinder.hpp" // Для PathFinder
 
 // Предварительное объявление класса Control
 class Control;
