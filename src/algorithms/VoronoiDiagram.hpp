@@ -7,8 +7,8 @@
 // Локальные заголовки
 #include "core/Constants.hpp"  // Подключаем константы
 #include "core/Logger.hpp"
-#include "core/Geometry.hpp" // для PointD, Edge, Triangle
-#include "core/Pole.hpp" // для std::unique_ptr<Pole>
+#include "services/Geometry.hpp" // для PointD, Edge, Triangle
+#include "services/Pole.hpp" // для std::unique_ptr<Pole>
 #include "algorithms/PathFinder.hpp" // для PathFinder
 
 class VoronoiDiagram {

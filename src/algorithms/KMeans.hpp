@@ -11,7 +11,6 @@
 // Локальные заголовки
 #include "core/Constants.hpp"  // Подключаем константы
 #include "core/Logger.hpp"
-#include "utils/ColorGenerator.hpp" // для ColorGenerator
 
 class KMeans {
 private:
@@ -36,7 +35,6 @@ public:
 
     struct ClusterResult {
         std::vector<int> labels;
-        std::vector<std::array<int, 3>> colors;
         std::vector<std::vector<double>> centers;
     };
 
@@ -143,10 +141,7 @@ public:
 
         result.labels = labels;
         result.centers = centers;
-        result.colors = ColorGenerator::generateColors(k, logger);
         
-        logger.debug(std::string("[KMeans::cluster] Сгенерировано ") + 
-                    std::to_string(result.colors.size()) + " цветов для кластеров");
         logCenters(result.centers, "Финальные центры кластеров: ");
         
         return result;
@@ -221,7 +216,6 @@ public:
         if (static_cast<int>(result.centers.size()) != k) {
             logger.error("[KMeans::kmeansWithKernels] Несоответствие количества кластеров!");
         }
-        result.colors = ColorGenerator::generateColors(k, logger);
 
         logger.info("[KMeans::kmeansWithKernels] Кластеризация с ядрами завершена");
         logCenters(result.centers, "Финальные центры: ");

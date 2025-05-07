@@ -8,7 +8,7 @@
 
 // Локальные заголовки
 #include "core/Logger.hpp"
-#include "core/Geometry.hpp" // для PointD, Triangle, Edge
+#include "services/Geometry.hpp" // для PointD, Triangle, Edge
 
 class Triangulator {
 private:
@@ -29,7 +29,37 @@ private:
             << edge.b.x << "," << edge.b.y << ")";
         logger.trace(oss.str());
     }
+    
+    bool isPointInCircumcircle(const PointD& p, const Triangle& tri) {
+        double ax = tri.a.x - p.x, ay = tri.a.y - p.y;
+        double bx = tri.b.x - p.x, by = tri.b.y - p.y;
+        double cx = tri.c.x - p.x, cy = tri.c.y - p.y;
+        
+        double det = ax * (by * (cx*cx + cy*cy) - cy * (bx*bx + by*by)) 
+                   - ay * (bx * (cx*cx + cy*cy) - cx * (bx*bx + by*by)) 
+                   + (ax*ax + ay*ay) * (bx*cy - by*cx);
 
+        bool inside = det > 0;
+        logger.trace(std::string("[Triangulator::isPointInCircumcircle] Точка (") + 
+                    std::to_string(p.x) + "," + std::to_string(p.y) + ") " +
+                    (inside ? "внутри" : "вне") + " окружности треугольника");
+        logTriangle(tri, "Проверяемый треугольник: ");
+
+        return inside;
+    }
+
+    bool hasEdge(const Triangle& tri, const Edge& edge) {
+        bool has = Edge(tri.a, tri.b) == edge 
+                || Edge(tri.b, tri.c) == edge 
+                || Edge(tri.c, tri.a) == edge;
+
+        logger.trace(std::string("[Triangulator::hasEdge] Треугольник ") + 
+                    std::string(has ? "содержит" : "не содержит") + " ребро");
+        logTriangle(tri);
+        logEdge(edge);
+
+        return has;
+    }
 public:
     Triangulator(Logger& lg) : logger(lg) {
         logger.trace("[Triangulator] Инициализация калькулятора компонент");
@@ -135,36 +165,5 @@ public:
         logger.debug(std::string("Итоговое количество треугольников: ") + std::to_string(triangles.size()));
 
         return triangles;
-    }
-
-    bool isPointInCircumcircle(const PointD& p, const Triangle& tri) {
-        double ax = tri.a.x - p.x, ay = tri.a.y - p.y;
-        double bx = tri.b.x - p.x, by = tri.b.y - p.y;
-        double cx = tri.c.x - p.x, cy = tri.c.y - p.y;
-        
-        double det = ax * (by * (cx*cx + cy*cy) - cy * (bx*bx + by*by)) 
-                   - ay * (bx * (cx*cx + cy*cy) - cx * (bx*bx + by*by)) 
-                   + (ax*ax + ay*ay) * (bx*cy - by*cx);
-
-        bool inside = det > 0;
-        logger.trace(std::string("[Triangulator::isPointInCircumcircle] Точка (") + 
-                    std::to_string(p.x) + "," + std::to_string(p.y) + ") " +
-                    (inside ? "внутри" : "вне") + " окружности треугольника");
-        logTriangle(tri, "Проверяемый треугольник: ");
-
-        return inside;
-    }
-
-    bool hasEdge(const Triangle& tri, const Edge& edge) {
-        bool has = Edge(tri.a, tri.b) == edge 
-                || Edge(tri.b, tri.c) == edge 
-                || Edge(tri.c, tri.a) == edge;
-
-        logger.trace(std::string("[Triangulator::hasEdge] Треугольник ") + 
-                    std::string(has ? "содержит" : "не содержит") + " ребро");
-        logTriangle(tri);
-        logEdge(edge);
-
-        return has;
     }
 };
