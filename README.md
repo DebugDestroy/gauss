@@ -144,11 +144,11 @@ cmake --build . --parallel $(nproc)
 |------------------------------|------------------------------------------------|----------------------------------------------------------------------------------|
 | fieldWidth                   | `fieldWidth`                                   | Ширина рабочего поля в пикселях                                                  |  
 | fieldHeight                  | `fieldHeight`                                  | Высота рабочего поля в пикселях                                                  |
-| defaultX                     | `defaultX`                                     | Стандартная X-координата центра гауссова распределения по умолчанию              |
-| defaultY                     | `defaultY`                                     | Стандартная Y-координата центра гауссова распределения по умолчанию              |
-| defaultSx                    | `defaultSx`                                    | Стандартное отклонение по оси X по умолчанию                                     |
-| defaultSy                    | `defaultSy`                                    | Стандартное отклонение по оси Y по умолчанию                                     |
-| defaultH                     | `defaultH`                                     | Стандартная высота гауссова распределения по умолчанию                           |
+| defaultCenterX               | `defaultCenterX`                               | Стандартная X-координата центра гауссова распределения по умолчанию              |
+| defaultCenterY               | `defaultCenterY`                               | Стандартная Y-координата центра гауссова распределения по умолчанию              |
+| defaultSigmaX                | `defaultSigmaX`                                | Стандартное отклонение по оси X по умолчанию                                     |
+| defaultSigmaY                | `defaultSigmaY`                                | Стандартное отклонение по оси Y по умолчанию                                     |
+| defaultHeight                | `defaultHeight`                                | Стандартная высота гауссова распределения по умолчанию                           |
 | defaultGnuplot               | `filename_gnuplot.png`                         | Путь к файлу для сохранения 3D-визуализации по умолчанию                         |
 | defaultPlotMetedata          | `filename_metadata.png`                        | Путь к файлу для визуализации метаданных компонент по умолчанию                  |
 | defaultPlotVoronoi           | `filename_voronoi.png`                         | Путь к файлу для диаграммы Вороного по умолчанию                                 |
@@ -157,7 +157,7 @@ cmake --build . --parallel $(nproc)
 | defaultWrite                 | `filename_write.bmp`                           | Путь к файлу для сохранения BMP-изображения по умолчанию                         |
 | defaultWriteModeImage        | `writeMode`                                    | Режим сохранения BMP (Full/Binary) по умолчанию                                  |
 | defaultRead                  | `filename_read.bmp`                            | Путь к файлу для загрузки BMP-изображения по умолчанию                           |
-| defaultSlice                 | `defaultSlice`                                 | Порог бинаризации по умолчанию                                                   |
+| defaultThreshold             | `defaultThreshold`                             | Порог бинаризации по умолчанию                                                   |
 | defaultBinMode               | `binMode`                                      | Режим бинаризации (Peaks/Valleys/All) по умолчанию                               |
 | defaultNoisy                 | `defaultNoisy`                                 | Порог для удаления шумовых компонент по умолчанию                                |
 | defaultKlaster               | `defaultKlaster`                               | Количество кластеров для k-mean по умолчанию                                     |
@@ -243,11 +243,11 @@ end
 ```
 fieldWidth 250
 fieldHeight 250
-defaultX 50.0
-defaultY 50.0
-defaultSx 20.0
-defaultSy 20.0
-defaultH 200.0
+defaultCenterX 50.0
+defaultCenterY 50.0
+defaultSigmaX 20.0
+defaultSigmaY 20.0
+defaultHeight 200.0
 defaultGnuplot results/visualizations/Gnuplot.png
 defaultPlotMetedata results/visualizations/Metadata.png
 defaultPlotVoronoi results/visualizations/Voronoi.png
@@ -256,17 +256,17 @@ defaultPlotPath results/visualizations/Path.png
 defaultWrite results/visualizations/Write.bmp 
 defaultWriteModeImage Full
 defaultRead results/visualizations/Read.bmp
-defaultSlice 127
+defaultThreshold 130
 defaultBinMode All
 defaultNoisy 10
 defaultKlaster 5
 defaultKlasterKern 5
-defaultpointA_x 150.0
-defaultpointA_y 150.0
-defaultpointB_x 160.0
-defaultpointB_y 160.0
+defaultstartPointX 150.0
+defaultstartPointY 150.0
+defaultendPointX 160.0
+defaultendPointY 160.0
 defaultPlot3DPath results/visualizations/Plot3DPath.png
-vehicleRadius 5
+vehicleRadius 1
 maxSideAngle 90.0
 maxUpDownAngle 90.0
 logFileNameInterface var/logs/log_interface.txt
@@ -275,69 +275,6 @@ defaultHelp results/help.txt
 FiltrationLogLevelInterface INFO
 FiltrationLogLevelControl INFO
 ```
-
-##### ======================================
-## 🔄 SAFE WORKFLOW v1.0
-##### ======================================
-#### Философия: "Мои изменения — священны 😤️, main обновляется без боли 😇️"
-
-### 1️⃣ Начало работы (без опасного pull!)
-```
-git checkout main
-git checkout -b feature/improved-structure  # Создаем ветку ОТ локального main
-```
-
-### 2️⃣ Работа с файлами
-#### Редактируете файлы -> сохраняете -> проверяете:
-```
-git status
-```
-
-### 3️⃣ Фиксация изменений в ветке
-```
-git add .
-git commit -m "Мои изменения ..."
-git push origin feature/improved-structure
-```
-
-### 4️⃣ Лучший способ обновить main:
-
-#### --- Способ 1: Идеальный мир (без конфликтов) ---
-```
-git checkout main
-git merge --squash feature/improved-structure #Лень решать конфликты? Пишем "git reset --merge" после и идем ко 2 способу!
-git commit -m "РЕЛИЗ: Новая структура проекта"
-git push origin main
-```
-
-#### --- Способ 2: Жёсткий reset (когда конфликты лень решать) ---
-```
-git checkout main
-git reset --hard feature/improved-structure
-git push origin main --force-with-lease
-```
-
-#### --- Способ 3: Аккуратный мерж (если main меняли другие) ---
-```
-git fetch origin
-git merge origin/main --no-commit
-[ручное разрешение конфликтов]
-git commit -m "Мерж улучшенной структуры"
-git push origin main
-```
-
-### 5️⃣ Создание тега
-```
-git tag -a v2.0.0 -m "Обновленная структура проекта"
-git push origin v2.0.0
-```
-
-### 6️⃣ Очистка
-```
-git branch -D feature/improved-structure
-git push origin --delete feature/improved-structure
-```
-
 
 ## 📄 Лицензия
 Этот проект лицензирован под MIT License. Вы можете свободно использовать, изменять и распространять код, при условии, что вы укажете автора.
