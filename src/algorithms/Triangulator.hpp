@@ -7,7 +7,6 @@
 #include <limits> // для std::numeric_limits
 
 // Локальные заголовки
-#include "core/Logger.hpp"
 #include "services/Geometry.hpp" // для PointD, Triangle, Edge
 
 class Triangulator {

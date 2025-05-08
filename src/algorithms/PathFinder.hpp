@@ -10,10 +10,7 @@
 
 // Локальные заголовки
 #include "core/Constants.hpp"  // Подключаем константы
-#include "core/Config.hpp"
-#include "core/Logger.hpp"
 #include "services/Geometry.hpp" // для PointD, Triangle, Edge
-#include "services/Pole.hpp" // для std::unique_ptr<Pole>
 
 struct AStarNode {
     PointD position;       // Позиция узла (центр треугольника)

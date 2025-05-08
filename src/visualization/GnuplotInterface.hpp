@@ -6,14 +6,6 @@
 #include <cmath>        // Для std::sqrt, std::abs
 #include <memory>       // Для std::unique_ptr
 
-// Локальные заголовки
-#include "core/Logger.hpp"          // Для Logger
-#include "services/Pole.hpp"            // Для Pole
-#include "algorithms/Component.hpp" // Для Component
-#include "services/Geometry.hpp"        // Для PointD, Triangle, VoronoiEdge
-#include "command/DispatcherParams.hpp"  // Новый include
-#include "algorithms/PathFinder.hpp"    // Для PathFinder
-
 class GnuplotInterface {
 private:
     Logger& logger;
