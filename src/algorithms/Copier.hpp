@@ -5,8 +5,6 @@
 
 // Локальные заголовки
 #include "core/Constants.hpp"  // Подключаем константы
-#include "core/Logger.hpp"
-#include "algorithms/Component.hpp"
 
 class Copier {
 private:

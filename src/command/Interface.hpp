@@ -7,8 +7,6 @@
 #include <unordered_map> // Для std::unordered_map (если потребуется)
 
 // Локальные заголовки
-#include "core/Config.hpp"          // Для Config
-#include "core/Logger.hpp"          // Для Logger
 #include "command/DispatcherParams.hpp"  // Новый include
 
 // Предварительное объявление класса Control

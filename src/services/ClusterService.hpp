@@ -2,22 +2,20 @@
 #include <vector>
 
 // Локальные заголовки
-#include "algorithms/KMeans.hpp"
-#include "core/Logger.hpp"
-#include "core/Config.hpp"
 #include "services/Geometry.hpp" // для PointD
-#include "algorithms/Component.hpp" // для Component
 #include "services/ColorGenerator.hpp"
+#include "algorithms/KMeans.hpp"
 
 class ClusterService {
 private:
     Logger& logger;
-    KMeans kMeans;
-    ColorGenerator colorGenerator;
+    KMeans& kMeans;
+    ColorGenerator& colorGenerator;
     std::vector<std::vector<double>> kMeansData;
 
 public:
-    ClusterService(Logger& log) : logger(log), kMeans(log), colorGenerator() {}
+    ClusterService(Logger& log, KMeans& kmeans, ColorGenerator& colorGen) 
+        : logger(log), kMeans(kmeans), colorGenerator(colorGen) {}
     
     std::vector<std::array<int, 3>> getClusterColors(int clusterCount) {
         return colorGenerator.generateColors(clusterCount, logger);
@@ -74,7 +72,4 @@ public:
         return kMeansData;
     }
 
-    KMeans& getKMeans() {
-        return kMeans;
-    }
 };
