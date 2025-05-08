@@ -20,6 +20,7 @@
 #include "core/Logger.hpp"
 #include "command/DispatcherParams.hpp"  // Добавляем include
 #include "services/ClusterService.hpp"
+#include "services/ColorGenerator.hpp"
 #include "algorithms/Copier.hpp"
 #include "algorithms/Component.hpp"
 #include "algorithms/GaussBuilder.hpp"
@@ -56,6 +57,8 @@ public:
     BmpHandler bmpHandler;
     GnuplotInterface gnuplotInterface;
     ComponentCalculator componentCalculator;
+    KMeans kMeans;
+    ColorGenerator colorGenerator;
     Triangulator triangulator;
     std::unique_ptr<Pole> p = nullptr;
     ClusterService clusterService;
@@ -74,8 +77,10 @@ public:
           bmpHandler(log),
           gnuplotInterface(log),
           componentCalculator(log),
+          kMeans(log),           // Инициализируем KMeans
+          colorGenerator(),       // Инициализируем ColorGenerator
           triangulator(log),
-          clusterService(log),
+          clusterService(log, kMeans, colorGenerator),
           pathFinder(cfg, log),
           voronoi(log) {
         
@@ -126,7 +131,7 @@ public:
         }
         
         if (params.command == "PlotPath") {
-            gnuplotInterface.plotPath(path, p, params.filename, params, pathFinder, config.vehicleRadius);
+            gnuplotInterface.plotPath(path, p, params.filename, params, config.vehicleRadius);
             logOperation(LogLevel::Info, std::string("PlotPath"), std::string("file: ") + params.filename);
         }
 
@@ -174,7 +179,7 @@ public:
                 logger.logMessage(LogLevel::Warning, "No data for k_means clustering");
                 return;
             }
-            auto result = clusterService.getKMeans().cluster(clusterService.getKMeansData(), params.clusterCount);
+            auto result = kMeans.cluster(clusterService.getKMeansData(), params.clusterCount);
             clusterService.applyClusterResults(result, CopyPole);
             logOperation(LogLevel::Info, std::string("k_means"), std::string("clusterCount=") + std::to_string(params.clusterCount));
         }
@@ -192,7 +197,7 @@ public:
                  return;
              }
 
-    auto result = clusterService.getKMeans().kmeansWithKernels(
+    auto result = kMeans.kmeansWithKernels(
         clusterService.getKMeansData(), 
         params.clusterCount, 
         params.kernelSize
@@ -207,7 +212,7 @@ public:
         if (params.command == "triangulate") {
             clusterCenters = clusterService.getClusterCenters(componenti, config);  
             lastTriangulation = triangulator.bowyerWatson(clusterCenters);
-            voronoi.buildFromDelaunay(lastTriangulation, pathFinder, p, voronoiEdges);
+            voronoi.buildFromDelaunay(lastTriangulation, p, voronoiEdges);
             logOperation(LogLevel::Info, std::string("triangulate"), 
                 std::string("clusters=") + std::to_string(clusterCenters.size()) + 
                 ", triangles=" + std::to_string(lastTriangulation.size()));
@@ -243,14 +248,14 @@ public:
         if (params.command == "Plot3DPath") {
             PointD start(params.startPointX, params.startPointY);
             PointD end(params.endPointX, params.endPointY);
-            gnuplotInterface.plot3DPath(path, p, params.filename, start, end, pathFinder, config.vehicleRadius);
+            gnuplotInterface.plot3DPath(path, p, params.filename, start, end, config.vehicleRadius);
             logOperation(LogLevel::Info, std::string("Plot3DPath"), std::string("file: ") + params.filename);
         }
         
         if (params.command == "plotInteractive3DPath") {
             PointD start(params.startPointX, params.startPointY);
             PointD end(params.endPointX, params.endPointY);
-            gnuplotInterface.plotInteractive3DPath(path, p, start, end, pathFinder, config.vehicleRadius);
+            gnuplotInterface.plotInteractive3DPath(path, p, start, end, config.vehicleRadius);
             logOperation(LogLevel::Info, std::string("plotInteractive3DPath"));
         }
     }

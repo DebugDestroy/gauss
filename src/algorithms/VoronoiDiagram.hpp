@@ -6,10 +6,7 @@
 
 // Локальные заголовки
 #include "core/Constants.hpp"  // Подключаем константы
-#include "core/Logger.hpp"
 #include "services/Geometry.hpp" // для PointD, Edge, Triangle
-#include "services/Pole.hpp" // для std::unique_ptr<Pole>
-#include "algorithms/PathFinder.hpp" // для PathFinder
 
 class VoronoiDiagram {
 private:
@@ -32,7 +29,6 @@ public:
     }
 
     void buildFromDelaunay(const std::vector<Triangle>& triangles, 
-                          const PathFinder& pathFinder, 
                           const std::unique_ptr<Pole>& p,
                           std::vector<VoronoiEdge>& edges) {
         logger.info("[VoronoiDiagram::buildFromDelaunay] Построение диаграммы из триангуляции Делоне");
@@ -58,7 +54,7 @@ public:
                        std::to_string(cc1.x) + "," + std::to_string(cc1.y) + "), " +
                        (cc1_valid ? "внутри" : "снаружи") + " области");
 
-            auto neighbors = pathFinder.findNeighbors(tri, triangles);
+            auto neighbors = Triangle::findNeighbors(tri, triangles);
             logger.trace(std::string("[VoronoiDiagram::buildFromDelaunay] Найдено ") + 
                        std::to_string(neighbors.size()) + " соседей");
 
@@ -89,7 +85,7 @@ public:
             // Обработка граничных треугольников
             if (neighbors.size() < 3) {
                 logger.trace("[VoronoiDiagram::buildFromDelaunay] Обработка граничного треугольника");
-                handleBoundaryTriangle(tri, cc1, width, height, edges, cc1_valid, triangles, pathFinder);
+                handleBoundaryTriangle(tri, cc1, width, height, edges, cc1_valid, triangles);
             }
         }
 
@@ -173,14 +169,13 @@ private:
 
     void handleBoundaryTriangle(const Triangle& tri, const PointD& cc, int width, int height, 
                                std::vector<VoronoiEdge>& edges, bool cc_valid,
-                               const std::vector<Triangle>& allTriangles,  
-                               const PathFinder& pathFinder) {
+                               const std::vector<Triangle>& allTriangles) {
         if (!cc_valid) {
             logger.trace("[VoronoiDiagram::handleBoundaryTriangle] Центр снаружи, пропуск");
             return;
         }
 
-        auto boundaryEdges = getBoundaryEdges(tri, allTriangles, pathFinder);
+        auto boundaryEdges = getBoundaryEdges(tri, allTriangles);
         logger.debug(std::string("[VoronoiDiagram::handleBoundaryTriangle] Найдено ") +
                    std::to_string(boundaryEdges.size()) + " граничных ребер");
 
@@ -192,8 +187,7 @@ private:
     }
 
     std::vector<Edge> getBoundaryEdges(const Triangle& tri, 
-                                      const std::vector<Triangle>& allTriangles,  
-                                      const PathFinder& pathFinder) {
+                                      const std::vector<Triangle>& allTriangles) {
         std::vector<Edge> boundaryEdges;
         logger.trace("[VoronoiDiagram::getBoundaryEdges] Поиск граничных ребер треугольника");
 
@@ -203,7 +197,7 @@ private:
 
             for (const auto& other : allTriangles) {
                 if (&tri == &other) continue;
-                if (pathFinder.shareEdge(tri, other) && pathFinder.otherHasEdge(other, edge)) {
+                if (Triangle::shareEdge(tri, other) && Triangle::otherHasEdge(other, edge)) {
                     isBoundary = false;
                     break;
                 }

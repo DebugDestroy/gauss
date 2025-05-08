@@ -8,9 +8,8 @@
 
 // Локальные заголовки
 #include "core/Constants.hpp"  // Подключаем константы
-#include "core/Logger.hpp"       // Для Logger
-#include "algorithms/GaussBuilder.hpp"  // Для GaussBuilder
-#include "services/Pole.hpp"         // Для Pole
+#include "services/Pole.hpp"
+#include "algorithms/GaussBuilder.hpp"
 
 enum class BmpWriteMode {//для bmp_write
     Binary,  // Бинарное изображение

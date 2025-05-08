@@ -10,7 +10,6 @@
 
 // Локальные заголовки
 #include "core/Constants.hpp"  // Подключаем константы
-#include "core/Logger.hpp"  // Для Logger
 
 struct Color{ // структура для хранения rgb цвета
     uint8_t r, g, b;

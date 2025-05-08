@@ -7,12 +7,7 @@
 #include <memory>       // Для std::unique_ptr
 
 // Локальные заголовки
-#include "core/Logger.hpp"          // Для Logger
-#include "services/Pole.hpp"            // Для Pole
-#include "algorithms/Component.hpp" // Для Component
-#include "services/Geometry.hpp"        // Для PointD, Triangle, VoronoiEdge
-#include "command/DispatcherParams.hpp"  // Новый include
-#include "algorithms/PathFinder.hpp"    // Для PathFinder
+#include "services/Geometry.hpp" // Brezenhaim
 
 class GnuplotInterface {
 private:
@@ -305,8 +300,7 @@ void plotVoronoi(const std::unique_ptr<Pole>& p,
 void plotPath(const std::vector<PointD>& path, 
                  const std::unique_ptr<Pole>& p, 
                  const std::string& filename, 
-                 const DispatcherParams& params, 
-                 const PathFinder& pathFinder, 
+                 const DispatcherParams& params,
                  const double Radius) {
         logPlotStart("PathVisualization", filename);
         
@@ -337,7 +331,7 @@ void plotPath(const std::vector<PointD>& path,
     // 1. Собираем все пиксели пути
     std::vector<PointD> pathPixels;
     for (size_t i = 0; i < path.size() - 1; ++i) {
-        auto segment = pathFinder.bresenhamLine(path[i], path[i+1]);
+        auto segment = Edge::bresenhamLine(path[i], path[i+1]);
         pathPixels.insert(pathPixels.end(), segment.begin(), segment.end());
     }
 
@@ -407,8 +401,7 @@ void plotPath(const std::vector<PointD>& path,
 void plotInteractive3DPath(const std::vector<PointD>& path, 
                               const std::unique_ptr<Pole>& p, 
                               const PointD& start, 
-                              const PointD& end, 
-                              const PathFinder& pathFinder,  
+                              const PointD& end,
                               const double sphereRadius) {
         logPlotStart("Interactive3DPath", "интерактивное окно");
         
@@ -442,7 +435,7 @@ void plotInteractive3DPath(const std::vector<PointD>& path,
     // 2. Создаем проекцию пути (все пиксели между узлами)
     std::vector<std::pair<int, int>> pathProjection;
     for (size_t i = 0; i < path.size() - 1; ++i) {
-        auto linePixels = pathFinder.bresenhamLine(path[i], path[i+1]); // Алгоритм Брезенхема для рисования линии
+        auto linePixels = Edge::bresenhamLine(path[i], path[i+1]); // Алгоритм Брезенхема для рисования линии
         for (const auto& pixel : linePixels) {
             pathProjection.emplace_back(static_cast<int>(pixel.x), static_cast<int>(pixel.y));
         }
@@ -496,8 +489,7 @@ void plot3DPath(const std::vector<PointD>& path,
                    const std::unique_ptr<Pole>& p, 
                    const std::string& filename, 
                    const PointD& start, 
-                   const PointD& end, 
-                   const PathFinder& pathFinder, 
+                   const PointD& end,
                    const double sphereRadius) {
         logPlotStart("3DPathProjection", filename);
         
@@ -519,7 +511,7 @@ void plot3DPath(const std::vector<PointD>& path,
     // 1. Создаем проекцию пути (все пиксели между узлами)
     std::vector<std::pair<int, int>> pathProjection;
     for (size_t i = 0; i < path.size() - 1; ++i) {
-        auto linePixels = pathFinder.bresenhamLine(path[i], path[i+1]); // Алгоритм Брезенхема для рисования линии
+        auto linePixels = Edge::bresenhamLine(path[i], path[i+1]); // Алгоритм Брезенхема для рисования линии
         for (const auto& pixel : linePixels) {
             pathProjection.emplace_back(static_cast<int>(pixel.x), static_cast<int>(pixel.y));
         }
