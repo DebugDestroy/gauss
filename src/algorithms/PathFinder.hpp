@@ -34,30 +34,6 @@ private:
     const Config& config;
     Logger& logger;
 
-    void logPoint(const std::string& prefix, const PointD& p) const {
-        logger.debug(prefix + " (" + std::to_string(p.x) + ", " + std::to_string(p.y) + ")");
-    }
-
-    void logTriangle(const std::string& prefix, const Triangle* tri) const {
-        if (tri) {
-            std::ostringstream oss;
-            oss << prefix << " ["
-                << "A(" << tri->a.x << "," << tri->a.y << "), "
-                << "B(" << tri->b.x << "," << tri->b.y << "), "
-                << "C(" << tri->c.x << "," << tri->c.y << ")]";
-            logger.debug(oss.str());
-        } else {
-            logger.debug(prefix + " [не найден]");
-        }
-    }
-
-    void logEdge(const Edge& edge) const {
-        std::ostringstream oss;
-        oss << "Ребро: (" << edge.a.x << "," << edge.a.y << ")-(" 
-            << edge.b.x << "," << edge.b.y << "), длина: " << edge.length();
-        logger.trace(oss.str());
-    }
-
 std::vector<PointD> reconstructPath(const AStarNode& endNode, 
                                    const PointD& start, 
                                    const PointD& goal) const {
@@ -80,40 +56,6 @@ std::vector<PointD> reconstructPath(const AStarNode& endNode,
                    std::to_string(b.x) + "," + std::to_string(b.y) + "): " + 
                    std::to_string(dist));
         return dist;
-    }
-    
-    const Triangle* findContainingTriangle(const PointD& p, const std::vector<Triangle>& triangles) {
-        logger.trace(std::string("[PathFinder::findContainingTriangle] Поиск треугольника для точки (") + 
-                   std::to_string(p.x) + "," + std::to_string(p.y) + ")");
-        
-        for (const auto& tri : triangles) {
-            if (isPointInTriangle(p, tri)) {
-                logTriangle("[PathFinder::findContainingTriangle] Найден содержащий треугольник", &tri);
-                return &tri;
-            }
-        }
-        
-        logger.warning("[PathFinder::findContainingTriangle] Точка не принадлежит ни одному треугольнику");
-        return nullptr;
-    }
-
-    bool isPointInTriangle(const PointD& p, const Triangle& tri) {
-        auto sign = [](PointD p1, PointD p2, PointD p3) {
-            return (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y);
-        };
-        
-        double d1 = sign(p, tri.a, tri.b);
-        double d2 = sign(p, tri.b, tri.c);
-        double d3 = sign(p, tri.c, tri.a);
-        
-        bool has_neg = (d1 < -Constants::EPSILON) || (d2 < -Constants::EPSILON) || (d3 < -Constants::EPSILON);
-        bool has_pos = (d1 > Constants::EPSILON) || (d2 > Constants::EPSILON) || (d3 > Constants::EPSILON);
-        
-        bool result = !(has_neg && has_pos);
-        logger.trace(std::string("[PathFinder::isPointInTriangle] Точка (") + 
-                   std::to_string(p.x) + "," + std::to_string(p.y) + ") " + 
-                   (result ? "внутри" : "вне") + " треугольника");
-        return result;
     }
     
     bool isVehicleRadiusValid(const PointD& pixel, 
@@ -177,46 +119,11 @@ std::vector<PointD> reconstructPath(const AStarNode& endNode,
     return result;
 }
 
-   std::vector<const Triangle*> getNeighbors(const Triangle& tri, const std::vector<Triangle>& triangles) {
-    logger.trace(std::string("[PathFinder::getNeighbors] Поиск соседей треугольника [") +
-               "A(" + std::to_string(tri.a.x) + "," + std::to_string(tri.a.y) + "), " +
-               "B(" + std::to_string(tri.b.x) + "," + std::to_string(tri.b.y) + "), " +
-               "C(" + std::to_string(tri.c.x) + "," + std::to_string(tri.c.y) + ")]");
-    
-    std::vector<const Triangle*> neighbors;
-    size_t totalChecked = 0;
-    size_t edgesMatched = 0;
-
-    for (const auto& other : triangles) {
-        if (&tri == &other) {
-            logger.trace("[PathFinder::getNeighbors] Пропуск самосравнения");
-            continue;
-        }
-        
-        totalChecked++;
-        if (shareEdge(tri, other)) {
-            neighbors.push_back(&other);
-            edgesMatched++;
-            logger.debug(std::string("[PathFinder::getNeighbors] Найдено общее ребро с треугольником [") +
-                       "A(" + std::to_string(other.a.x) + "," + std::to_string(other.a.y) + "), " +
-                       "B(" + std::to_string(other.b.x) + "," + std::to_string(other.b.y) + "), " +
-                       "C(" + std::to_string(other.c.x) + "," + std::to_string(other.c.y) + ")]");
-        }
-    }
-
-    logger.info(std::string("[PathFinder::getNeighbors] Результаты поиска: ") +
-              std::to_string(neighbors.size()) + " соседей из " +
-              std::to_string(totalChecked) + " проверенных треугольников, " +
-              std::to_string(edgesMatched) + " общих ребер");
-    
-    return neighbors;
-}
-
 bool isEdgeNavigable(const Edge& edge, 
                     const std::unique_ptr<Pole>& p,
                     const std::vector<std::vector<double>>& binaryMap,
                     double sliceLevel) const {
-    const auto line = bresenhamLine(edge.a, edge.b);
+    const auto line = edge.bresenhamLine(edge.a, edge.b);
     const double r = config.vehicleRadius;
     
     // Вектор пути и ортогональный ему
@@ -328,63 +235,6 @@ public:
     PathFinder(const Config& cfg, Logger& lg) : config(cfg), logger(lg) {
         logger.trace("[PathFinder] Инициализация поисковика пути");
     }
-    
-    bool shareEdge(const Triangle& a, const Triangle& b) const {
-    logger.trace("[PathFinder::shareEdge] Проверка общего ребра между треугольниками");
-    
-    const std::array<Edge, 3> edgesA = { Edge(a.a, a.b), Edge(a.b, a.c), Edge(a.c, a.a) };
-    const std::array<Edge, 3> edgesB = { Edge(b.a, b.b), Edge(b.b, b.c), Edge(b.c, b.a) };
-
-    for (size_t i = 0; i < 3; ++i) {
-        const Edge& edgeA = edgesA[i];
-        for (size_t j = 0; j < 3; ++j) {
-            const Edge& edgeB = edgesB[j];
-            if (edgeA == edgeB) {
-                logger.debug(std::string("[PathFinder::shareEdge] Найдено общее ребро: (") +
-                           std::to_string(edgeA.a.x) + "," + std::to_string(edgeA.a.y) + ")-(" +
-                           std::to_string(edgeA.b.x) + "," + std::to_string(edgeA.b.y) + ")");
-                return true;
-            }
-        }
-    }
-
-    logger.trace("[PathFinder::shareEdge] Общих ребер не обнаружено");
-    return false;
-}
-
-bool otherHasEdge(const Triangle& other, const Edge& edge) const {
-    logger.trace("[PathFinder::otherHasEdge] Проверка наличия ребра в треугольнике");
-    
-    const Edge edges[3] = { Edge(other.a, other.b), Edge(other.b, other.c), Edge(other.c, other.a) };
-    
-    for (int i = 0; i < 3; ++i) {
-        if (edges[i] == edge) {
-            logger.debug(std::string("[PathFinder::otherHasEdge] Ребро найдено: (") +
-                       std::to_string(edge.a.x) + "," + std::to_string(edge.a.y) + ")-(" +
-                       std::to_string(edge.b.x) + "," + std::to_string(edge.b.y) + ")");
-            return true;
-        }
-    }
-
-    logger.trace("[PathFinder::otherHasEdge] Ребро отсутствует в треугольнике");
-    return false;
-}
-
-    std::vector<const Triangle*> findNeighbors(const Triangle& tri, const std::vector<Triangle>& allTriangles) const {
-        logger.trace("[PathFinder::findNeighbors] Поиск соседей треугольника");
-        std::vector<const Triangle*> neighbors;
-        
-        for (const auto& other : allTriangles) {
-            if (&tri == &other) continue;
-            if (shareEdge(tri, other)) {
-                neighbors.push_back(&other);
-                logger.trace("[PathFinder::findNeighbors] Найден соседний треугольник");
-            }
-        }
-        
-        logger.debug(std::string("[PathFinder::findNeighbors] Найдено ") + std::to_string(neighbors.size()) + " соседей");
-        return neighbors;
-    }
 
     std::vector<PointD> findPathAStar(const PointD& start, const PointD& goal, 
                                  const std::vector<Triangle>& triangles,
@@ -392,8 +242,8 @@ bool otherHasEdge(const Triangle& other, const Edge& edge) const {
                                  double slice, const std::unique_ptr<Pole>& p) {
     logger.info("[PathFinder::findPathAStar] Начало поиска пути");
     
-    const Triangle* startTri = findContainingTriangle(start, triangles);
-    const Triangle* goalTri = findContainingTriangle(goal, triangles);
+    const Triangle* startTri = Triangle::findContainingTriangle(start, triangles);
+    const Triangle* goalTri = Triangle::findContainingTriangle(goal, triangles);
     
     if (!startTri || !goalTri) {
         logger.error("Старт или цель вне триангуляции");
@@ -426,7 +276,7 @@ bool otherHasEdge(const Triangle& other, const Edge& edge) const {
             return path;
         }
 
-        for (const auto& neighbor : getNeighbors(*current.tri, triangles)) {
+        for (const auto& neighbor : Triangle::getNeighbors(*current.tri, triangles)) {
             Edge edge(current.position, neighbor->calculateCircumcenter());
             
             if (!isEdgeNavigable(edge, p, binaryMap, slice)) {
@@ -444,56 +294,6 @@ bool otherHasEdge(const Triangle& other, const Edge& edge) const {
 
     logger.warning("Путь не найден");
     return {};
-}
-
-std::vector<PointD> bresenhamLine(const PointD& start, const PointD& end) const {
-    logger.trace(std::string("[PathFinder::bresenhamLine] Построение линии от (") + 
-               std::to_string(start.x) + "," + std::to_string(start.y) + ") до (" +
-               std::to_string(end.x) + "," + std::to_string(end.y) + ")");
-    
-    std::vector<PointD> linePoints;
-    int x0 = static_cast<int>(start.x);
-    int y0 = static_cast<int>(start.y);
-    int x1 = static_cast<int>(end.x);
-    int y1 = static_cast<int>(end.y);
-
-    logger.debug(std::string("[PathFinder::bresenhamLine] Целочисленные координаты: (") + 
-               std::to_string(x0) + "," + std::to_string(y0) + ") -> (" +
-               std::to_string(x1) + "," + std::to_string(y1) + ")");
-
-    int dx = std::abs(x1 - x0);
-    int dy = -std::abs(y1 - y0);
-    int sx = x0 < x1 ? 1 : -1;
-    int sy = y0 < y1 ? 1 : -1;
-    int err = dx + dy;
-
-    logger.trace(std::string("[PathFinder::bresenhamLine] Параметры алгоритма: dx=") + std::to_string(dx) + 
-               ", dy=" + std::to_string(dy) + ", err=" + std::to_string(err));
-
-    size_t pointCount = 0;
-    while (true) {
-        linePoints.emplace_back(x0, y0);
-        pointCount++;
-        
-        if (x0 == x1 && y0 == y1) {
-            logger.debug(std::string("[PathFinder::bresenhamLine] Линия завершена, точек: ") + std::to_string(pointCount));
-            break;
-        }
-        
-        int e2 = 2 * err;
-        if (e2 >= dy) {
-            err += dy;
-            x0 += sx;
-            logger.trace(std::string("[PathFinder::bresenhamLine] Шаг по X: x=") + std::to_string(x0));
-        }
-        if (e2 <= dx) {
-            err += dx;
-            y0 += sy;
-            logger.trace(std::string("[PathFinder::bresenhamLine] Шаг по Y: y=") + std::to_string(y0));
-        }
-    }
-    
-    return linePoints;
 }
 
 };
