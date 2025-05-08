@@ -9,9 +9,7 @@
 
 // Локальные заголовки
 #include "core/Constants.hpp"  // Подключаем константы
-#include "core/Logger.hpp"
-#include "services/Pole.hpp" // для std::unique_ptr<Pole>
-#include "algorithms/Component.hpp" // для Component, ThresholdMode
+#include "algorithms/Component.hpp" // для ThresholdMode
 
 class ComponentCalculator {
 private:

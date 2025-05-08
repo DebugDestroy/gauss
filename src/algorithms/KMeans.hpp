@@ -10,7 +10,6 @@
 
 // Локальные заголовки
 #include "core/Constants.hpp"  // Подключаем константы
-#include "core/Logger.hpp"
 
 class KMeans {
 private:

@@ -3,9 +3,6 @@
 #include <string>      // Для std::string
 #include <stdexcept>   // Для std::invalid_argument
 
-// Локальные заголовки
-#include "core/Logger.hpp"  // Для Logger
-
 class Pole {
 private:
     Logger& logger;
