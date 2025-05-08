@@ -20,6 +20,7 @@
 #include "core/Logger.hpp"
 #include "command/DispatcherParams.hpp"  // Добавляем include
 #include "services/ClusterService.hpp"
+#include "services/ColorGenerator.hpp"
 #include "algorithms/Copier.hpp"
 #include "algorithms/Component.hpp"
 #include "algorithms/GaussBuilder.hpp"
@@ -56,6 +57,8 @@ public:
     BmpHandler bmpHandler;
     GnuplotInterface gnuplotInterface;
     ComponentCalculator componentCalculator;
+    KMeans kMeans;
+    ColorGenerator colorGenerator;
     Triangulator triangulator;
     std::unique_ptr<Pole> p = nullptr;
     ClusterService clusterService;
@@ -74,8 +77,10 @@ public:
           bmpHandler(log),
           gnuplotInterface(log),
           componentCalculator(log),
+          kMeans(log),           // Инициализируем KMeans
+          colorGenerator(),       // Инициализируем ColorGenerator
           triangulator(log),
-          clusterService(log),
+          clusterService(log, kMeans, colorGenerator),
           pathFinder(cfg, log),
           voronoi(log) {
         
@@ -174,7 +179,7 @@ public:
                 logger.logMessage(LogLevel::Warning, "No data for k_means clustering");
                 return;
             }
-            auto result = clusterService.getKMeans().cluster(clusterService.getKMeansData(), params.clusterCount);
+            auto result = kMeans.cluster(clusterService.getKMeansData(), params.clusterCount);
             clusterService.applyClusterResults(result, CopyPole);
             logOperation(LogLevel::Info, std::string("k_means"), std::string("clusterCount=") + std::to_string(params.clusterCount));
         }
@@ -192,7 +197,7 @@ public:
                  return;
              }
 
-    auto result = clusterService.getKMeans().kmeansWithKernels(
+    auto result = kMeans.kmeansWithKernels(
         clusterService.getKMeansData(), 
         params.clusterCount, 
         params.kernelSize

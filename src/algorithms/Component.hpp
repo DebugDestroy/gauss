@@ -6,7 +6,6 @@
 
 // Локальные заголовки
 #include "core/Constants.hpp"  // Подключаем константы
-#include "core/Logger.hpp"
 
 enum class ThresholdMode {// Для bin
     All,     // и ямы, и горы (по модулю)
