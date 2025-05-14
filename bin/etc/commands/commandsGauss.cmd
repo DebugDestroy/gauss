@@ -14,8 +14,13 @@ g 170 50 20 10 20
 g 10 10 10 10 7
 g 290 290 10 10 7
 g 290 10 10 10 7
-g 10 290 10 10 7
-
+g 10 290 10 30 7
+g 230 90 20 10 7
+g 180 130 10 20 10
+g 200 190 20 10 7
+g 230 90 10 10 7
+g 230 90 10 10 7
+g 30 200 10 10 7
 
 generate
 gnuplot results/visualizations/gnuplot.png
@@ -29,7 +34,7 @@ bmp_write results/visualizations/kmeans.bmp Binary
 triangulate
 PlotVoronoi results/visualizations/Diagramma_Voronova.png
 PlotDelaunay results/visualizations/Triangulation_Delone.png
-find_path 50 40 50 270
+find_path 30 30 250 240
 PlotPath results/visualizations/Path.png
 Plot3DPath results/visualizations/Plot3DPath.png
 plotInteractive3DPath

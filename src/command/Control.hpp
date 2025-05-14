@@ -233,7 +233,7 @@ public:
             }
             
             copier.removeNoise(CopyPole, componenti);
-            path = pathFinder.findPathAStar(start, goal, voronoiEdges, CopyPole, params.threshold, p);
+            path = pathFinder.findPathAStar(start, goal, voronoiEdges, CopyPole, p);
             
             if (path.empty()) {
                 logger.logMessage(LogLevel::Warning, "Path not found");
