@@ -38,70 +38,53 @@ private:
     }
     
     bool isVehicleRadiusValid(const PointD& pixel, 
-                         const std::vector<std::vector<double>>& binaryMap,
-                         const std::unique_ptr<Pole>& elevationData,
-                         double sliceLevel) const {
-    logger.trace(std::string("[PathFinder::isVehicleRadiusValid] Проверка радиуса в точке (") +
-               std::to_string(pixel.x) + "," + std::to_string(pixel.y) + ")");
-    
+                         const std::vector<std::vector<double>>& binaryMap) const
+{
+    logger.trace("[PathFinder::isVehicleRadiusValid] Проверка радиуса в точке (" +
+                 std::to_string(pixel.x) + "," + std::to_string(pixel.y) + ")");
+
     const double x = pixel.x;
     const double y = pixel.y;
-    const double currentHeight = elevationData->field[static_cast<int>(y)][static_cast<int>(x)];
-    
-    logger.debug(std::string("[PathFinder::isVehicleRadiusValid] Высота в точке: ") + std::to_string(currentHeight) +
-               ", уровень среза: " + std::to_string(sliceLevel));
 
-    const double heightDiff = std::fabs(currentHeight - sliceLevel);
-    if (heightDiff >= config.vehicleRadius) {
-        logger.debug(std::string("[PathFinder::isVehicleRadiusValid] Тележка ниже среза (") + 
-                   std::to_string(heightDiff) + " >= " + std::to_string(config.vehicleRadius) + 
-                   "), столкновений нет");
-        return true;
-    }
-
-    const double effectiveRadius = std::sqrt(config.vehicleRadius * config.vehicleRadius - heightDiff * heightDiff);
+    const double effectiveRadius = config.vehicleRadius;
     const int radiusPixels = static_cast<int>(std::ceil(effectiveRadius));
-    
-    logger.trace(std::string("[PathFinder::isVehicleRadiusValid] Эффективный радиус: ") + 
-               std::to_string(effectiveRadius) + " пикселей (" + 
-               std::to_string(radiusPixels) + " целых)");
-
     const double radiusSquared = effectiveRadius * effectiveRadius;
+
     size_t checkedPixels = 0;
     size_t collisionPixels = 0;
 
     for (int dy = -radiusPixels; dy <= radiusPixels; ++dy) {
         for (int dx = -radiusPixels; dx <= radiusPixels; ++dx) {
-            if (dx*dx + dy*dy > radiusSquared) continue;
-            
+            if (dx * dx + dy * dy > radiusSquared) continue;
+
             const int nx = static_cast<int>(x) + dx;
             const int ny = static_cast<int>(y) + dy;
-            checkedPixels++;
-            
-            if (nx >= 0 && ny >= 0 && 
-                nx < static_cast<int>(binaryMap[0].size()) && 
+            ++checkedPixels;
+
+            if (nx >= 0 && ny >= 0 &&
                 ny < static_cast<int>(binaryMap.size()) &&
+                nx < static_cast<int>(binaryMap[0].size()) &&
                 std::fabs(binaryMap[ny][nx] - Constants::WHITE) < Constants::EPSILON) {
-                collisionPixels++;
-                logger.trace(std::string("[PathFinder::isVehicleRadiusValid] Столкновение в (") +
-                           std::to_string(nx) + "," + std::to_string(ny) + ")");
+
+                ++collisionPixels;
+                logger.trace("[PathFinder::isVehicleRadiusValid] Столкновение в (" +
+                             std::to_string(nx) + "," + std::to_string(ny) + ")");
             }
         }
     }
 
     bool result = (collisionPixels == 0);
-    logger.debug(std::string("[PathFinder::isVehicleRadiusValid] Результат проверки: ") + 
-               std::string(result ? "проходимо" : "столкновение") + 
-               ", проверено пикселей: " + std::to_string(checkedPixels) +
-               ", столкновений: " + std::to_string(collisionPixels));
-    
+    logger.debug("[PathFinder::isVehicleRadiusValid] Результат: " + 
+                 std::string(result ? "проходимо" : "столкновение") +
+                 ", проверено пикселей: " + std::to_string(checkedPixels) + 
+                 ", столкновений: " + std::to_string(collisionPixels));
+
     return result;
 }
 
 bool isEdgeNavigable(const Edge& edge, 
                     const std::unique_ptr<Pole>& p,
-                    const std::vector<std::vector<double>>& binaryMap,
-                    double sliceLevel) const {
+                    const std::vector<std::vector<double>>& binaryMap) const {
     const auto line = edge.bresenhamLine(edge.a, edge.b);
     const double r = config.vehicleRadius;
     
@@ -148,7 +131,7 @@ bool isEdgeNavigable(const Edge& edge,
         std::ostringstream pointHeader;
         pointHeader << "Точка [" << i << "/" << line.size()-1 << "] (" 
                    << center.x << "," << center.y << "): "
-                   << "высота=" << h_center << ", slice=" << sliceLevel;
+                   << "высота=" << h_center;
         logger.trace(pointHeader.str());
 
         // Проверка переднего колеса
@@ -203,7 +186,7 @@ bool isEdgeNavigable(const Edge& edge,
         }
 
         // Проверка коллизий
-        bool collisionCheck = isVehicleRadiusValid(center, binaryMap, p, sliceLevel);
+        bool collisionCheck = isVehicleRadiusValid(center, binaryMap);
         logger.trace("  Коллизия: " + std::string(collisionCheck ? "нет" : "есть"));
         
         if (!collisionCheck) {
@@ -252,26 +235,25 @@ PointD findClosestVoronoiNode(const PointD& point, const std::unordered_map<Poin
 std::unordered_map<PointD, std::vector<PointD>> buildGraphFromEdges(
     const std::vector<Edge>& edges,
     const std::vector<std::vector<double>>& binaryMap,
-    const std::unique_ptr<Pole>& elevationData,
-    double sliceLevel)
+    const std::unique_ptr<Pole>& elevationData)
 {
     std::unordered_map<PointD, std::vector<PointD>> graph;
 
     for (const auto& edge : edges) {
-        if (!isEdgeNavigable(edge, elevationData, binaryMap, sliceLevel)) {
+        if (!isEdgeNavigable(edge, elevationData, binaryMap)) {
             logger.trace("[PathFinder::buildGraphFromEdges] Ребро непроходимо, пропуск: (" +
                          std::to_string(edge.a.x) + ", " + std::to_string(edge.a.y) + ") -> (" +
                          std::to_string(edge.b.x) + ", " + std::to_string(edge.b.y) + ")");
             continue;
         }
 
-        if (!isVehicleRadiusValid(edge.a, binaryMap, elevationData, sliceLevel)) {
+        if (!isVehicleRadiusValid(edge.a, binaryMap)) {
             logger.trace("[PathFinder::buildGraphFromEdges] Точка edge.a непригодна для радиуса машины: (" +
                          std::to_string(edge.a.x) + ", " + std::to_string(edge.a.y) + ")");
             continue;
         }
 
-        if (!isVehicleRadiusValid(edge.b, binaryMap, elevationData, sliceLevel)) {
+        if (!isVehicleRadiusValid(edge.b, binaryMap)) {
             logger.trace("[PathFinder::buildGraphFromEdges] Точка edge.b непригодна для радиуса машины: (" +
                          std::to_string(edge.b.x) + ", " + std::to_string(edge.b.y) + ")");
             continue;
@@ -295,12 +277,11 @@ public:
     const PointD& goal,
     std::vector<Edge>& voronoiEdges,
     const std::vector<std::vector<double>>& binaryMap,
-    double sliceLevel,
     const std::unique_ptr<Pole>& elevationData)
 {
     logger.info("[PathFinder::findPathAStar] Начало поиска пути...");
 
-    auto graph = buildGraphFromEdges(voronoiEdges, binaryMap, elevationData, sliceLevel);
+    auto graph = buildGraphFromEdges(voronoiEdges, binaryMap, elevationData);
     logger.debug("[PathFinder::findPathAStar] Граф построен, количество узлов: " + std::to_string(graph.size()));
 
     PointD startNode = findClosestVoronoiNode(start, graph);
@@ -308,11 +289,29 @@ public:
     logger.debug("[PathFinder::findPathAStar] Ближайший к старту: (" + std::to_string(startNode.x) + ", " + std::to_string(startNode.y) + ")");
     logger.debug("[PathFinder::findPathAStar] Ближайший к цели: (" + std::to_string(goalNode.x) + ", " + std::to_string(goalNode.y) + ")");
 
-    // Временные рёбра
-    graph[start] = {startNode};
-    graph[startNode].push_back(start);
-    graph[goalNode].push_back(goal);
-    graph[goal] = {goalNode};
+    // Добавим временные рёбра с проверками проходимости
+auto addTemporaryEdge = [&](const PointD& a, const PointD& b) -> bool {
+    if (!isEdgeNavigable(Edge(a, b), elevationData, binaryMap)) {
+        logger.warning("[PathFinder::findPathAStar] Временное ребро непроходимо: (" +
+                       std::to_string(a.x) + ", " + std::to_string(a.y) + ") -> (" +
+                       std::to_string(b.x) + ", " + std::to_string(b.y) + ")");
+        return false;
+    }
+    if (!isVehicleRadiusValid(a, binaryMap) || !isVehicleRadiusValid(b, binaryMap)) {
+        logger.warning("[PathFinder::findPathAStar] Временное ребро вне допустимого радиуса: (" +
+                       std::to_string(a.x) + ", " + std::to_string(a.y) + ") -> (" +
+                       std::to_string(b.x) + ", " + std::to_string(b.y) + ")");
+        return false;
+    }
+    graph[a].push_back(b);
+    graph[b].push_back(a);
+    return true;
+};
+
+if (!addTemporaryEdge(start, startNode) || !addTemporaryEdge(goal, goalNode)) {
+    logger.warning("[PathFinder::findPathAStar] Не удалось добавить стартовое или конечное ребро");
+    return {};
+}
 
     std::priority_queue<AStarNode, std::vector<AStarNode>, std::greater<AStarNode>> openSet;
     std::unordered_map<PointD, PointD> cameFrom;
