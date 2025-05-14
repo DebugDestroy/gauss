@@ -7,47 +7,26 @@
 #include <string>
 #include <sstream>
 #include <array>
+#include <map>
 
 // Локальные заголовки
 #include "core/Constants.hpp"  // Подключаем константы
 #include "services/Geometry.hpp" // для PointD, Triangle, Edge
 
 struct AStarNode {
-    PointD position;       // Позиция узла (центр треугольника)
-    const Triangle* tri;   // Связанный треугольник
-    AStarNode* parent;     // Родительский узел
-    double g;              // Стоимость пути от старта
-    double h;              // Эвристическая оценка до цели
-    double f;              // Общая стоимость: f = g + h
+    PointD position;
+    double gScore;
+    double fScore;
 
-    AStarNode(PointD pos, const Triangle* triangle, AStarNode* p = nullptr, double cost = 0, double heuristic_val = 0)
-    : position(pos), tri(triangle), parent(p), 
-      g(cost), h(heuristic_val), f(g + h) {}
-
-    // Для сравнения в priority_queue
-    bool operator<(const AStarNode& other) const { return f > other.f; }
-};
-    
+    bool operator>(const AStarNode& other) const {
+        return fScore > other.fScore;
+    }
+}; 
 
 class PathFinder {
 private:
     const Config& config;
     Logger& logger;
-
-std::vector<PointD> reconstructPath(const AStarNode& endNode, 
-                                   const PointD& start, 
-                                   const PointD& goal) const {
-    std::vector<PointD> path;
-    const AStarNode* current = &endNode;
-    while (current) {
-        path.push_back(current->position);
-        current = current->parent;
-    }
-    std::reverse(path.begin(), path.end());
-    path.insert(path.begin(), start);
-    path.push_back(goal);
-    return path;
-}
 
     double heuristic(const PointD& a, const PointD& b) {
         double dist = std::hypot(a.x - b.x, a.y - b.y);
@@ -130,6 +109,13 @@ bool isEdgeNavigable(const Edge& edge,
     const PointD dir = {line.back().x - line.front().x, line.back().y - line.front().y};
     PointD perp = {-dir.y, dir.x};
     double perpLen = std::hypot(perp.x, perp.y);
+    
+    // Защита от деления на ноль
+        if (perpLen < Constants::EPSILON) {
+            logger.error("Нулевая длина перпендикуляра");
+            return false;
+        }
+        
     perp.x = perp.x / perpLen * r;
     perp.y = perp.y / perpLen * r;
 
@@ -137,10 +123,27 @@ bool isEdgeNavigable(const Edge& edge,
     logger.debug("Параметры тележки: радиус=" + std::to_string(r) + 
                 ", max_уклон=" + std::to_string(config.maxUpDownAngle) + 
                 "°, max_крен=" + std::to_string(config.maxSideAngle) + "°");
+    // Проверка на минимальную длину ребра
+        if (line.size() < 2) {
+            logger.error("Слишком короткое ребро для проверки");
+            return false;
+        }
+        logger.trace("Длина ребра: " + std::to_string(line.size()) + " точек");
     
     for (size_t i = 0; i < line.size(); ++i) {
         const PointD& center = line[i];
-        double h_center = p->field[static_cast<int>(center.y)][static_cast<int>(center.x)];
+        double h_center; // Высота центра тележки
+        // Проверка границ массива
+            if (center.y < 0 || center.x < 0 || 
+                center.y >= p->field.size() || 
+                center.x >= p->field[0].size()) {
+                logger.error("Точка за границами поля: (" + 
+                           std::to_string(center.x) + "," + 
+                           std::to_string(center.y) + ")");
+                return false;
+            }
+            
+        h_center = p->field[static_cast<int>(center.y)][static_cast<int>(center.x)];
         
         std::ostringstream pointHeader;
         pointHeader << "Точка [" << i << "/" << line.size()-1 << "] (" 
@@ -231,69 +234,135 @@ double calculateWheelAngle(const PointD& center,
                      std::hypot(wheel.x - center.x, wheel.y - center.y)) * 180.0 / M_PI;
 }
 
+PointD findClosestVoronoiNode(const PointD& point, const std::unordered_map<PointD, std::vector<PointD>>& graph) {
+    double bestDist = std::numeric_limits<double>::max();
+    PointD closest = point;
+
+    for (const auto& [node, _] : graph) {
+        double dist = std::hypot(point.x - node.x, point.y - node.y);
+        if (dist < bestDist) {
+            bestDist = dist;
+            closest = node;
+        }
+    }
+    return closest;
+}
+
+// Перегрузка: принимает вектор Edge
+std::unordered_map<PointD, std::vector<PointD>> buildGraphFromEdges(
+    const std::vector<Edge>& edges,
+    const std::vector<std::vector<double>>& binaryMap,
+    const std::unique_ptr<Pole>& elevationData,
+    double sliceLevel)
+{
+    std::unordered_map<PointD, std::vector<PointD>> graph;
+
+    for (const auto& edge : edges) {
+        if (!isEdgeNavigable(edge, elevationData, binaryMap, sliceLevel)) {
+            logger.trace("[PathFinder::buildGraphFromEdges] Ребро непроходимо, пропуск: (" +
+                         std::to_string(edge.a.x) + ", " + std::to_string(edge.a.y) + ") -> (" +
+                         std::to_string(edge.b.x) + ", " + std::to_string(edge.b.y) + ")");
+            continue;
+        }
+
+        if (!isVehicleRadiusValid(edge.a, binaryMap, elevationData, sliceLevel)) {
+            logger.trace("[PathFinder::buildGraphFromEdges] Точка edge.a непригодна для радиуса машины: (" +
+                         std::to_string(edge.a.x) + ", " + std::to_string(edge.a.y) + ")");
+            continue;
+        }
+
+        if (!isVehicleRadiusValid(edge.b, binaryMap, elevationData, sliceLevel)) {
+            logger.trace("[PathFinder::buildGraphFromEdges] Точка edge.b непригодна для радиуса машины: (" +
+                         std::to_string(edge.b.x) + ", " + std::to_string(edge.b.y) + ")");
+            continue;
+        }
+
+        graph[edge.a].push_back(edge.b);
+        graph[edge.b].push_back(edge.a);
+    }
+
+    return graph;
+}
+
+
 public:
     PathFinder(const Config& cfg, Logger& lg) : config(cfg), logger(lg) {
         logger.trace("[PathFinder] Инициализация поисковика пути");
     }
 
-    std::vector<PointD> findPathAStar(const PointD& start, const PointD& goal, 
-                                 const std::vector<Triangle>& triangles,
-                                 const std::vector<std::vector<double>>& binaryMap,
-                                 double slice, const std::unique_ptr<Pole>& p) {
-    logger.info("[PathFinder::findPathAStar] Начало поиска пути");
-    
-    const Triangle* startTri = Triangle::findContainingTriangle(start, triangles);
-    const Triangle* goalTri = Triangle::findContainingTriangle(goal, triangles);
-    
-    if (!startTri || !goalTri) {
-        logger.error("Старт или цель вне триангуляции");
-        return {};
-    }
+    std::vector<PointD> findPathAStar(
+    const PointD& start,
+    const PointD& goal,
+    std::vector<Edge>& voronoiEdges,
+    const std::vector<std::vector<double>>& binaryMap,
+    double sliceLevel,
+    const std::unique_ptr<Pole>& elevationData)
+{
+    logger.info("[PathFinder::findPathAStar] Начало поиска пути...");
 
-    // Проверка для точек в одном треугольнике
-    if (startTri == goalTri) {
-        Edge directEdge(start, goal);
-        if (!isEdgeNavigable(directEdge, p, binaryMap, slice)) {
-            logger.warning("Прямой путь в треугольнике непроходим");
-            return {};
-        }
-        return {start, goal};
-    }
+    auto graph = buildGraphFromEdges(voronoiEdges, binaryMap, elevationData, sliceLevel);
+    logger.debug("[PathFinder::findPathAStar] Граф построен, количество узлов: " + std::to_string(graph.size()));
 
-    // Основной алгоритм A*
-    std::priority_queue<AStarNode> openSet;
-    std::unordered_map<const Triangle*, double> costSoFar;
-    openSet.emplace(startTri->calculateCircumcenter(), startTri);
-    costSoFar[startTri] = 0;
+    PointD startNode = findClosestVoronoiNode(start, graph);
+    PointD goalNode = findClosestVoronoiNode(goal, graph);
+    logger.debug("[PathFinder::findPathAStar] Ближайший к старту: (" + std::to_string(startNode.x) + ", " + std::to_string(startNode.y) + ")");
+    logger.debug("[PathFinder::findPathAStar] Ближайший к цели: (" + std::to_string(goalNode.x) + ", " + std::to_string(goalNode.y) + ")");
+
+    // Временные рёбра
+    graph[start] = {startNode};
+    graph[startNode].push_back(start);
+    graph[goalNode].push_back(goal);
+    graph[goal] = {goalNode};
+
+    std::priority_queue<AStarNode, std::vector<AStarNode>, std::greater<AStarNode>> openSet;
+    std::unordered_map<PointD, PointD> cameFrom;
+    std::unordered_map<PointD, double> gScore;
+    std::unordered_map<PointD, double> fScore;
+
+    gScore[start] = 0.0;
+    fScore[start] = heuristic(start, goal);
+    openSet.push({start, 0.0, fScore[start]});
 
     while (!openSet.empty()) {
         AStarNode current = openSet.top();
         openSet.pop();
 
-        if (current.tri == goalTri) {
-            std::vector<PointD> path = reconstructPath(current, start, goal);
-            logger.info("Путь найден. Длина: " + std::to_string(path.size()));
+        logger.trace("[PathFinder::findPathAStar] Обработка узла: (" +
+                     std::to_string(current.position.x) + ", " + std::to_string(current.position.y) + ")");
+
+        if (current.position == goal) {
+            logger.info("[PathFinder::findPathAStar] Цель достигнута!");
+
+            std::vector<PointD> path;
+            PointD node = current.position;
+            while (cameFrom.count(node)) {
+                path.push_back(node);
+                node = cameFrom[node];
+            }
+            path.push_back(start);
+            std::reverse(path.begin(), path.end());
+
             return path;
         }
 
-        for (const auto& neighbor : Triangle::getNeighbors(*current.tri, triangles)) {
-            Edge edge(current.position, neighbor->calculateCircumcenter());
-            
-            if (!isEdgeNavigable(edge, p, binaryMap, slice)) {
-                continue; // Непроходимые рёбра отсекаются
-            }
+        for (const auto& neighbor : graph[current.position]) {
+            Edge edge(current.position, neighbor);
 
-            double newCost = current.g + edge.length();
-            if (!costSoFar.count(neighbor) || newCost < costSoFar[neighbor]) {
-                costSoFar[neighbor] = newCost;
-                double priority = newCost + heuristic(neighbor->calculateCircumcenter(), goal);
-                openSet.emplace(neighbor->calculateCircumcenter(), neighbor, new AStarNode(current), priority);
+            double tentativeG = gScore[current.position] + heuristic(current.position, neighbor);
+
+            if (!gScore.count(neighbor) || tentativeG < gScore[neighbor]) {
+                cameFrom[neighbor] = current.position;
+                gScore[neighbor] = tentativeG;
+                fScore[neighbor] = tentativeG + heuristic(neighbor, goal);
+                openSet.push({neighbor, gScore[neighbor], fScore[neighbor]});
+                logger.trace("[PathFinder::findPathAStar] Добавление в очередь: (" +
+                             std::to_string(neighbor.x) + ", " + std::to_string(neighbor.y) + "), f = " +
+                             std::to_string(fScore[neighbor]));
             }
         }
     }
 
-    logger.warning("Путь не найден");
+    logger.warning("[PathFinder::findPathAStar] Путь не найден!");
     return {};
 }
-
 };
