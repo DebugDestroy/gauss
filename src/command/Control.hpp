@@ -63,7 +63,7 @@ public:
     std::unique_ptr<Pole> p = nullptr;
     ClusterService clusterService;
     std::vector<Triangle> lastTriangulation;
-    std::vector<VoronoiEdge> voronoiEdges;
+    std::vector<Edge> voronoiEdges;
     PathFinder pathFinder;
     VoronoiDiagram voronoi;
     std::vector<PointD> clusterCenters;
@@ -211,7 +211,7 @@ public:
         
         if (params.command == "triangulate") {
             clusterCenters = clusterService.getClusterCenters(componenti, config);  
-            lastTriangulation = triangulator.bowyerWatson(clusterCenters);
+            lastTriangulation = triangulator.bowyerWatson(clusterCenters, params.fieldWidth, params.fieldHeight);
             voronoi.buildFromDelaunay(lastTriangulation, p, voronoiEdges);
             logOperation(LogLevel::Info, std::string("triangulate"), 
                 std::string("clusters=") + std::to_string(clusterCenters.size()) + 
@@ -233,7 +233,7 @@ public:
             }
             
             copier.removeNoise(CopyPole, componenti);
-            path = pathFinder.findPathAStar(start, goal, lastTriangulation, CopyPole, params.threshold, p);
+            path = pathFinder.findPathAStar(start, goal, voronoiEdges, CopyPole, params.threshold, p);
             
             if (path.empty()) {
                 logger.logMessage(LogLevel::Warning, "Path not found");
