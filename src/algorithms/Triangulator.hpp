@@ -28,47 +28,25 @@ private:
             << edge.b.x << "," << edge.b.y << ")";
         logger.trace(oss.str());
     }
-    
-    bool isPointInCircumcircle(const PointD& p, const Triangle& tri) {
-        double ax = tri.a.x - p.x, ay = tri.a.y - p.y;
-        double bx = tri.b.x - p.x, by = tri.b.y - p.y;
-        double cx = tri.c.x - p.x, cy = tri.c.y - p.y;
-        
-        double det = ax * (by * (cx*cx + cy*cy) - cy * (bx*bx + by*by)) 
-                   - ay * (bx * (cx*cx + cy*cy) - cx * (bx*bx + by*by)) 
-                   + (ax*ax + ay*ay) * (bx*cy - by*cx);
 
-        bool inside = det > 0;
-        logger.trace(std::string("[Triangulator::isPointInCircumcircle] Точка (") + 
-                    std::to_string(p.x) + "," + std::to_string(p.y) + ") " +
-                    (inside ? "внутри" : "вне") + " окружности треугольника");
-        logTriangle(tri, "Проверяемый треугольник: ");
-
-        return inside;
-    }
-
-    bool hasEdge(const Triangle& tri, const Edge& edge) {
-        bool has = Edge(tri.a, tri.b) == edge 
-                || Edge(tri.b, tri.c) == edge 
-                || Edge(tri.c, tri.a) == edge;
-
-        logger.trace(std::string("[Triangulator::hasEdge] Треугольник ") + 
-                    std::string(has ? "содержит" : "не содержит") + " ребро");
-        logTriangle(tri);
-        logEdge(edge);
-
-        return has;
-    }
 public:
     Triangulator(Logger& lg) : logger(lg) {
         logger.trace("[Triangulator] Инициализация калькулятора компонент");
     }
 
-    std::vector<Triangle> bowyerWatson(const std::vector<PointD>& points) {
+    std::vector<Triangle> bowyerWatson(const std::vector<PointD>& points, const int width, const int height) {
+         std::vector<Triangle> triangles;// Треугольники
+
+        // Вычисляем размер супер-треугольника (2 * максимальная сторона)
+        const double super_size = 2 * std::max(width, height);
+
+         // Создаём вершины треугольника (в целочисленных координатах для точности)
+         PointD p1(0, 0);                       // Левый нижний угол
+         PointD p2(0, super_size);               // Левый верхний угол
+         PointD p3(super_size, 0);               // Правый нижний угол
+         
         logger.info("[Triangulator::bowyerWatson] Начало триангуляции Боуера-Ватсона");
         logger.debug(std::string("Количество точек: ") + std::to_string(points.size()));
-        
-        std::vector<Triangle> triangles;
 
         // Проверка на минимальное количество точек
         if (points.size() < 3) {
@@ -84,39 +62,24 @@ public:
             }
         }
 
-        // Проверка на коллинеарность
-        if (std::all_of(points.begin(), points.end(), 
-                       [&](const PointD& p) { return Triangle::areCollinear(points[0], points[1], p); })) {
-            logger.error("[Triangulator::bowyerWatson] Все точки коллинеарны, триангуляция невозможна");
-            return triangles;
-        }
-
-        // Создаём супер-треугольник
-        auto [minX, maxX] = std::minmax_element(points.begin(), points.end(), 
-                                              [](auto& a, auto& b) { return a.x < b.x; });
-        auto [minY, maxY] = std::minmax_element(points.begin(), points.end(), 
-                                              [](auto& a, auto& b) { return a.y < b.y; });
-
-        double dx = (maxX->x - minX->x) * 10;
-        double dy = (maxY->y - minY->y) * 10;
-        PointD p1(minX->x - dx, minY->y - dy);
-        PointD p2(maxX->x + dx, minY->y - dy);
-        PointD p3((minX->x + maxX->x) / 2, maxY->y + dy);
-
-        triangles.emplace_back(p1, p2, p3);
-        logger.info("[Triangulator::bowyerWatson] Создан супер-треугольник");
-        logTriangle(triangles.back(), "Супер-треугольник: ");
+// Создаём и логируем супер-треугольник
+triangles.emplace_back(p1, p2, p3);
+logger.info("[Triangulator] Создан супер-треугольник с вершинами:");
+logger.info("  A(0, 0)");
+logger.info("  B(0, " + std::to_string(super_size) + ")");
+logger.info("  C(" + std::to_string(super_size) + ", 0)");
 
         // Основной алгоритм
         size_t pointIndex = 0;
         for (const auto& point : points) {
+            
             logger.trace(std::string("[Triangulator::bowyerWatson] Обработка точки #") + 
                         std::to_string(++pointIndex) + " (" + 
                         std::to_string(point.x) + "," + std::to_string(point.y) + ")");
 
             std::vector<Triangle> badTriangles;
             std::copy_if(triangles.begin(), triangles.end(), std::back_inserter(badTriangles),
-                         [&](const Triangle& tri) { return isPointInCircumcircle(point, tri); });
+                         [&](const Triangle& tri) { return Triangle::isPointInCircumcircle(point, tri); });
 
             logger.debug(std::string("[Triangulator::bowyerWatson] Найдено ") + 
                        std::to_string(badTriangles.size()) + " плохих треугольников");
@@ -126,7 +89,7 @@ public:
                 for (const auto& edge : { Edge{tri.a, tri.b}, Edge{tri.b, tri.c}, Edge{tri.c, tri.a} }) {
                     bool isShared = std::any_of(badTriangles.begin(), badTriangles.end(),
                         [&](const Triangle& other) { 
-                            return !(tri == other) && hasEdge(other, edge); 
+                            return !(tri == other) && Triangle::otherHasEdge(other, edge); 
                         });
                     
                     if (!isShared) {
