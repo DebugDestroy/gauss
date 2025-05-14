@@ -1,4 +1,5 @@
 #pragma once
+#include <optional>  // Для std::optional
 #include <cmath>    // Для std::fabs, std::hypot
 #include <vector>   // Для использования в других классах
 #include <string>   // Для возможного использования строк
@@ -18,6 +19,10 @@ struct PointD {
     bool operator!=(const PointD& other) const {
         return !(*this == other);
     }
+    
+    static double distance(const PointD& p1, const PointD& p2) {
+        return std::hypot(p1.x - p2.x, p1.y - p2.y);
+    }
 };
 
 struct Edge {
@@ -30,6 +35,14 @@ struct Edge {
     
     double length() const {
         return std::hypot(a.x - b.x, a.y - b.y);
+    }
+    
+     PointD midPoint() const {
+        return PointD((a.x + b.x) / 2, (a.y + b.y) / 2); // середина
+    }
+
+    PointD perpendicular() const {
+        return PointD(-(b.y - a.y), b.x - a.x); // перпендикуляр
     }
     
    static std::vector<PointD> bresenhamLine(const PointD& start, const PointD& end) {
@@ -70,11 +83,6 @@ struct Edge {
 }
 };
 
-struct VoronoiEdge {
-    PointD start, end;
-    VoronoiEdge(PointD s, PointD e) : start(s), end(e) {}
-};
-
 struct Triangle {
     PointD a, b, c;
     Triangle(PointD a_, PointD b_, PointD c_) : a(a_), b(b_), c(c_) {}
@@ -100,10 +108,6 @@ struct Triangle {
         double x = ((a.x*a.x + a.y*a.y)*(b.y - c.y) + (b.x*b.x + b.y*b.y)*(c.y - a.y) + (c.x*c.x + c.y*c.y)*(a.y - b.y)) / d;
         double y = ((a.x*a.x + a.y*a.y)*(c.x - b.x) + (b.x*b.x + b.y*b.y)*(a.x - c.x) + (c.x*c.x + c.y*c.y)*(b.x - a.x)) / d;
         return PointD(x, y);
-    }
-
-    static double distance(const PointD& p1, const PointD& p2) {
-        return std::hypot(p1.x - p2.x, p1.y - p2.y);
     }
 
    static const Triangle* findContainingTriangle(const PointD& p, const std::vector<Triangle>& triangles) {
@@ -188,4 +192,55 @@ static bool otherHasEdge(const Triangle& other, const Edge& edge) {
     }
     return false;
 }
+
+static bool isPointInCircumcircle(const PointD& p, const Triangle& tri) {
+    const PointD& a = tri.a;
+    const PointD& b = tri.b;
+    const PointD& c = tri.c;
+
+    // 1. Проверка на вырожденный треугольник
+    if (areCollinear(a, b, c)) {
+        // Вырожденный треугольник - проверка окружности невозможна
+        return false;
+    }
+
+    // 2. Вычисление центра окружности
+    const double D = 2 * (a.x*(b.y - c.y) + b.x*(c.y - a.y) + c.x*(a.y - b.y));
+    if (std::fabs(D) < Constants::EPSILON) {
+        //Ошибка вычисления центра окружности
+        return false;
+    }
+
+    const PointD center = {
+        ((a.x*a.x + a.y*a.y) * (b.y - c.y) + 
+         (b.x*b.x + b.y*b.y) * (c.y - a.y) + 
+         (c.x*c.x + c.y*c.y) * (a.y - b.y)) / D,
+         
+        ((a.x*a.x + a.y*a.y) * (c.x - b.x) + 
+         (b.x*b.x + b.y*b.y) * (a.x - c.x) + 
+         (c.x*c.x + c.y*c.y) * (b.x - a.x)) / D
+    };
+
+    // 3. Вычисление квадрата радиуса
+    const double radius_sq = (a.x - center.x)*(a.x - center.x) + 
+                           (a.y - center.y)*(a.y - center.y);
+
+    // 4. Вычисление квадрата расстояния от точки до центра
+    const double dist_sq = (p.x - center.x)*(p.x - center.x) + 
+                         (p.y - center.y)*(p.y - center.y);
+
+    // 5. Epsilon-сравнение
+    return dist_sq < radius_sq - Constants::EPSILON;
+}
 };
+
+namespace std {
+    template <>
+    struct hash<PointD> {
+        size_t operator()(const PointD& p) const {
+            size_t h1 = hash<double>{}(p.x); // Assuming PointD has 'x' and 'y' as double members
+            size_t h2 = hash<double>{}(p.y);
+            return h1 ^ (h2 << 1); // Combine the two hash values (you can also use other methods for combining)
+        }
+    };
+}

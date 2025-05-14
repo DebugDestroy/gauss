@@ -18,147 +18,7 @@ private:
             << edge.b.x << "," << edge.b.y << "), длина: " << edge.length();
         logger.trace(oss.str());
     }
-
-    void logPoint(const PointD& p, const std::string& prefix = "") const {
-        logger.trace(prefix + "Точка (" + std::to_string(p.x) + "," + std::to_string(p.y) + ")");
-    }
-
-public:
-    VoronoiDiagram(Logger& lg) : logger(lg) {
-        logger.trace("[VoronoiDiagram] Инициализация диаграммы Вороного");
-    }
-
-    void buildFromDelaunay(const std::vector<Triangle>& triangles, 
-                          const std::unique_ptr<Pole>& p,
-                          std::vector<VoronoiEdge>& edges) {
-        logger.info("[VoronoiDiagram::buildFromDelaunay] Построение диаграммы из триангуляции Делоне");
-        
-        const int height = p->field.size();
-        const int width = p->field[0].size();
-        edges.clear();
-
-        if (!p) {
-            logger.error("[VoronoiDiagram::buildFromDelaunay] Ошибка: данные высот не инициализированы!");
-            return;
-        }
-
-        logger.debug(std::string("[VoronoiDiagram::buildFromDelaunay] Размер области: ") + 
-                   std::to_string(width) + "x" + std::to_string(height) + 
-                   ", треугольников: " + std::to_string(triangles.size()));
-
-        for (const auto& tri : triangles) {
-            PointD cc1 = tri.calculateCircumcenter();
-            bool cc1_valid = isPointInsideField(cc1, width, height);
-            
-            logger.debug(std::string("[VoronoiDiagram::buildFromDelaunay] Обработка треугольника с центром (") +
-                       std::to_string(cc1.x) + "," + std::to_string(cc1.y) + "), " +
-                       (cc1_valid ? "внутри" : "снаружи") + " области");
-
-            auto neighbors = Triangle::findNeighbors(tri, triangles);
-            logger.trace(std::string("[VoronoiDiagram::buildFromDelaunay] Найдено ") + 
-                       std::to_string(neighbors.size()) + " соседей");
-
-            // Обработка обычных ребер
-            for (const auto& neighbor : neighbors) {
-                PointD cc2 = neighbor->calculateCircumcenter();
-                bool cc2_valid = isPointInsideField(cc2, width, height);
-
-                logger.trace(std::string("[VoronoiDiagram::buildFromDelaunay] Соседний центр (") +
-                           std::to_string(cc2.x) + "," + std::to_string(cc2.y) + "), " +
-                           (cc2_valid ? "внутри" : "снаружи") + " области");
-
-                if (cc1_valid && cc2_valid) {
-                    edges.emplace_back(cc1, cc2);
-                    logger.debug("[VoronoiDiagram::buildFromDelaunay] Добавлено полное ребро Вороного");
-                } 
-                else if (cc1_valid || cc2_valid) {
-                    auto clipped = clipEdgeToField(cc1, cc2, width, height);
-                    if (!clipped.empty()) {
-                        edges.emplace_back(clipped[0], clipped[1]);
-                        logger.debug("[VoronoiDiagram::buildFromDelaunay] Добавлено обрезанное ребро Вороного");
-                    } else {
-                        logger.trace("[VoronoiDiagram::buildFromDelaunay] Ребро полностью вне области после отсечения");
-                    }
-                }
-            }
-
-            // Обработка граничных треугольников
-            if (neighbors.size() < 3) {
-                logger.trace("[VoronoiDiagram::buildFromDelaunay] Обработка граничного треугольника");
-                handleBoundaryTriangle(tri, cc1, width, height, edges, cc1_valid, triangles);
-            }
-        }
-
-        logger.info(std::string("[VoronoiDiagram::buildFromDelaunay] Построение завершено, ребер: ") + 
-                  std::to_string(edges.size()));
-    }
-
-private:
-    std::vector<PointD> clipEdgeToField(const PointD& p1, const PointD& p2, int width, int height) {
-        logger.trace(std::string("[VoronoiDiagram::clipEdgeToField] Отсечение ребра (") +
-                   std::to_string(p1.x) + "," + std::to_string(p1.y) + ")-(" +
-                   std::to_string(p2.x) + "," + std::to_string(p2.y) + ")");
-
-        auto code = [&](const PointD& p) {
-            int c = 0;
-            if (p.x < 0) c |= 1;
-            if (p.x > width) c |= 2;
-            if (p.y < 0) c |= 4;
-            if (p.y > height) c |= 8;
-            return c;
-        };
-
-        int code1 = code(p1);
-        int code2 = code(p2);
-        PointD a = p1, b = p2;
-
-        logger.trace(std::string("[VoronoiDiagram::clipEdgeToField] Коды: p1=") + std::to_string(code1) + 
-                   ", p2=" + std::to_string(code2));
-
-        while (true) {
-            if (!(code1 | code2)) {
-                logger.trace("[VoronoiDiagram::clipEdgeToField] Ребро полностью внутри области");
-                return {a, b};
-            }
-            if (code1 & code2) {
-                logger.trace("[VoronoiDiagram::clipEdgeToField] Ребро полностью снаружи области");
-                return {};
-            }
-
-            int outcode = code1 ? code1 : code2;
-            PointD p;
-
-            if (outcode & 8) {
-                p.x = a.x + (b.x - a.x) * (height - a.y) / (b.y - a.y);
-                p.y = height;
-                logger.trace("[VoronoiDiagram::clipEdgeToField] Пересечение с верхней границей");
-            }
-            else if (outcode & 4) {
-                p.x = a.x + (b.x - a.x) * (-a.y) / (b.y - a.y);
-                p.y = 0;
-                logger.trace("[VoronoiDiagram::clipEdgeToField] Пересечение с нижней границей");
-            }
-            else if (outcode & 2) {
-                p.y = a.y + (b.y - a.y) * (width - a.x) / (b.x - a.x);
-                p.x = width;
-                logger.trace("[VoronoiDiagram::clipEdgeToField] Пересечение с правой границей");
-            }
-            else if (outcode & 1) {
-                p.y = a.y + (b.y - a.y) * (-a.x) / (b.x - a.x);
-                p.x = 0;
-                logger.trace("[VoronoiDiagram::clipEdgeToField] Пересечение с левой границей");
-            }
-
-            if (outcode == code1) {
-                a = p;
-                code1 = code(a);
-            } else {
-                b = p;
-                code2 = code(b);
-            }
-        }
-    }
-
+    
     bool isPointInsideField(const PointD& p, int width, int height) {
         bool inside = p.x >= 0 && p.y >= 0 && p.x < width && p.y < height;
         logger.trace(std::string("[VoronoiDiagram::isPointInsideField] Точка (") +
@@ -166,87 +26,161 @@ private:
                     (inside ? "внутри" : "снаружи") + " области");
         return inside;
     }
-
-    void handleBoundaryTriangle(const Triangle& tri, const PointD& cc, int width, int height, 
-                               std::vector<VoronoiEdge>& edges, bool cc_valid,
-                               const std::vector<Triangle>& allTriangles) {
-        if (!cc_valid) {
-            logger.trace("[VoronoiDiagram::handleBoundaryTriangle] Центр снаружи, пропуск");
-            return;
-        }
-
-        auto boundaryEdges = getBoundaryEdges(tri, allTriangles);
-        logger.debug(std::string("[VoronoiDiagram::handleBoundaryTriangle] Найдено ") +
-                   std::to_string(boundaryEdges.size()) + " граничных ребер");
-
-        for (const auto& edge : boundaryEdges) {
-            PointD boundaryPoint = calculateBoundaryIntersection(cc, edge, width, height);
-            edges.emplace_back(cc, boundaryPoint);
-            logger.debug("[VoronoiDiagram::handleBoundaryTriangle] Добавлено граничное ребро Вороного");
-        }
+    
+    // Нахождение пересечения с границей (простая версия в реализации)
+    PointD findBoundaryIntersection(const PointD& start, const PointD& dir, int width, int height) const {
+    // Нормализуем направление
+    double len = std::hypot(dir.x, dir.y);
+    if (len < Constants::EPSILON) {
+        logger.warning("[VoronoiDiagram::findBoundaryIntersection] Нулевое направление, возвращается стартовая точка");
+        return start;
     }
 
-    std::vector<Edge> getBoundaryEdges(const Triangle& tri, 
-                                      const std::vector<Triangle>& allTriangles) {
-        std::vector<Edge> boundaryEdges;
-        logger.trace("[VoronoiDiagram::getBoundaryEdges] Поиск граничных ребер треугольника");
+    PointD unitDir = { dir.x / len, dir.y / len };
 
-        for (const auto& edge : { Edge(tri.a, tri.b), Edge(tri.b, tri.c), Edge(tri.c, tri.a) }) {
-            bool isBoundary = true;
-            logEdge(edge, "Проверка ребра: ");
+    double t = std::numeric_limits<double>::max();
 
+    // Проверяем пересечения с 4 границами
+    if (unitDir.x != 0) {
+        if (unitDir.x > 0) t = std::min(t, (width - 1 - start.x) / unitDir.x);  // Правая граница
+        else               t = std::min(t, -start.x / unitDir.x);              // Левая граница
+    }
+
+    if (unitDir.y != 0) {
+        if (unitDir.y > 0) t = std::min(t, (height - 1 - start.y) / unitDir.y); // Верхняя граница
+        else                t = std::min(t, -start.y / unitDir.y);              // Нижняя граница
+    }
+
+    // Проверка t ещё раз не нужна — если длина была > 0, t гарантированно установится
+    PointD result = { start.x + unitDir.x * t, start.y + unitDir.y * t };
+
+    logger.trace(std::string("[VoronoiDiagram::findBoundaryIntersection] Пересечение с границей: (") +
+                 std::to_string(result.x) + "," + std::to_string(result.y) + ")");
+    return result;
+}
+    
+    // Получение рёбер выпуклой оболочки
+    std::vector<Edge> getConvexHullEdges(const Triangle& tri, const std::vector<Triangle>& allTriangles) const {
+        std::vector<Edge> hullEdges;
+        
+        for (const Edge& edge : { Edge(tri.a, tri.b), Edge(tri.b, tri.c), Edge(tri.c, tri.a) }) {
+            bool isShared = false;
             for (const auto& other : allTriangles) {
-                if (&tri == &other) continue;
-                if (Triangle::shareEdge(tri, other) && Triangle::otherHasEdge(other, edge)) {
-                    isBoundary = false;
+                if (&other == &tri) continue;
+                if (Triangle::otherHasEdge(other, edge)) {
+                    isShared = true;
                     break;
                 }
             }
+            if (!isShared) hullEdges.push_back(edge);
+        }
+        
+        return hullEdges;
+    }
 
-            if (isBoundary) {
-                boundaryEdges.push_back(edge);
-                logger.trace("[VoronoiDiagram::getBoundaryEdges] Найдено граничное ребро");
+public:
+    VoronoiDiagram(Logger& lg) : logger(lg) {
+        logger.trace("[VoronoiDiagram] Инициализация диаграммы Вороного");
+    }
+
+    void buildFromDelaunay(const std::vector<Triangle>& triangles,
+                      const std::unique_ptr<Pole>& p,
+                      std::vector<Edge>& edges) {
+    logger.info("[VoronoiDiagram::buildFromDelaunay] Начало построения диаграммы Вороного из триангуляции Делоне");
+    if (!p) {
+        logger.error("[VoronoiDiagram::buildFromDelaunay] Ошибка: данные высот не инициализированы!");
+        return;
+    }
+    
+    const int width = p->field[0].size();
+    const int height = p->field.size();
+    edges.clear();
+
+    logger.debug(std::string("[VoronoiDiagram::buildFromDelaunay] Размер области: ") + 
+               std::to_string(width) + "x" + std::to_string(height) + 
+               ", треугольников: " + std::to_string(triangles.size()));
+
+for (const auto& tri : triangles) {
+    PointD cc = tri.calculateCircumcenter();
+    bool ccValid = isPointInsideField(cc, width, height);
+    
+    logger.debug(std::string("[VoronoiDiagram::buildFromDelaunay] Обработка треугольника с центром (") +
+               std::to_string(cc.x) + "," + std::to_string(cc.y) + "), " +
+               (ccValid ? "внутри" : "снаружи") + " области");
+
+    // Обработка внутренних рёбер
+    auto neighbors = Triangle::findNeighbors(tri, triangles);
+    logger.trace(std::string("[VoronoiDiagram::buildFromDelaunay] Найдено ") + 
+               std::to_string(neighbors.size()) + " соседей");
+
+   for (const auto& neighbor : neighbors) {
+    auto neighborCC = neighbor->calculateCircumcenter();
+    bool neighborCCValid = isPointInsideField(neighborCC, width, height);
+
+    if (ccValid && neighborCCValid) {
+        if (!isPointInsideField(cc, width, height) || !isPointInsideField(neighborCC, width, height)) {
+logger.warning("!!! ВНИМАНИЕ: добавляется ребро снаружи: (" + std::to_string(cc.x) + ", " + std::to_string(cc.y) + ") (" + std::to_string(neighborCC.x) + ", " + std::to_string(neighborCC.y) + ")");
+}
+logger.trace("!!! ВНИМАНИЕ: добавляется ребро: (" + std::to_string(cc.x) + ", " + std::to_string(cc.y) + ") (" + std::to_string(neighborCC.x) + ", " + std::to_string(neighborCC.y) + ")");
+        edges.emplace_back(cc, neighborCC);
+        logger.debug("[VoronoiDiagram::buildFromDelaunay] Добавлено внутреннее ребро Вороного");
+        continue;
+    }
+
+    if (ccValid && !neighborCCValid) {
+        PointD direction = { neighborCC.x - cc.x, neighborCC.y - cc.y };
+        PointD clipped = findBoundaryIntersection(cc, direction, width, height);
+        if (!isPointInsideField(cc, width, height) || !isPointInsideField(clipped, width, height)) {
+logger.warning("!!! ВНИМАНИЕ: добавляется ребро снаружи: (" + std::to_string(cc.x) + ", " + std::to_string(cc.y) + ") (" + std::to_string(clipped.x) + ", " + std::to_string(clipped.y) + ")");
+}
+logger.trace("!!! ВНИМАНИЕ: добавляется ребро: (" + std::to_string(cc.x) + ", " + std::to_string(cc.y) + ") (" + std::to_string(clipped.x) + ", " + std::to_string(clipped.y) + ")");
+        edges.emplace_back(cc, clipped);
+        logger.debug("[VoronoiDiagram::buildFromDelaunay] Добавлен обрезанный луч Вороного");
+        continue;
+    }
+}
+
+
+    // Обработка граничных рёбер
+    if (ccValid && neighbors.size() < 3) {
+        logger.trace("[VoronoiDiagram::buildFromDelaunay] Обработка граничного треугольника");
+        
+        auto hullEdges = getConvexHullEdges(tri, triangles);
+        logger.trace(std::string("[VoronoiDiagram::buildFromDelaunay] Найдено ") + 
+                   std::to_string(hullEdges.size()) + " рёбер выпуклой оболочки");
+
+        for (const auto& hullEdge : hullEdges) {
+            PointD mid = hullEdge.midPoint();
+            PointD outwardDir = hullEdge.perpendicular();
+
+            // Нормализуем
+            double len = std::hypot(outwardDir.x, outwardDir.y);
+            if (len > Constants::EPSILON) {
+                outwardDir.x /= len;
+                outwardDir.y /= len;
+            }
+
+            PointD boundaryPt = findBoundaryIntersection(mid, outwardDir, width, height);
+
+            if (isPointInsideField(boundaryPt, width, height)) {
+            if (!isPointInsideField(cc, width, height) || !isPointInsideField(boundaryPt, width, height)) {
+logger.warning("!!! ВНИМАНИЕ: добавляется ребро снаружи: (" + std::to_string(cc.x) + ", " + std::to_string(cc.y) + ") (" + std::to_string(boundaryPt.x) + ", " + std::to_string(boundaryPt.y) + ")");
+}
+logger.trace("!!! ВНИМАНИЕ: добавляется ребро: (" + std::to_string(cc.x) + ", " + std::to_string(cc.y) + ") (" + std::to_string(boundaryPt.x) + ", " + std::to_string(boundaryPt.y) + ")");
+                edges.emplace_back(cc, boundaryPt);
+                logger.debug("[VoronoiDiagram::buildFromDelaunay] Добавлено ребро Вороного к границе области");
+            } else {
+                logger.warning("[VoronoiDiagram::buildFromDelaunay] Не удалось найти валидную граничную точку");
             }
         }
-
-        return boundaryEdges;
     }
+}
 
-    PointD calculateBoundaryIntersection(const PointD& circumCenter, 
-                                        const Edge& boundaryEdge, 
-                                        int width, int height) {
-        logger.trace("[VoronoiDiagram::calculateBoundaryIntersection] Вычисление пересечения с границей");
-
-        PointD edgeDir = { boundaryEdge.b.x - boundaryEdge.a.x, boundaryEdge.b.y - boundaryEdge.a.y };
-        PointD normal = { -edgeDir.y, edgeDir.x };
-        double length = std::hypot(normal.x, normal.y);
-        
-        if (std::fabs(length) < Constants::EPSILON) {
-            logger.warning("[VoronoiDiagram::calculateBoundaryIntersection] Нулевая длина нормали!");
-            return circumCenter;
-        }
-        
-        normal.x /= length;
-        normal.y /= length;
-
-        double t = std::numeric_limits<double>::max();
-        if (std::fabs(normal.x) > Constants::EPSILON) {
-            t = std::min(t, (width - circumCenter.x) / normal.x);
-            t = std::min(t, -circumCenter.x / normal.x);
-        }
-        if (std::fabs(normal.y) > Constants::EPSILON) {
-            t = std::min(t, (height - circumCenter.y) / normal.y);
-            t = std::min(t, -circumCenter.y / normal.y);
-        }
-        
-        PointD result = {
-            circumCenter.x + normal.x * t,
-            circumCenter.y + normal.y * t
-        };
-
-        logger.debug(std::string("[VoronoiDiagram::calculateBoundaryIntersection] Точка пересечения: (") +
-                    std::to_string(result.x) + "," + std::to_string(result.y) + ")");
-        
-        return result;
-    }
+logger.info(std::string("[VoronoiDiagram::buildFromDelaunay] Построение завершено, всего ребер: ") + 
+          std::to_string(edges.size()));
+          for (const auto& correctedge : edges) {
+              logEdge(correctedge, "!!! ВНИМАНИЕ: добавлено ребро:");
+              }          
+          
+}
 };

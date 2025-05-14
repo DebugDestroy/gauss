@@ -172,7 +172,7 @@ fprintf(gnuplotPipe, "e\n");
 }
 
 void plotVoronoi(const std::unique_ptr<Pole>& p, 
-                    const std::vector<VoronoiEdge>& edges, 
+                    const std::vector<Edge>& edges, 
                     const std::vector<PointD>& sites, 
                     const std::string& filename) {
         logPlotStart("VoronoiDiagram", filename);
@@ -223,8 +223,8 @@ void plotVoronoi(const std::unique_ptr<Pole>& p,
     // 2. Ребра Вороного (ярко-зеленые)
     for (const auto& edge : edges) {
         fprintf(gnuplotPipe, "%f %f\n%f %f\n\n", 
-                edge.start.x, transformY(edge.start.y, height),
-                edge.end.x, transformY(edge.end.y, height));
+                edge.a.x, transformY(edge.a.y, height),
+                edge.b.x, transformY(edge.b.y, height));
     }
     fprintf(gnuplotPipe, "e\n");
 
