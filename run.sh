@@ -18,7 +18,8 @@ set -euo pipefail
 
 # --- Конфигурация ---
 BUILD_DIR="build"
-COMMAND_FILE="bin/etc/commands/commandsGauss.cmd"
+COMMAND_FILE="config/commands/commandsGauss.cmd"
+EXEC_PATH="$BUILD_DIR/bin/terrain_navigator"
 EXEC_NAME="terrain_navigator"
 
 # --- Цвета ---
@@ -34,7 +35,7 @@ info() { echo -e "${YELLOW}$1${NC}"; }
 get_project_root() {
     local script_dir="$(dirname "$(realpath "$0")")"
     while [[ "$script_dir" != "/" ]]; do
-        [[ -d "$script_dir/bin/etc" ]] && { echo "$script_dir"; return; }
+        [[ -d "$script_dir/config" ]] && { echo "$script_dir"; return; }
         script_dir="$(dirname "$script_dir")"
     done
     error "Корень проекта не найден!"
@@ -49,7 +50,7 @@ check_and_build() {
         error "CMake не установлен. Установите:\n  Ubuntu: sudo apt install cmake\n  macOS: brew install cmake"
     fi
 
-    if [[ ! -f "$PROJECT_ROOT/$BUILD_DIR/bin/$EXEC_NAME" ]]; then
+    if [[ ! -f "$PROJECT_ROOT/$EXEC_PATH" ]]; then
         info "🔧 Сборка проекта..."
         mkdir -p "$PROJECT_ROOT/$BUILD_DIR"
         cd "$PROJECT_ROOT/$BUILD_DIR"
@@ -64,11 +65,12 @@ check_and_build() {
 # --- Запуск ---
 run_program() {
     info "🚀 Запуск программы..."
+    local binary="$PROJECT_ROOT/$EXEC_PATH"
     if [[ $# -gt 0 && "$1" == "commands" ]]; then
         [[ ! -f "$PROJECT_ROOT/$COMMAND_FILE" ]] && error "Файл команд не найден: $COMMAND_FILE"
-        echo -e "1\n$PROJECT_ROOT/$COMMAND_FILE" | "$PROJECT_ROOT/$BUILD_DIR/bin/$EXEC_NAME"
+        echo -e "1\n$PROJECT_ROOT/$COMMAND_FILE" | "$binary"
     else
-        "$PROJECT_ROOT/$BUILD_DIR/bin/$EXEC_NAME"
+        "$binary"
     fi
 }
 
