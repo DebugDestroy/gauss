@@ -4,21 +4,23 @@
 3) Оптимизация
 4) Ошибка если уровень среза 127, алгоритм wave работает рекурсивно и при компонете размерером с поле рекурсия может переполнить память
 
-Изменения:
+Изменения: 1) cmake в каждой папке 
+           2) Улучшил файловую структуру
+           3) Улучшил инкапсуляцию, добавил namespace
 
                            Программа готова!!! Но всю равно следите за обновлениями на гитхаб [GitHub Profile](https://github.com/DebugDestroy)
 */
-#include "command/Control.hpp"
-#include "command/Interface.hpp"
+#include "command/control.hpp"
+#include "command/interface.hpp"
 
 int main() {
     // Все пути считаются относительно корня (текущей директории)
-    Config config("bin/etc/config.conf");
-    Logger loggerinterface(config.logFileNameInterface, "Interface", config.FiltrationLogLevelInterface);
-    Logger loggercontrol(config.logFileNameControl, "Control", config.FiltrationLogLevelControl);
+    core::Config config("config/config.conf");
+    core::Logger loggerinterface(config.logFileNameInterface, "Interface", config.FiltrationLogLevelInterface);
+    core::Logger loggercontrol(config.logFileNameControl, "Control", config.FiltrationLogLevelControl);
     
-    Control c(config, loggercontrol);
-    Interface i(config, loggerinterface, c);
+    command::Control c(config, loggercontrol);
+    command::Interface i(config, loggerinterface, c);
     
     i.print();
     return 0;
