@@ -166,39 +166,11 @@ namespace algorithms::components {
                     std::to_string(kernelCenters.size()) + " ядерных точек");
 
         // Шаг 2: Первичная кластеризация
-        initializeCenters(kernelCenters, k * kernelSize);
-        auto kernelResult = cluster(kernelCenters, k * kernelSize);
-
-        // Шаг 3: Агрегация центров
-        std::vector<std::vector<double>> aggregatedCenters(k, {0.0, 0.0});
-        std::vector<int> counts(k, 0);
-
-        for (size_t i = 0; i < kernelResult.labels.size(); ++i) {
-            int label = kernelResult.labels[i];
-            if (label >= 0 && label < k) {
-                aggregatedCenters[label][0] += kernelCenters[i][0];
-                aggregatedCenters[label][1] += kernelCenters[i][1];
-                counts[label]++;
-            }
-        }
-
-        // Шаг 4: Нормализация или замена пустых кластеров
-        for (int i = 0; i < k; ++i) {
-            if (counts[i] > 0) {
-                aggregatedCenters[i][0] /= counts[i];
-                aggregatedCenters[i][1] /= counts[i];
-                logger.debug(std::string("[KMeans::kmeansWithKernels] Агрегированный центр ") + 
-                            std::to_string(i) + " на основе " + 
-                            std::to_string(counts[i]) + " точек");
-            } else {
-                aggregatedCenters[i] = data[std::rand() % data.size()];
-                logger.warning(std::string("[KMeans::kmeansWithKernels] Кластер ") + 
-                             std::to_string(i) + " был пуст, заменен случайной точкой");
-            }
-        }
+        initializeCenters(kernelCenters, k);
+        auto kernelResult = cluster(kernelCenters, k);
 
         // Финальная кластеризация
-        centers = aggregatedCenters;
+        centers = kernelResult.centers;
         result = cluster(data, k);
         if (static_cast<int>(result.centers.size()) != k) {
             logger.error("[KMeans::kmeansWithKernels] Несоответствие количества кластеров!");
