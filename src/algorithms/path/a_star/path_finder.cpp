@@ -7,6 +7,7 @@
 #include <cmath>
 #include <algorithm>
 #include <string>
+#include <unordered_set>
 
 namespace algorithms::path::a_star {
 
@@ -52,7 +53,9 @@ std::vector<algorithms::geometry::PointD> PathFinder::findPathAStar(
         return {};
     }
 
+    //ОБЪВЛЕНИЕ ПЕРЕМЕННЫХ
     std::priority_queue<AStarNode, std::vector<AStarNode>, std::greater<AStarNode>> openSet;
+    std::unordered_set<algorithms::geometry::PointD> closedSet;
     std::unordered_map<algorithms::geometry::PointD, algorithms::geometry::PointD> cameFrom;
     std::unordered_map<algorithms::geometry::PointD, double> gScore;
     std::unordered_map<algorithms::geometry::PointD, double> fScore;
@@ -64,7 +67,10 @@ std::vector<algorithms::geometry::PointD> PathFinder::findPathAStar(
     while (!openSet.empty()) {
         AStarNode current = openSet.top();
         openSet.pop();
-
+        
+        if (closedSet.count(current.position))
+           continue;
+        
         if (current.position == goal) {
             logger.info("[PathFinder::findPathAStar] Цель достигнута!");
 
@@ -75,10 +81,15 @@ std::vector<algorithms::geometry::PointD> PathFinder::findPathAStar(
             std::reverse(path.begin(), path.end());
             return path;
         }
+        
+        closedSet.insert(current.position);
 
         for (const algorithms::geometry::PointD& neighbor : localGraph[current.position]) {
             double tentativeG = gScore[current.position] + euclidean(current.position, neighbor);
 
+            if (closedSet.count(neighbor))
+            continue;
+            
             if (!gScore.count(neighbor) || tentativeG < gScore[neighbor]) {
                 cameFrom[neighbor] = current.position;
                 gScore[neighbor] = tentativeG;

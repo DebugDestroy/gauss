@@ -35,6 +35,8 @@ wave 10
 PlotMetedata results/visualizations/Metadata.png
 k_means 10
 bmp_write results/visualizations/kmeans.bmp Binary
+k_means_kern 5
+bmp_write results/visualizations/kmeans_with_kernel.bmp Binary
 triangulate
 PlotVoronoi results/visualizations/Diagramma_Voronova.png
 PlotDelaunay results/visualizations/Triangulation_Delone.png
