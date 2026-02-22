@@ -1,4 +1,4 @@
-#include "algorithms/path/a_star/conditions.hpp"
+#include "algorithms/path/common/conditions.hpp"
 #include "algorithms/kinematics/incline_angle.hpp"  // Для calculateWheelAngle
 #include "algorithms/geometry/bresenham_line.hpp"
 
@@ -6,7 +6,7 @@
 #include <sstream>
 #include <limits>
 
-namespace algorithms::path::a_star {
+namespace algorithms::path::common {
 
     Conditions::Conditions(const core::Config& cfg, core::Logger& lg) : config(cfg), logger(lg) {
         logger.trace("[Conditions] Инициализация проверок проходимости пути");

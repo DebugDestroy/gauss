@@ -43,10 +43,18 @@ namespace command {
       end(),
       path(),
 
-      // algorithms::path::a_star
+      // algorithms::path::common
       conditions(cfg, log),
       graph(log),
-      pathFinder(log)
+      
+      // algorithms::path::a_star
+      astarFinder(log),
+      
+      // algorithms::path::dekstra
+      dekstraFinder(log),
+      
+      // algorithms::path::greedy
+      greedyFinder(log)    
 {
     logger.info("Control system initialized");
     logger.debug(std::string("Field dimensions: ") +
@@ -190,14 +198,14 @@ namespace command {
                 ", triangles=" + std::to_string(lastTriangulation.size()));
         }
 
-        if (params.command == "find_path") {
+        if (params.command == "find_path_astar") {
             if (!p) {
-                logger.logMessage(core::LogLevel::Error, "Pole not initialized for find_path");
+                logger.logMessage(core::LogLevel::Error, "Pole not initialized for A*");
                 return;
             }
             
             if (lastTriangulation.empty()) {
-                logger.logMessage(core::LogLevel::Error, "No triangulation for find_path");
+                logger.logMessage(core::LogLevel::Error, "No triangulation for A*");
                 return;
             }
             start = algorithms::geometry::PointD(params.startPointX, params.startPointY);
@@ -205,12 +213,66 @@ namespace command {
 
             
             copier.removeNoise(CopyPole, componenti);
-            path = pathFinder.findPathAStar(start, end, voronoiEdges, graph, conditions, CopyPole, p);
+            path = astarFinder.findPathAStar(start, end, voronoiEdges, graph, conditions, CopyPole, p);
             
             if (path.empty()) {
-                logger.logMessage(core::LogLevel::Warning, "Path not found");
+                logger.logMessage(core::LogLevel::Warning, "Path A* not found");
             } else {
-                logOperation(core::LogLevel::Info, std::string("find_path"), 
+                logOperation(core::LogLevel::Info, std::string("find_path_astar"), 
+                    std::string("from (") + std::to_string(start.x) + "," + std::to_string(start.y) + ")" +
+                    " to (" + std::to_string(end.x) + "," + std::to_string(end.y) + ")" +
+                    ", points=" + std::to_string(path.size()));
+            }
+        }
+
+        if (params.command == "find_path_dekstra") {
+            if (!p) {
+                logger.logMessage(core::LogLevel::Error, "Pole not initialized for dekstra");
+                return;
+            }
+            
+            if (lastTriangulation.empty()) {
+                logger.logMessage(core::LogLevel::Error, "No triangulation for dekstra");
+                return;
+            }
+            start = algorithms::geometry::PointD(params.startPointX, params.startPointY);
+              end = algorithms::geometry::PointD(params.endPointX, params.endPointY);
+
+            
+            copier.removeNoise(CopyPole, componenti);
+            path = dekstraFinder.findPathDijkstra(start, end, voronoiEdges, graph, conditions, CopyPole, p);
+            
+            if (path.empty()) {
+                logger.logMessage(core::LogLevel::Warning, "Path dekstra not found");
+            } else {
+                logOperation(core::LogLevel::Info, std::string("find_path_dekstra"), 
+                    std::string("from (") + std::to_string(start.x) + "," + std::to_string(start.y) + ")" +
+                    " to (" + std::to_string(end.x) + "," + std::to_string(end.y) + ")" +
+                    ", points=" + std::to_string(path.size()));
+            }
+        }
+
+        if (params.command == "find_path_greedy") {
+            if (!p) {
+                logger.logMessage(core::LogLevel::Error, "Pole not initialized for greedy");
+                return;
+            }
+            
+            if (lastTriangulation.empty()) {
+                logger.logMessage(core::LogLevel::Error, "No triangulation for greedy");
+                return;
+            }
+            start = algorithms::geometry::PointD(params.startPointX, params.startPointY);
+              end = algorithms::geometry::PointD(params.endPointX, params.endPointY);
+
+            
+            copier.removeNoise(CopyPole, componenti);
+            path = greedyFinder.findPathGreedy(start, end, voronoiEdges, graph, conditions, CopyPole, p);
+            
+            if (path.empty()) {
+                logger.logMessage(core::LogLevel::Warning, "Path greedy not found");
+            } else {
+                logOperation(core::LogLevel::Info, std::string("find_path_greedy"), 
                     std::string("from (") + std::to_string(start.x) + "," + std::to_string(start.y) + ")" +
                     " to (" + std::to_string(end.x) + "," + std::to_string(end.y) + ")" +
                     ", points=" + std::to_string(path.size()));

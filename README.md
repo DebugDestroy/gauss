@@ -104,7 +104,7 @@ cmake --build . --parallel $(nproc)
 │   │   ├── gauss/            # Генерация гауссовых холмов
 │   │   ├── geometry/         # Геометрические алгоритмы (триангуляция, Вороной и т.д.)
 │   │   ├── kinematics/       # Расчёт углов наклона и крена
-│   │   └── path/             # Алгоритмы поиска пути (A*, D*, RRT*)
+│   │   └── path/             # Алгоритмы поиска пути (A*, Dekstra, Greedy)
 │   ├── app/                  # Точка входа (main.cpp)
 │   ├── command/              # Интерпретация команд пользователя
 │   ├── core/                 # Базовые сущности и логика (конфиг, логгирование и т.д.)
@@ -137,7 +137,9 @@ cmake --build . --parallel $(nproc)
 | k_means              | k                              | Кластеризует данные в k кластеров                                        |
 | k_means_kern         | kk                             | Кластеризация с ядрами размера kk                                        |
 | triangulate          | -                              | Строит триангуляцию Делоне по центрам компонент                          |
-| find_path            | Ax Ay Bx By                    | Ищет путь между точками A и B через триангуляцию                         |
+| find_path_astar      | Ax Ay Bx By                    | A* ищет путь между точками A и B через триангуляцию                      |
+| find_path_dekstra    | Ax Ay Bx By                    | Dekstra ищет путь между точками A и B через триангуляцию                 |
+| find_path_greedy     | Ax Ay Bx By                    | Greedy ищет путь между точками A и B через триангуляцию                  |
 | Plot3DPath           | filename.png                   | Сохраняет 3D-визуализацию путя в PNG файл                                |
 | plotInteractive3DPath| -                              | Интерактвный 3D режим с путем                                            |
 | end                  | -                              | Завершает работу программы                                               |
@@ -212,7 +214,7 @@ bmp_write results/visualizations/kmeans.bmp Binary
 triangulate
 PlotVoronoi results/visualizations/Diagramma_Voronova.png
 PlotDelaunay results/visualizations/Triangulation_Delone.png
-find_path
+find_path_astar
 PlotPath results/visualizations/Path.png
 end
 ```
@@ -237,7 +239,7 @@ bmp_write results/visualizations/kmeans.bmp Binary
 triangulate
 PlotVoronoi results/visualizations/Diagramma_Voronova.png
 PlotDelaunay results/visualizations/Triangulation_Delone.png
-find_path 60 130 150 135
+find_path_astar 60 130 150 135
 PlotPath results/visualizations/Path.png
 Plot3DPath results/visualizations/Plot3DPath.png
 plotInteractive3DPath
@@ -302,7 +304,7 @@ bmp_write results/visualizations/kmeans.bmp Binary
 triangulate
 PlotVoronoi results/visualizations/Diagramma_Voronova.png
 PlotDelaunay results/visualizations/Triangulation_Delone.png
-find_path 20 27 100 298
+find_path_astar 20 27 100 298
 PlotPath results/visualizations/Path.png
 Plot3DPath results/visualizations/Plot3DPath.png
 plotInteractive3DPath

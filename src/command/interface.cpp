@@ -66,7 +66,10 @@ cmake --build . --parallel $(nproc)
 | k_means              | k                              | Кластеризует данные в k кластеров                                        |
 | k_means_kern         | kk                             | Кластеризация с ядрами размера kk                                        |
 | triangulate          | -                              | Строит триангуляцию Делоне по центрам компонент                          |
-| find_path            | Ax Ay Bx By                    | Ищет путь между точками A и B через триангуляцию                         |
+| find_path_astar      | Ax Ay Bx By                    | A* ищет путь между точками A и B через триангуляцию                      |
+| find_path_dekstra    | Ax Ay Bx By                    | Dekstra ищет путь между точками A и B через триангуляцию                 |
+| find_path_greedy     | Ax Ay Bx By                    | Greedy ищет путь между точками A и B через триангуляцию                  |
+| compare_paths        | (неизвестно, пока команды нет) | Сравнивает пути по параметрам                                            |
 | Plot3DPath           | filename.png                   | Сохраняет 3D-визуализацию путя в PNG файл                                |
 | plotInteractive3DPath| -                              | Интерактвный 3D режим с путем                                            |
 | end                  | -                              | Завершает работу программы                                               |
@@ -141,7 +144,7 @@ bmp_write results/visualizations/kmeans.bmp Binary
 triangulate
 PlotVoronoi results/visualizations/Diagramma_Voronova.png
 PlotDelaunay results/visualizations/Triangulation_Delone.png
-find_path
+find_path_astar
 PlotPath results/visualizations/Path.png
 end
 ```
@@ -166,7 +169,7 @@ bmp_write results/visualizations/kmeans.bmp Binary
 triangulate
 PlotVoronoi results/visualizations/Diagramma_Voronova.png
 PlotDelaunay results/visualizations/Triangulation_Delone.png
-find_path 60 130 150 135
+find_path_astar 60 130 150 135
 PlotPath results/visualizations/Path.png
 Plot3DPath results/visualizations/Plot3DPath.png
 plotInteractive3DPath
@@ -569,7 +572,7 @@ FiltrationLogLevelControl INFO
         control.Dispetcher(params);
         logger.info("Delaunay triangulation completed");
     }
-    else if (params.command == "find_path") {
+    else if (params.command == "find_path_astar") {
         params.startPointX = config.defaultstartPointX;
         params.startPointY = config.defaultstartPointY;
         params.endPointX = config.defaultendPointX;
@@ -579,7 +582,7 @@ FiltrationLogLevelControl INFO
             std::istringstream iss(line);
             iss >> params.startPointX >> params.startPointY >> params.endPointX >> params.endPointY;
             
-        showInfo = std::string("Finding path from (") + std::to_string(params.startPointX) + "," + 
+        showInfo = std::string("Finding path A* from (") + std::to_string(params.startPointX) + "," + 
                    std::to_string(params.startPointY) + ") to (" + 
                    std::to_string(params.endPointX) + "," + 
                    std::to_string(params.endPointY) + ")";
@@ -591,8 +594,56 @@ FiltrationLogLevelControl INFO
 
         logger.info(showInfo);
         control.Dispetcher(params);
-        logger.info("Path finding completed");
+        logger.info("Path A* finding completed");
     }
+    else if (params.command == "find_path_dekstra") {
+        params.startPointX = config.defaultstartPointX;
+        params.startPointY = config.defaultstartPointY;
+        params.endPointX = config.defaultendPointX;
+        params.endPointY = config.defaultendPointY;
+        
+            std::getline(input, line);
+            std::istringstream iss(line);
+            iss >> params.startPointX >> params.startPointY >> params.endPointX >> params.endPointY;
+            
+        showInfo = std::string("Finding path dekstra from (") + std::to_string(params.startPointX) + "," + 
+                   std::to_string(params.startPointY) + ") to (" + 
+                   std::to_string(params.endPointX) + "," + 
+                   std::to_string(params.endPointY) + ")";
+            
+            if (fromKeyboard) {
+            std::cout << "\n";
+            std::cout << showInfo << std::endl;
+         }
+
+        logger.info(showInfo);
+        control.Dispetcher(params);
+        logger.info("Path dekstra finding completed");
+    }
+    else if (params.command == "find_path_greedy") {
+        params.startPointX = config.defaultstartPointX;
+        params.startPointY = config.defaultstartPointY;
+        params.endPointX = config.defaultendPointX;
+        params.endPointY = config.defaultendPointY;
+        
+            std::getline(input, line);
+            std::istringstream iss(line);
+            iss >> params.startPointX >> params.startPointY >> params.endPointX >> params.endPointY;
+            
+        showInfo = std::string("Finding path greedy from (") + std::to_string(params.startPointX) + "," + 
+                   std::to_string(params.startPointY) + ") to (" + 
+                   std::to_string(params.endPointX) + "," + 
+                   std::to_string(params.endPointY) + ")";
+            
+            if (fromKeyboard) {
+            std::cout << "\n";
+            std::cout << showInfo << std::endl;
+         }
+
+        logger.info(showInfo);
+        control.Dispetcher(params);
+        logger.info("Path greedy finding completed");
+    }  
     else if (params.command == "Plot3DPath") {
         params.filename = config.defaultPlot3DPath;
         
