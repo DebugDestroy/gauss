@@ -1,4 +1,3 @@
-
 # Terrain Navigation System
 
 Программа для анализа рельефа местности, построения триангуляции Делоне, диаграмм Вороного и поиска оптимальных маршрутов с учетом препятствий.
@@ -55,7 +54,9 @@ cmake --build . --parallel $(nproc)
 | k_means              | k                              | Кластеризует данные в k кластеров                                        |
 | k_means_kern         | kk                             | Кластеризация с ядрами размера kk                                        |
 | triangulate          | -                              | Строит триангуляцию Делоне по центрам компонент                          |
-| find_path            | Ax Ay Bx By                    | Ищет путь между точками A и B через триангуляцию                         |
+| find_path_astar      | Ax Ay Bx By                    | A* ищет путь между точками A и B через триангуляцию                      |
+| find_path_dekstra    | Ax Ay Bx By                    | Dekstra ищет путь между точками A и B через триангуляцию                 |
+| find_path_greedy     | Ax Ay Bx By                    | Greedy ищет путь между точками A и B через триангуляцию                  |
 | Plot3DPath           | filename.png                   | Сохраняет 3D-визуализацию путя в PNG файл                                |
 | plotInteractive3DPath| -                              | Интерактвный 3D режим с путем                                            |
 | end                  | -                              | Завершает работу программы                                               |
@@ -67,11 +68,11 @@ cmake --build . --parallel $(nproc)
 |------------------------------|------------------------------------------------|----------------------------------------------------------------------------------|
 | fieldWidth                   | `fieldWidth`                                   | Ширина рабочего поля в пикселях                                                  |  
 | fieldHeight                  | `fieldHeight`                                  | Высота рабочего поля в пикселях                                                  |
-| defaultX                     | `defaultX`                                     | Стандартная X-координата центра гауссова распределения по умолчанию              |
-| defaultY                     | `defaultY`                                     | Стандартная Y-координата центра гауссова распределения по умолчанию              |
-| defaultSx                    | `defaultSx`                                    | Стандартное отклонение по оси X по умолчанию                                     |
-| defaultSy                    | `defaultSy`                                    | Стандартное отклонение по оси Y по умолчанию                                     |
-| defaultH                     | `defaultH`                                     | Стандартная высота гауссова распределения по умолчанию                           |
+| defaultCenterX               | `defaultCenterX`                               | Стандартная X-координата центра гауссова распределения по умолчанию              |
+| defaultCenterY               | `defaultCenterY`                               | Стандартная Y-координата центра гауссова распределения по умолчанию              |
+| defaultSigmaX                | `defaultSigmaX`                                | Стандартное отклонение по оси X по умолчанию                                     |
+| defaultSigmaY                | `defaultSigmaY`                                | Стандартное отклонение по оси Y по умолчанию                                     |
+| defaultHeight                | `defaultHeight`                                | Стандартная высота гауссова распределения по умолчанию                           |
 | defaultGnuplot               | `filename_gnuplot.png`                         | Путь к файлу для сохранения 3D-визуализации по умолчанию                         |
 | defaultPlotMetedata          | `filename_metadata.png`                        | Путь к файлу для визуализации метаданных компонент по умолчанию                  |
 | defaultPlotVoronoi           | `filename_voronoi.png`                         | Путь к файлу для диаграммы Вороного по умолчанию                                 |
@@ -80,7 +81,7 @@ cmake --build . --parallel $(nproc)
 | defaultWrite                 | `filename_write.bmp`                           | Путь к файлу для сохранения BMP-изображения по умолчанию                         |
 | defaultWriteModeImage        | `writeMode`                                    | Режим сохранения BMP (Full/Binary) по умолчанию                                  |
 | defaultRead                  | `filename_read.bmp`                            | Путь к файлу для загрузки BMP-изображения по умолчанию                           |
-| defaultSlice                 | `defaultSlice`                                 | Порог бинаризации по умолчанию                                                   |
+| defaultThreshold             | `defaultThreshold`                             | Порог бинаризации по умолчанию                                                   |
 | defaultBinMode               | `binMode`                                      | Режим бинаризации (Peaks/Valleys/All) по умолчанию                               |
 | defaultNoisy                 | `defaultNoisy`                                 | Порог для удаления шумовых компонент по умолчанию                                |
 | defaultKlaster               | `defaultKlaster`                               | Количество кластеров для k-mean по умолчанию                                     |
@@ -130,7 +131,7 @@ bmp_write results/visualizations/kmeans.bmp Binary
 triangulate
 PlotVoronoi results/visualizations/Diagramma_Voronova.png
 PlotDelaunay results/visualizations/Triangulation_Delone.png
-find_path
+find_path_astar
 PlotPath results/visualizations/Path.png
 end
 ```
@@ -155,7 +156,7 @@ bmp_write results/visualizations/kmeans.bmp Binary
 triangulate
 PlotVoronoi results/visualizations/Diagramma_Voronova.png
 PlotDelaunay results/visualizations/Triangulation_Delone.png
-find_path 60 130 150 135
+find_path_astar 60 130 150 135
 PlotPath results/visualizations/Path.png
 Plot3DPath results/visualizations/Plot3DPath.png
 plotInteractive3DPath
@@ -166,11 +167,11 @@ end
 ```
 fieldWidth 250
 fieldHeight 250
-defaultX 50.0
-defaultY 50.0
-defaultSx 20.0
-defaultSy 20.0
-defaultH 200.0
+defaultCenterX 50.0
+defaultCenterY 50.0
+defaultSigmaX 20.0
+defaultSigmaY 20.0
+defaultHeight 200.0
 defaultGnuplot results/visualizations/Gnuplot.png
 defaultPlotMetedata results/visualizations/Metadata.png
 defaultPlotVoronoi results/visualizations/Voronoi.png
@@ -179,17 +180,17 @@ defaultPlotPath results/visualizations/Path.png
 defaultWrite results/visualizations/Write.bmp 
 defaultWriteModeImage Full
 defaultRead results/visualizations/Read.bmp
-defaultSlice 127
+defaultThreshold 130
 defaultBinMode All
 defaultNoisy 10
 defaultKlaster 5
 defaultKlasterKern 5
-defaultpointA_x 150.0
-defaultpointA_y 150.0
-defaultpointB_x 160.0
-defaultpointB_y 160.0
+defaultstartPointX 150.0
+defaultstartPointY 150.0
+defaultendPointX 160.0
+defaultendPointY 160.0
 defaultPlot3DPath results/visualizations/Plot3DPath.png
-vehicleRadius 5
+vehicleRadius 1
 maxSideAngle 90.0
 maxUpDownAngle 90.0
 logFileNameInterface var/logs/log_interface.txt

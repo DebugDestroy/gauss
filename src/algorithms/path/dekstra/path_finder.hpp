@@ -10,15 +10,14 @@
 #include "algorithms/path/common/graph.hpp"
 #include "algorithms/path/common/conditions.hpp"
 
-namespace algorithms::path::a_star {
+namespace algorithms::path::dekstra {
 
-struct AStarNode {
+struct DijkstraNode {
     algorithms::geometry::PointD position;
     double gScore;
-    double fScore;
 
-    bool operator>(const AStarNode& other) const {
-        return fScore > other.fScore;
+    bool operator>(const DijkstraNode& other) const {
+        return gScore > other.gScore;
     }
 };
 
@@ -29,7 +28,7 @@ private:
 public:
     explicit PathFinder(core::Logger& lg);
 
-    std::vector<algorithms::geometry::PointD> findPathAStar(
+    std::vector<algorithms::geometry::PointD> findPathDijkstra(
         const algorithms::geometry::PointD& start,
         const algorithms::geometry::PointD& goal,
         std::vector<algorithms::geometry::Edge> voronoiEdges,

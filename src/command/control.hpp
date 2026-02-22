@@ -35,10 +35,18 @@
 #include "algorithms/geometry/triangulator.hpp"
 #include "algorithms/geometry/voronoi_diagram.hpp"
 
+// algorithms::path::common
+#include "algorithms/path/common/conditions.hpp"
+#include "algorithms/path/common/graph.hpp"
+
 // algorithms::path::a_star
-#include "algorithms/path/a_star/conditions.hpp"
-#include "algorithms/path/a_star/graph.hpp"
 #include "algorithms/path/a_star/path_finder.hpp"
+
+// algorithms::path::dekstra
+#include "algorithms/path/dekstra/path_finder.hpp"
+
+// algorithms::path::greedy
+#include "algorithms/path/greedy/path_finder.hpp"
 
 namespace command {
 
@@ -86,10 +94,18 @@ public:
     algorithms::geometry::PointD end;
     std::vector<algorithms::geometry::PointD> path;
     
+    // algorithms::path::common
+    algorithms::path::common::Conditions conditions;
+    algorithms::path::common::Graph graph;
+    
     // algorithms::path::a_star
-    algorithms::path::a_star::Conditions conditions;
-    algorithms::path::a_star::Graph graph;
-    algorithms::path::a_star::PathFinder pathFinder;
+    algorithms::path::a_star::PathFinder astarFinder;
+    
+    // algorithms::path::dekstra
+    algorithms::path::dekstra::PathFinder dekstraFinder;
+    
+    // algorithms::path::greedy
+    algorithms::path::greedy::PathFinder greedyFinder;
     
     // Конструктор
     Control(core::Config& cfg, core::Logger& log);

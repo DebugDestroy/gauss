@@ -1,9 +1,27 @@
 init
- 
-g 50 50 3.5 3.5 110  
+
+g 4 100 5 5 100
+g 50 50 1.5 1.5 40 
+g 30 40 4.5 4.5 140 
+g 50 150 4.0 4.0 105 
+g 75 275 3.0 3.0 105 
+g 75 28 3.0 3.0 105 
+g 75 15 3.0 3.0 105 
+g 125 90 3.0 3.0 105 
+g 275 250 3.0 3.0 105 
+g 75 285 3.0 3.0 105 
+g 90 50 5 5 100
+g 150 250 5 5 100
+g 150 110 4.5 4.5 140
+g 150 5 3.0 3.0 105 
+g 100 150 4.5 4.5 140
 g 250 50 4.0 4.0 -110  
 g 50 250 3.0 3.0 105  
-g 250 250 3.8 3.8 -105  
+g 280 200 3.0 3.0 105  
+g 225 150 3.0 3.0 105 
+g 240 200 3.0 3.0 105 
+g 200 250 5 5 100
+g 250 250 7.8 10.8 -105  
 g 150 150 5.0 5.0 100  
 g 100 200 4.5 4.5 -95  
 g 200 100 4.2 4.2 90  
@@ -40,8 +58,16 @@ bmp_write results/visualizations/kmeans_with_kernel.bmp Binary
 triangulate
 PlotVoronoi results/visualizations/Diagramma_Voronova.png
 PlotDelaunay results/visualizations/Triangulation_Delone.png
-find_path 5 5 295 295
-PlotPath results/visualizations/Path.png
-Plot3DPath results/visualizations/Plot3DPath.png
+find_path_astar 5 5 295 295
+PlotPath results/visualizations/AstarPath.png
+Plot3DPath results/visualizations/AstarPlot3DPath.png
+plotInteractive3DPath
+find_path_dekstra 5 5 295 295
+PlotPath results/visualizations/DekstraPath.png
+Plot3DPath results/visualizations/DekstraPlot3DPath.png
+plotInteractive3DPath
+find_path_greedy 5 5 295 295
+PlotPath results/visualizations/GreedyPath.png
+Plot3DPath results/visualizations/GreedyPlot3DPath.png
 plotInteractive3DPath
 end

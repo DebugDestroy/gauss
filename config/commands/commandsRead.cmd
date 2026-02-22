@@ -12,6 +12,6 @@ bmp_write results/visualizations/kmeans.bmp Binary
 triangulate
 PlotVoronoi results/visualizations/Diagramma_Voronova.png
 PlotDelaunay results/visualizations/Triangulation_Delone.png
-find_path
+find_path_astar
 PlotPath results/visualizations/Path.png
 end

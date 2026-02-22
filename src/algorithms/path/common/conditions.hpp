@@ -8,7 +8,7 @@
 #include "algorithms/geometry/geometry_structures.hpp"
 #include "algorithms/gauss/pole.hpp"
 
-namespace algorithms::path::a_star {
+namespace algorithms::path::common {
 
 class Conditions {
 private:

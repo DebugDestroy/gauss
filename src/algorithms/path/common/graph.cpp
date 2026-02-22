@@ -5,7 +5,7 @@
 #include <limits>
 #include <string>
 
-namespace algorithms::path::a_star {
+namespace algorithms::path::common {
 
 Graph::Graph(core::Logger& lg) : logger(lg) {}
 
@@ -43,6 +43,46 @@ std::unordered_map<algorithms::geometry::PointD, std::vector<algorithms::geometr
     }
 
     return graph;
+}
+
+bool Graph::connectPointToGraph(
+    std::unordered_map<algorithms::geometry::PointD, std::vector<algorithms::geometry::PointD>>& graph,
+    const algorithms::geometry::PointD& p,
+    const std::vector<std::vector<double>>& binaryMap,
+    const std::unique_ptr<gauss::Pole>& elevationData,
+    const Conditions& conds)
+{
+    if (!conds.isVehicleRadiusValid(p, binaryMap)) {
+        logger.warning("[Graph::connectPointToGraph] Точка непригодна");
+        return false;
+    }
+
+    // Добавляем точку заранее, чтобы не было вставки во время итерации
+    graph.emplace(p, std::vector<algorithms::geometry::PointD>{});
+
+    bool connected = false;
+
+    for (const auto& [node, _] : graph)
+    {
+        if (node == p)
+            continue;
+
+        geometry::Edge e(p, node);
+
+        if (!conds.isEdgeNavigable(e, elevationData, binaryMap))
+            continue;
+
+        graph[p].push_back(node);
+        graph[node].push_back(p);
+
+        connected = true;
+    }
+
+    if (!connected) {
+        logger.warning("[Graph::connectPointToGraph] Нет допустимых соединений");
+    }
+
+    return connected;
 }
 
  algorithms::geometry::PointD Graph::findClosestVoronoiNode(const algorithms::geometry::PointD& point, const std::unordered_map<algorithms::geometry::PointD, std::vector<algorithms::geometry::PointD>>& graph) const 
