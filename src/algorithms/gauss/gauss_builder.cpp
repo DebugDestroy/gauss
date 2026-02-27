@@ -2,6 +2,8 @@
 #include <cmath>
 #include <algorithm>
 #include <string>
+#include <random>
+#include <fstream>
 
 namespace algorithms::gauss {
 
@@ -24,6 +26,42 @@ namespace algorithms::gauss {
         gaussi.emplace_back(h, x0, y0, sigma_x, sigma_y);
         logGaussParameters(gaussi.back());
     }
+    
+void GaussBuilder::addgaussRandom(
+    double xmin, double xmax,
+    double ymin, double ymax,
+    double sx_min, double sx_max,
+    double sy_min, double sy_max,
+    double h_min, double h_max,
+    int count_min, int count_max,
+    std::vector<Gaus>& gaussi)
+{
+    logger.info("[GaussBuilder] Автогенерация гауссов");
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+
+    std::uniform_real_distribution<> dx(xmin, xmax);
+    std::uniform_real_distribution<> dy(ymin, ymax);
+    std::uniform_real_distribution<> dsx(sx_min, sx_max);
+    std::uniform_real_distribution<> dsy(sy_min, sy_max);
+    std::uniform_real_distribution<> dh(h_min, h_max);
+    std::uniform_int_distribution<> dcount(count_min, count_max);
+
+    int count = dcount(gen);
+
+    for (int i = 0; i < count; ++i) {
+        double x0 = dx(gen);
+        double y0 = dy(gen);
+        double sigma_x = dsx(gen);
+        double sigma_y = dsy(gen);
+        double h = dh(gen);
+
+        addgauss(h, x0, y0, sigma_x, sigma_y, gaussi);
+    }
+
+    logger.info("[GaussBuilder] Сгенерировано " + std::to_string(count) + " гауссов");
+}
     
     void GaussBuilder::init(int A, int B, std::unique_ptr<Pole>& p) {
         logger.trace(std::string("[GaussBuilder::init] Initializing field with size ") +
@@ -101,4 +139,29 @@ namespace algorithms::gauss {
                   std::to_string((double)clamped_pixels/total_pixels*100) + "%");
     }
   }
+  
+void GaussBuilder::saveGaussiansToFile(
+    const std::string& filename,
+    const std::vector<Gaus>& gaussi)
+{
+    std::ofstream out(filename);
+
+    if (!out.is_open()) {
+        logger.error("[GaussBuilder] Не удалось открыть файл для записи!");
+        return;
+    }
+
+    for (const auto& g : gaussi) {
+        out << "g "
+            << g.x0 << " "
+            << g.y0 << " "
+            << g.sigma_x << " "
+            << g.sigma_y << " "
+            << g.h << "\n";
+    }
+
+    out.close();
+
+    logger.info("[GaussBuilder] Гауссы сохранены в файл: " + filename);
+}
 }

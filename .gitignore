@@ -2,6 +2,7 @@
 /archive/
 /.github/
 /var/
+config/commands/gaussians.txt
 *.o
 
 # Сборка CMake
