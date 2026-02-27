@@ -10,7 +10,7 @@
 #
 # Использование:
 #   ./run.sh          # Запуск с клавиатуры
-#   ./run.sh commands # Запуск с файлом commandsGauss.cmd
+#   ./run.sh filename # Запуск с файлом filename
 # ======================================
 
 
@@ -18,9 +18,7 @@ set -euo pipefail
 
 # --- Конфигурация ---
 BUILD_DIR="build"
-COMMAND_FILE="config/commands/commandsGauss.cmd"
 EXEC_PATH="$BUILD_DIR/bin/terrain_navigator"
-EXEC_NAME="terrain_navigator"
 
 # --- Цвета ---
 RED='\033[1;31m'
@@ -66,10 +64,21 @@ check_and_build() {
 run_program() {
     info "🚀 Запуск программы..."
     local binary="$PROJECT_ROOT/$EXEC_PATH"
-    if [[ $# -gt 0 && "$1" == "commands" ]]; then
-        [[ ! -f "$PROJECT_ROOT/$COMMAND_FILE" ]] && error "Файл команд не найден: $COMMAND_FILE"
-        echo -e "1\n$PROJECT_ROOT/$COMMAND_FILE" | "$binary"
+
+    if [[ $# -gt 0 ]]; then
+        local user_file="$1"
+
+        # Если путь относительный — делаем его от корня проекта
+        if [[ ! "$user_file" = /* ]]; then
+            user_file="$PROJECT_ROOT/$user_file"
+        fi
+
+        [[ ! -f "$user_file" ]] && error "Файл команд не найден: $user_file"
+
+        info "📄 Используется файл команд: $user_file"
+        echo -e "1\n$user_file" | "$binary"
     else
+        info "⌨️  Режим ввода с клавиатуры"
         "$binary"
     fi
 }

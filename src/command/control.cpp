@@ -85,9 +85,33 @@ namespace command {
                 ", h=" + std::to_string(params.height));
         }
         
+        if (params.command == "g_auto") {
+            gaussBuilder.addgaussRandom(
+            params.xmin, params.xmax, 
+            params.ymin, params.ymax,
+            params.sx_min, params.sx_max,
+            params.sy_min, params.sy_max,
+            params.h_min, params.h_max,
+            params.count_min, params.count_max,
+            gaussi);
+                
+            logOperation(core::LogLevel::Info, std::string("g_auto"), std::string(
+               "x=[" + std::to_string(params.xmin) + ", " + std::to_string(params.xmax) + "], " +
+               "y=[" + std::to_string(params.ymin) + ", " + std::to_string(params.ymax) + "], " +
+               "sx=[" + std::to_string(params.sx_min) + ", " + std::to_string(params.sx_max) + "], " +
+               "sy=[" + std::to_string(params.sy_min) + ", " + std::to_string(params.sy_max) + "], " +
+               "h=[" + std::to_string(params.h_min) + ", " + std::to_string(params.h_max) + "], " +
+               "count=[" + std::to_string(params.count_min) + ", " + std::to_string(params.count_max) + "]"));
+        }
+        
         if (params.command == "generate") {
             gaussBuilder.generate(p, gaussi);
             logOperation(core::LogLevel::Info, std::string("generate"));
+        }
+        
+        if (params.command == "save_g") {
+            gaussBuilder.saveGaussiansToFile(params.filename, gaussi);
+            logOperation(core::LogLevel::Info, std::string("save_g"), std::string("file: ") + params.filename);
         }
         
         if (params.command == "gnuplot") {

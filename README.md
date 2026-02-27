@@ -65,18 +65,8 @@ chmod +x run.sh
 # Запуск с интерфейсом командной строки
 ./run.sh
 
-# Запуск с файлом команд (commandsGauss.cmd)
-./run.sh commands
-```
-
-### Способ 2: С CMake (опционально)
-```bash
-mkdir build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
-cmake --build . --parallel $(nproc)
-
-# Запуск из корня проекта
-./run.sh commands
+# Запуск с файлом команд (filename)
+./run.sh filename
 ```
 
 ## 📂 Файлы проекта
@@ -90,8 +80,6 @@ cmake --build . --parallel $(nproc)
 ├── User Guide.pdf            # Руководство пользователя
 ├── config/                   # Конфигурационные файлы
 │   ├── commands/             # Примеры команд
-│   │   ├── commandsGauss.cmd
-│   │   └── commandsRead.cmd
 │   └── config.conf           # Параметры конфигурации
 ├── results/                  # Результаты работы
 │   ├── help.txt              # Подсказки по командам
@@ -119,30 +107,32 @@ cmake --build . --parallel $(nproc)
 
 ## 🛠 Команды управления (для командного файла command.txt)
 
-| Команда              | Параметры                      | Описание                                                                 |
-|----------------------|--------------------------------|--------------------------------------------------------------------------|
-| help                 | -                              | Создание файла с пояснением команд                                       |
-| init                 | -                              | Инициализация поля                                                       |
-| g                    | x y sx sy h                    | Создает гаусс с центром (x,y), размерами (sx,sy) и высотой h             |
-| generate             | -                              | Складывает все добавленные гауссы в итоговое поле                        |
-| gnuplot              | filename.png                   | Сохраняет 3D-визуализацию поля в PNG файл                                |
-| PlotMetedata         | filename.png                   | Визуализирует метаданные компонент с границами и центрами                |
-| PlotVoronoi          | filename.png                   | Строит диаграмму Вороного по текущей триангуляции                        |
-| PlotDelaunay         | filename.png                   | Визуализирует триангуляцию Делоне                                        |
-| PlotPath             | filename.png                   | Отображает найденный путь между точками A и B                            |
-| bmp_write            | filename.bmp [Full/Binary]     | Сохраняет поле в BMP: Full - полное, Binary - бинаризованное             |
-| bmp_read             | filename.bmp                   | Загружает поле из BMP файла                                              |
-| bin                  | slice [Peaks/Valleys/All]      | Бинаризация: Peaks - только пики, Valleys - впадины, All - по модулю     |
-| wave                 | noisy                          | Удаляет компоненты размером ≤ noisy как шум                              |
-| k_means              | k                              | Кластеризует данные в k кластеров                                        |
-| k_means_kern         | kk                             | Кластеризация с ядрами размера kk                                        |
-| triangulate          | -                              | Строит триангуляцию Делоне по центрам компонент                          |
-| find_path_astar      | Ax Ay Bx By                    | A* ищет путь между точками A и B через триангуляцию                      |
-| find_path_dekstra    | Ax Ay Bx By                    | Dekstra ищет путь между точками A и B через триангуляцию                 |
-| find_path_greedy     | Ax Ay Bx By                    | Greedy ищет путь между точками A и B через триангуляцию                  |
-| Plot3DPath           | filename.png                   | Сохраняет 3D-визуализацию путя в PNG файл                                |
-| plotInteractive3DPath| -                              | Интерактвный 3D режим с путем                                            |
-| end                  | -                              | Завершает работу программы                                               |
+| Команда              | Параметры                                                                                          | Описание                                                                 |
+|----------------------|----------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------|
+| help                 | -                                                                                                  | Создание файла с пояснением команд                                       |
+| init                 | -                                                                                                  | Инициализация поля                                                       |
+| g                    | x y sx sy h                                                                                        | Создает гаусс с центром (x,y), размерами (sx,sy) и высотой h             |
+| g_auto               | xmin, xmax, ymin, ymax, sx_min, sx_max, sy_min, sy_max, h_min, h_max, int count_min, int count_max | Создает случайные гаусы с параметрами в промежутках                      |
+| generate             | -                                                                                                  | Складывает все добавленные гауссы в итоговое поле                        |
+| save_g               | filename.png                                                                                       | Сохраняет параметры g в txt файл                                         |
+| gnuplot              | filename.png                                                                                       | Сохраняет 3D-визуализацию поля в PNG файл                                |
+| PlotMetedata         | filename.png                                                                                       | Визуализирует метаданные компонент с границами и центрами                |
+| PlotVoronoi          | filename.png                                                                                       | Строит диаграмму Вороного по текущей триангуляции                        |
+| PlotDelaunay         | filename.png                                                                                       | Визуализирует триангуляцию Делоне                                        |
+| PlotPath             | filename.png                                                                                       | Отображает найденный путь между точками A и B                            |
+| bmp_write            | filename.bmp [Full/Binary]                                                                         | Сохраняет поле в BMP: Full - полное, Binary - бинаризованное             |
+| bmp_read             | filename.bmp                                                                                       | Загружает поле из BMP файла                                              |
+| bin                  | slice [Peaks/Valleys/All]                                                                          | Бинаризация: Peaks - только пики, Valleys - впадины, All - по модулю     |
+| wave                 | noisy                                                                                              | Удаляет компоненты размером ≤ noisy как шум                              |
+| k_means              | k                                                                                                  | Кластеризует данные в k кластеров                                        |
+| k_means_kern         | kk                                                                                                 | Кластеризация с ядрами размера kk                                        |
+| triangulate          | -                                                                                                  | Строит триангуляцию Делоне по центрам компонент                          |
+| find_path_astar      | Ax Ay Bx By                                                                                        | A* ищет путь между точками A и B через триангуляцию                      |
+| find_path_dekstra    | Ax Ay Bx By                                                                                        | Dekstra ищет путь между точками A и B через триангуляцию                 |
+| find_path_greedy     | Ax Ay Bx By                                                                                        | Greedy ищет путь между точками A и B через триангуляцию                  |
+| Plot3DPath           | filename.png                                                                                       | Сохраняет 3D-визуализацию путя в PNG файл                                |
+| plotInteractive3DPath| -                                                                                                  | Интерактвный 3D режим с путем                                            |
+| end                  | -                                                                                                  | Завершает работу программы                                               |
 
 
 ## ⚙️ Параметры конфигурационного файла (config.txt)
@@ -156,6 +146,19 @@ cmake --build . --parallel $(nproc)
 | defaultSigmaX                | `defaultSigmaX`                                | Стандартное отклонение по оси X по умолчанию                                     |
 | defaultSigmaY                | `defaultSigmaY`                                | Стандартное отклонение по оси Y по умолчанию                                     |
 | defaultHeight                | `defaultHeight`                                | Стандартная высота гауссова распределения по умолчанию                           |
+| xmin                         | `xmin`                                         | Минимальная X-координата центра гаусса при g_auto                                |
+| xmax                         | `xmax`                                         | Максимальная X-координата центра гаусса при g_auto                               |
+| ymin                         | `ymin`                                         | Минимальная Y-координата центра гаусса при g_auto                                |
+| ymax                         | `ymax`                                         | Максимальная Y-координата центра гаусса при g_auto                               |
+| sx_min                       | `sx_min`                                       | Минимальное отклонение по оси X при g_auto                                       |
+| sx_max                       | `sx_max`                                       | Максимальное отклонение по оси X при g_auto                                      |
+| sy_min                       | `sy_min`                                       | Минимальное отклонение по оси Y при g_auto                                       |
+| sy_max                       | `sy_max`                                       | Максимальное отклонение по оси Y при g_auto                                      |
+| h_min                        | `h_min`                                        | Минимальная высота гаусса при g_auto                                             |
+| h_max                        | `h_max`                                        | Максимальная высота гаусса при g_auto                                            |
+| count_min                    | `count_min`                                    | Минимальное количество генерируемых гауссов                                      |
+| count_max                    | `count_max`                                    | Максимальное количество генерируемых гауссов                                     |
+| save_g                       | `filename_save_g`                              | Путь к файлу для сохранения параметров g                                         |
 | defaultGnuplot               | `filename_gnuplot.png`                         | Путь к файлу для сохранения 3D-визуализации по умолчанию                         |
 | defaultPlotMetedata          | `filename_metadata.png`                        | Путь к файлу для визуализации метаданных компонент по умолчанию                  |
 | defaultPlotVoronoi           | `filename_voronoi.png`                         | Путь к файлу для диаграммы Вороного по умолчанию                                 |
@@ -313,37 +316,72 @@ end
 
 ## 📃️ Конфигурационный файл (пример)
 ```
-fieldWidth 250
-fieldHeight 250
+defaultHelp results/help.txt
+
+
+fieldWidth 300
+fieldHeight 300
+
+
 defaultCenterX 50.0
 defaultCenterY 50.0
-defaultSigmaX 20.0
-defaultSigmaY 20.0
-defaultHeight 200.0
+defaultSigmaX 5.0
+defaultSigmaY 5.0
+defaultHeight 10.0
+
+
+xmin 0
+xmax 300
+ymin 0
+ymax 300
+sx_min 2
+sx_max 5
+sy_min 2
+sy_max 5
+h_min -120
+h_max 120
+count_min 50
+count_max 100
+
+
 defaultGnuplot results/visualizations/Gnuplot.png
 defaultPlotMetedata results/visualizations/Metadata.png
 defaultPlotVoronoi results/visualizations/Voronoi.png
 defaultPlotDelaunay results/visualizations/Delaunay.png
 defaultPlotPath results/visualizations/Path.png
+defaultPlot3DPath results/visualizations/Plot3DPath.png
+
 defaultWrite results/visualizations/Write.bmp 
 defaultWriteModeImage Full
 defaultRead results/visualizations/Read.bmp
+
+save_g config/commands/gaussians.txt
+
+
 defaultThreshold 130
 defaultBinMode All
+
+
 defaultNoisy 10
+
+
 defaultKlaster 5
 defaultKlasterKern 5
+
+
 defaultstartPointX 150.0
 defaultstartPointY 150.0
 defaultendPointX 160.0
 defaultendPointY 160.0
-defaultPlot3DPath results/visualizations/Plot3DPath.png
+
 vehicleRadius 1
 maxSideAngle 90.0
 maxUpDownAngle 90.0
+
+
 logFileNameInterface var/logs/log_interface.txt
 logFileNameControl var/logs/logcontrol.txt
-defaultHelp results/help.txt
+
 FiltrationLogLevelInterface INFO
 FiltrationLogLevelControl INFO
 ```
