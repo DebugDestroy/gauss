@@ -6,6 +6,39 @@ namespace visualization {
         logger.trace("[GnuplotInterface] Инициализация интерфейса Gnuplot");
     }
     
+    void GnuplotInterface::applyNiceStyle(FILE* pipe, const std::string& title, bool is3D, const std::string& terminal) {
+
+    if (terminal == "qt") {
+        fprintf(pipe,
+            "set terminal qt enhanced font 'Arial,20'\n");
+    } else {
+        fprintf(pipe,
+            "set terminal pngcairo enhanced size 1600,1200 font 'Arial,20'\n");
+    }
+
+    fprintf(pipe,
+        "set title '{/:Bold %s}'\n", title.c_str());
+
+    fprintf(pipe,
+        "set xlabel '{/:Bold X coordinate}' font 'Arial,18'\n");
+    fprintf(pipe,
+        "set ylabel '{/:Bold Y coordinate}' font 'Arial,18'\n");
+
+    fprintf(pipe,
+        "set xtics font 'Arial,18'\n");
+    fprintf(pipe,
+        "set ytics font 'Arial,18'\n");
+
+    if (is3D) {
+        fprintf(pipe,
+            "set zlabel '{/:Bold Height}' font 'Arial,18'\n");
+        fprintf(pipe,
+            "set ztics font 'Arial,18'\n");
+    }
+
+   fprintf(pipe, "set grid\n"); // бонус
+}
+    
     double GnuplotInterface::transformY(double y, int height) const {
         double transformed = height - y - 1;
         logger.trace(std::string("[GnuplotInterface::transformY] Преобразование Y: ") + 
@@ -39,9 +72,8 @@ namespace visualization {
                    ", компонентов: " + std::to_string(components.size()));
 
         // Настройки графика
-        fprintf(gnuplotPipe, "set terminal pngcairo size 1600,1200\n");
+        applyNiceStyle(gnuplotPipe, "Binary Image with Components");
         fprintf(gnuplotPipe, "set output '%s'\n", filename.c_str());
-        fprintf(gnuplotPipe, "set title 'Binary Image with Components Metadata'\n");
         fprintf(gnuplotPipe, "set size ratio -1\n");
         fprintf(gnuplotPipe, "set xrange [0:%d]\n", width-1);
         fprintf(gnuplotPipe, "set yrange [0:%d]\n", height-1);
@@ -51,7 +83,7 @@ namespace visualization {
         fprintf(gnuplotPipe, "plot '-' matrix with image, \\\n");
         fprintf(gnuplotPipe, "'-' with lines lw 2 lc 'red', \\\n");
         fprintf(gnuplotPipe, "'-' with points pt 7 ps 2 lc 'blue', \\\n");
-        fprintf(gnuplotPipe, "'-' with vectors head filled lc 'green'\n");
+        fprintf(gnuplotPipe, "'-' with vectors head filled  lw 3 lc 'green'\n");
 
         // 1. Данные бинарного изображения (с инверсией Y)
 for (int y = height - 1; y >= 0; --y) {
@@ -130,11 +162,8 @@ fprintf(gnuplotPipe, "e\n");
         }
     
     // Настройки 3D графика
-    fprintf(gnuplotPipe, "set terminal pngcairo enhanced size 1600,1200\n");
+    applyNiceStyle(gnuplotPipe, "Height Map", true);
     fprintf(gnuplotPipe, "set output '%s'\n", filename.c_str());
-    fprintf(gnuplotPipe, "set xlabel 'X'\n");
-    fprintf(gnuplotPipe, "set ylabel 'Y'\n");
-    fprintf(gnuplotPipe, "set zlabel 'Height'\n");
     fprintf(gnuplotPipe, "set xrange [0:%d]\n", cols - 1);
     fprintf(gnuplotPipe, "set yrange [0:%d]\n", rows - 1);
     fprintf(gnuplotPipe, "set zrange [*:*]\n"); // Автомасштабирование по Z
@@ -182,9 +211,8 @@ void GnuplotInterface::plotVoronoi(const std::unique_ptr<algorithms::gauss::Pole
         }
 
     // Настройки графика с контрастными цветами для красного фона
-    fprintf(gnuplotPipe, "set terminal pngcairo size 1600,1200 enhanced font 'Arial,12'\n");
+    applyNiceStyle(gnuplotPipe, "Voronoi Diagram");
     fprintf(gnuplotPipe, "set output '%s'\n", filename.c_str());
-    fprintf(gnuplotPipe, "set title 'Voronoi Diagram on Red Field'\n");
     fprintf(gnuplotPipe, "set size ratio -1\n");
     fprintf(gnuplotPipe, "set xrange [0:%d]\n", width - 1);
     fprintf(gnuplotPipe, "set yrange [0:%d]\n", height - 1);
@@ -249,9 +277,8 @@ void GnuplotInterface::plotVoronoi(const std::unique_ptr<algorithms::gauss::Pole
         logger.debug(std::string("Триангуляция Делоне: ") + std::to_string(triangles.size()) + " треугольников");
 
     // Улучшенные настройки графика
-    fprintf(gnuplotPipe, "set terminal pngcairo size 1600,1200 enhanced font 'Arial,12'\n");
+    applyNiceStyle(gnuplotPipe, "Delaunay Triangulation");
     fprintf(gnuplotPipe, "set output '%s'\n", filename.c_str());
-    fprintf(gnuplotPipe, "set title 'Delaunay Triangulation'\n");
     fprintf(gnuplotPipe, "set size ratio -1\n");
     fprintf(gnuplotPipe, "set xrange [0:%d]\n", width-1);
     fprintf(gnuplotPipe, "set yrange [0:%d]\n", height-1);
@@ -308,9 +335,8 @@ void GnuplotInterface::plotPath(const std::vector<algorithms::geometry::PointD>&
         }
 
     // Настройки графика
-    fprintf(gnuplotPipe, "set terminal pngcairo size 1600,1200\n");
+    applyNiceStyle(gnuplotPipe, "Path Visualization");
     fprintf(gnuplotPipe, "set output '%s'\n", filename.c_str());
-    fprintf(gnuplotPipe, "set title 'Path Visualization'\n");
     fprintf(gnuplotPipe, "set size ratio -1\n");
     fprintf(gnuplotPipe, "set xrange [0:%d]\n", width-1);
     fprintf(gnuplotPipe, "set yrange [0:%d]\n", height-1);
@@ -342,9 +368,9 @@ void GnuplotInterface::plotPath(const std::vector<algorithms::geometry::PointD>&
     }
     
     // 3. Подписи START/END
-    fprintf(gnuplotPipe, "set label 'START' at %d,%d front\n", 
+    fprintf(gnuplotPipe, "set label '{/:Bold START}' at %d,%d front font 'Arial,18'\n", 
             static_cast<int>(params.startPointX), static_cast<int>(transformY(params.startPointY, height)));
-    fprintf(gnuplotPipe, "set label 'END' at %d,%d front\n",
+    fprintf(gnuplotPipe, "set label '{/:Bold END}' at %d,%d front font 'Arial,18'\n",
             static_cast<int>(params.endPointX), static_cast<int>(transformY(params.endPointY, height)));
     
     // Многослойный график: фон + путь + точки
@@ -409,11 +435,7 @@ void GnuplotInterface::plotInteractive3DPath(const std::vector<algorithms::geome
         }
     
     // 1. Настройки графика (должны идти первыми!)
-    fprintf(gnuplotPipe, "set terminal qt size 1600,1200 enhanced\n");
-    fprintf(gnuplotPipe, "set title '3D Path Visualization (Use mouse to rotate)'\n");
-    fprintf(gnuplotPipe, "set xlabel 'X'\n");
-    fprintf(gnuplotPipe, "set ylabel 'Y'\n");
-    fprintf(gnuplotPipe, "set zlabel 'Height'\n");
+    applyNiceStyle(gnuplotPipe, "3D Path Visualization", true, "qt");
     fprintf(gnuplotPipe, "set pm3d\n");
     fprintf(gnuplotPipe, "set hidden3d\n");
     fprintf(gnuplotPipe, "set view 60, 30\n");
@@ -447,7 +469,7 @@ void GnuplotInterface::plotInteractive3DPath(const std::vector<algorithms::geome
                 p->field[startY][startX], sphereRadius);
     }
     
-    fprintf(gnuplotPipe, "set label 'START' at %d,%d,%f front\n",
+    fprintf(gnuplotPipe, "set label '{/:Bold START}' at %d,%d,%f front font 'Arial,18'\n",
                 startX, static_cast<int>(transformY(startY, height)), p->field[startY][startX] + 1);
     
     if (endX >= 0 && endY >= 0 && endX < width && endY < height) {
@@ -456,7 +478,7 @@ void GnuplotInterface::plotInteractive3DPath(const std::vector<algorithms::geome
                 p->field[endY][endX], sphereRadius);
     }
     
-     fprintf(gnuplotPipe, "set label 'END' at %d,%d,%f front\n",
+     fprintf(gnuplotPipe, "set label '{/:Bold END}' at %d,%d,%f front font 'Arial,18'\n",
                 endX, static_cast<int>(transformY(endY, height)), p->field[endY][endX] + 1);
 
     // 5. Рисуем поверхность
@@ -506,9 +528,8 @@ void GnuplotInterface::plot3DPath(const std::vector<algorithms::geometry::PointD
     }
 
     // 2. Настройки графика
-    fprintf(gnuplotPipe, "set terminal pngcairo enhanced size 1600,1200\n");
+    applyNiceStyle(gnuplotPipe, "3D Path Projection", true);
     fprintf(gnuplotPipe, "set output '%s'\n", filename.c_str());
-    fprintf(gnuplotPipe, "set title '3D Path Projection'\n");
     fprintf(gnuplotPipe, "set pm3d\n");
     fprintf(gnuplotPipe, "set hidden3d\n");
     fprintf(gnuplotPipe, "set view 60, 30\n");
@@ -531,7 +552,7 @@ void GnuplotInterface::plot3DPath(const std::vector<algorithms::geometry::PointD
                 p->field[startY][startX] , sphereRadius);
     }
     
-    fprintf(gnuplotPipe, "set label 'START' at %d,%d,%f front\n",
+    fprintf(gnuplotPipe, "set label '{/:Bold START}' at %d,%d,%f front font 'Arial,18'\n",
                 startX, static_cast<int>(transformY(startY, height)), p->field[startY][startX] + 1);
     
     if (endX >= 0 && endY >= 0 && endX < width && endY < height) {
@@ -540,7 +561,7 @@ void GnuplotInterface::plot3DPath(const std::vector<algorithms::geometry::PointD
                 p->field[endY][endX], sphereRadius);
     }
     
-     fprintf(gnuplotPipe, "set label 'END' at %d,%d,%f front\n",
+     fprintf(gnuplotPipe, "set label '{/:Bold END}' at %d,%d,%f front font 'Arial,18'\n",
                 endX, static_cast<int>(transformY(endY, height)), p->field[endY][endX] + 1);
 
     // 5. Рисуем поверхность
