@@ -17,6 +17,7 @@ class GnuplotInterface {
 private:
     core::Logger& logger;
 
+    void applyNiceStyle(FILE* pipe, const std::string& title, bool is3D = false, const std::string& terminal = "pngcairo");
     double transformY(double y, int height) const;
     void logPlotStart(const std::string& plotType, const std::string& filename) const;
     void logPlotEnd(const std::string& plotType) const;

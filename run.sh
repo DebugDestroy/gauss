@@ -69,11 +69,22 @@ run_program() {
         local user_file="$1"
 
         # Если путь относительный — делаем его от корня проекта
-        if [[ ! "$user_file" = /* ]]; then
-            user_file="$PROJECT_ROOT/$user_file"
-        fi
+        # Если путь относительный — ищем умно
+if [[ ! "$user_file" = /* ]]; then
+    # 1. Проверяем как есть (от корня проекта)
+    if [[ -f "$PROJECT_ROOT/$user_file" ]]; then
+        user_file="$PROJECT_ROOT/$user_file"
 
-        [[ ! -f "$user_file" ]] && error "Файл команд не найден: $user_file"
+    # 2. Проверяем в config/commands
+    elif [[ -f "$PROJECT_ROOT/config/commands/$user_file" ]]; then
+        user_file="$PROJECT_ROOT/config/commands/$user_file"
+
+    else
+        error "Файл команд не найден: $user_file"
+    fi
+else
+    [[ ! -f "$user_file" ]] && error "Файл команд не найден: $user_file"
+fi
 
         info "📄 Используется файл команд: $user_file"
         echo -e "1\n$user_file" | "$binary"
