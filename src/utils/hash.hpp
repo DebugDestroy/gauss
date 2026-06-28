@@ -7,4 +7,16 @@ namespace std {
             return h1 ^ (h2 << 1); // Combine the two hash values (you can also use other methods for combining)
         }
     };
+    
+    template<>
+    struct hash<algorithms::geometry::Pixel>
+    {
+        size_t operator()(const algorithms::geometry::Pixel& p) const
+        {
+            size_t h1 = hash<int>{}(p.x);
+            size_t h2 = hash<int>{}(p.y);
+
+            return h1 ^ (h2 << 1);
+        }
+    };
 }

@@ -10,15 +10,15 @@ namespace algorithms::components {
         return colorGenerator.generateColors(clusterCount, logger);
     }
 
-    std::vector<algorithms::geometry::PointD> ClusterService::getClusterCenters(const std::vector<Component>& components, const core::Config& config) {
+    std::vector<algorithms::geometry::PointD> ClusterService::getClusterCenters(const std::vector<Component>& components, double fieldWidth, double fieldHeight) {
         std::vector<algorithms::geometry::PointD> centers;
         for (const auto& component : components) {
             if (std::isnan(component.center_x) || std::isnan(component.center_y)) {
                 logger.logMessage(core::LogLevel::Warning, "Skipping invalid cluster center (NaN)");
                 continue;
             }
-            if (component.center_x >= 0 && component.center_x < config.fieldWidth &&
-                component.center_y >= 0 && component.center_y < config.fieldHeight) {
+            if (component.center_x >= 0 && component.center_x < fieldWidth &&
+                component.center_y >= 0 && component.center_y < fieldHeight) {
                 centers.emplace_back(component.center_x, component.center_y);
             } else {
                 logger.logMessage(core::LogLevel::Error, 

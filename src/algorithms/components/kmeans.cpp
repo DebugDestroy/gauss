@@ -30,7 +30,7 @@ namespace algorithms::components {
     }
 
     void KMeans::initializeCenters(const std::vector<std::vector<double>>& data, int k) {
-        logger.info("[KMeans::initializeCenters] Инициализация центров кластеров");
+        logger.debug("[KMeans::initializeCenters] Инициализация центров кластеров");
         logger.debug(std::string("Количество кластеров: ") + std::to_string(k) + 
                    ", количество точек: " + std::to_string(data.size()));
 
@@ -58,7 +58,7 @@ namespace algorithms::components {
     }
 
     KMeans::ClusterResult KMeans::cluster(const std::vector<std::vector<double>>& data, int k) {
-        logger.info("[KMeans::cluster] Начало кластеризации");
+        logger.trace("[KMeans::cluster] Начало кластеризации");
         logger.debug(std::string("Количество кластеров: ") + std::to_string(k) + 
                    ", точек: " + std::to_string(data.size()));
 
@@ -135,7 +135,7 @@ namespace algorithms::components {
     }
 
     KMeans::ClusterResult KMeans::kmeansWithKernels(const std::vector<std::vector<double>>& data, int k, int kernelSize) {
-        logger.info("[KMeans::kmeansWithKernels] Начало кластеризации с ядрами");
+        logger.trace("[KMeans::kmeansWithKernels] Начало кластеризации с ядрами");
         logger.debug(std::string("Параметры: k=") + std::to_string(k) + 
                    ", kernelSize=" + std::to_string(kernelSize) + 
                    ", точек=" + std::to_string(data.size()));

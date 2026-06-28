@@ -16,56 +16,46 @@ PathFinder::PathFinder(core::Logger& lg)
     logger.trace("[PathFinder] Инициализация поисковика пути Dijkstra");
 }
 
-std::vector<algorithms::geometry::PointD> PathFinder::findPathDijkstra(
-    const algorithms::geometry::PointD& start,
-    const algorithms::geometry::PointD& goal,
-    std::vector<algorithms::geometry::Edge> voronoiEdges,
-    algorithms::path::common::Graph& graph,
-    const algorithms::path::common::Conditions& conds,
-    const std::vector<std::vector<double>>& binaryMap,
-    const std::unique_ptr<algorithms::gauss::Pole>& elevationData)
+std::vector<algorithms::geometry::Pixel> PathFinder::findPathDijkstra(
+    const algorithms::geometry::Pixel& start,
+        const algorithms::geometry::Pixel& goal,
+        const std::unordered_map<algorithms::geometry::Pixel, std::vector<algorithms::geometry::Pixel>>& graph)
 {
     logger.info("[PathFinder::findPathDijkstra] Начало поиска пути...");
     
     PathMetrics metrics;
     metrics.startTimer();
-    
-    // Строим локальный граф
-auto localGraph = graph.buildGraphFromEdges(
-    voronoiEdges, binaryMap, elevationData, conds);
-
-logger.debug("[PathFinder::findPathDijkstra] Подключаем старт и цель ко всем видимым вершинам");
-
-if (!graph.connectPointToGraph(localGraph, start, binaryMap, elevationData, conds)) { // Добавили старт
-    logger.warning("[PathFinder::findPathDijkstra] Старт не подключен в граф!");
-    
-metrics.finishAndLog(logger, "Dijkstra (Failed)");
-
-    return {};
-}
-
-if (!graph.connectPointToGraph(localGraph, goal, binaryMap, elevationData, conds)) { // Добавили финиш
-    logger.warning("[PathFinder::findPathDijkstra] Финиш не подключен в граф!");
-    
-metrics.finishAndLog(logger, "Dijkstra (Failed)");
-
-    return {};
-}
 
     // =============================
     //         Dijkstra
     // =============================
+if (graph.empty()) {
+    logger.warning(
+        "[PathFinder::findPathAStar] Граф пуст");
+    return {};
+}
 
+if (!graph.contains(start)) {
+    logger.warning(
+        "[PathFinder::findPathAStar] Старт отсутствует в графе");
+    return {};
+}
+
+if (!graph.contains(goal)) {
+    logger.warning(
+        "[PathFinder::findPathAStar] Финиш отсутствует в графе");
+    return {};
+}
     std::priority_queue<
         DijkstraNode,
         std::vector<DijkstraNode>,
         std::greater<DijkstraNode>
     > openSet;
 
-    std::unordered_set<algorithms::geometry::PointD> closedSet;
-    std::unordered_map<algorithms::geometry::PointD,
-                       algorithms::geometry::PointD> cameFrom;
-    std::unordered_map<algorithms::geometry::PointD,
+    std::unordered_set<algorithms::geometry::Pixel> closedSet;
+    std::unordered_map<algorithms::geometry::Pixel,
+                       algorithms::geometry::Pixel> cameFrom;
+    std::unordered_map<algorithms::geometry::Pixel,
                        double> gScore;
 
     gScore[start] = 0.0;
@@ -90,9 +80,9 @@ metrics.finishAndLog(logger, "Dijkstra (Failed)");
             logger.info(
                 "[PathFinder::findPathDijkstra] Цель достигнута!");
 
-            std::vector<algorithms::geometry::PointD> path;
+            std::vector<algorithms::geometry::Pixel> path;
 
-            for (algorithms::geometry::PointD node = current.position;
+            for (algorithms::geometry::Pixel node = current.position;
                  cameFrom.count(node);
                  node = cameFrom[node])
             {
@@ -111,7 +101,7 @@ metrics.finishAndLog(logger, "Dijkstra");
         closedSet.insert(current.position);
 
         for (const auto& neighbor :
-             localGraph[current.position])
+             graph.at(current.position))
         {
             if (closedSet.count(neighbor))
                 continue;

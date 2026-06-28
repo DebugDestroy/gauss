@@ -4,6 +4,7 @@
 #include <numeric> // для std::iota
 #include <string>
 #include <sstream>
+#include <stack>
 #include <limits> // для std::numeric_limits
 
 // Локальные заголовки
@@ -11,102 +12,122 @@
 
 namespace algorithms::components {
 
-    int ComponentCalculator::incrementAndCollect(std::vector<std::vector<double>>& componenta, 
-                          std::vector<std::vector<double>>& CopyPole, 
-                          int x, int y, int i, int& pixelCount) {
-        logger.trace("[ComponentCalculator::incrementAndCollect] Вход: "
-                "координаты=(" + std::to_string(x) + "," + std::to_string(y) + "), "
-                "глубина_рекурсии=" + std::to_string(i) + ", "
-                "текущий_счетчик=" + std::to_string(pixelCount));
+void ComponentCalculator::collectComponent(
+        const std::vector<std::vector<double>>& binaryMap,
+        std::vector<std::vector<bool>>& visited,
+        int startX,
+        int startY,
+        std::vector<algorithms::geometry::Pixel>& pixels)
+{
+    std::stack<algorithms::geometry::Pixel> stack;
 
-        if (x < 1 || y < 1 || x > (int)componenta[0].size() - 2 || 
-            y > (int)componenta.size() - 2 || std::fabs(CopyPole[y][x] - core::WHITE) > core::EPSILON) {
-            logger.trace("[ComponentCalculator::incrementAndCollect] Выход за границы или неподходящее значение");
-            return pixelCount;
+    stack.push({startX, startY});
+
+    while (!stack.empty()) {
+
+        algorithms::geometry::Pixel current = stack.top();
+        stack.pop();
+
+        int x = current.x;
+        int y = current.y;
+
+        if (x < 0 || x >= static_cast<int>(binaryMap[0].size()) ||
+            y < 0 || y >= static_cast<int>(binaryMap.size()))
+        {
+            continue;
         }
 
-        if (std::fabs(CopyPole[y][x] - core::WHITE) < core::EPSILON) {
-            CopyPole[y][x] = core::BLACK;
-            pixelCount++;
-            componenta[y][x] = core::WHITE;
-            
-            logger.trace("[ComponentCalculator::incrementAndCollect] Обработан пиксель: "
-                   "координаты=(" + std::to_string(x) + "," + std::to_string(y) + "), "
-                   "новый_счетчик=" + std::to_string(pixelCount));
-
-            // Рекурсивные вызовы
-            incrementAndCollect(componenta, CopyPole, x + 1, y, i + 1, pixelCount);
-            incrementAndCollect(componenta, CopyPole, x - 1, y, i + 1, pixelCount);
-            incrementAndCollect(componenta, CopyPole, x, y + 1, i + 1, pixelCount);
-            incrementAndCollect(componenta, CopyPole, x, y - 1, i + 1, pixelCount);
+        if (visited[y][x]) {
+            continue;
         }
-        
-        return pixelCount;
+
+        if (std::fabs(binaryMap[y][x] - core::WHITE) > core::EPSILON) {
+            continue;
+        }
+
+        visited[y][x] = true;
+
+        pixels.push_back({x, y});
+
+        stack.push({x + 1, y});
+        stack.push({x - 1, y});
+        stack.push({x, y + 1});
+        stack.push({x, y - 1});
     }
+}
 
     ComponentCalculator::ComponentCalculator(core::Logger& lg) : logger(lg) {
         logger.trace("[ComponentCalculator] Инициализация калькулятора компонент");
     }
     
-    void ComponentCalculator::wave(int noisy, 
-             std::vector<Component>& componenti, 
-             std::vector<std::vector<double>>& CopyPole, 
-             std::unique_ptr<algorithms::gauss::Pole>& p) {
-        logger.info(std::string("[ComponentCalculator::wave] Начало волнового алгоритма, порог=") + 
-                  std::to_string(noisy));
+void ComponentCalculator::wave(
+        int noisy,
+        std::vector<Component>& componenti,
+        std::vector<std::vector<double>>& binaryMap,
+        std::vector<std::vector<double>>& field)
+{
+    logger.info("[ComponentCalculator::wave] Начало волнового алгоритма, порог=" +
+                std::to_string(noisy));
 
-        if (p == nullptr) {
-            logger.error("[ComponentCalculator::wave] Ошибка: данные высот не инициализированы!");
-            return;
-        }
+    if (field.empty()) {
+        logger.error("[ComponentCalculator::wave] Поле не инициализировано");
+        return;
+    }
 
-        int rows = p->field.size();
-        int cols = (rows > 0) ? p->field[0].size() : 0;
-        std::vector<Component> noiseComponents;
+    componenti.clear();
 
-        logger.debug(std::string("Размер данных: ") + std::to_string(cols) + "x" + std::to_string(rows));
+    const int rows = field.size();
+    const int cols = field[0].size();
 
-        for (int y = 2; y < rows - 2; ++y) {
-            for (int x = 2; x < cols - 2; ++x) {
-                if (std::fabs(CopyPole[y][x] - core::WHITE) < core::EPSILON) {
-                    std::vector<std::vector<double>> componentData(rows, std::vector<double>(cols, core::BLACK));
-                    int pixelCount = 0;
-                    incrementAndCollect(componentData, CopyPole, x, y, 0, pixelCount);
+    std::vector<std::vector<bool>> visited(
+        rows,
+        std::vector<bool>(cols, false));
 
-                    if (pixelCount >= noisy) {
-                        Component component(logger, componentData, pixelCount);
-                        componenti.push_back(component);
-                        
-                        logger.debug(std::string("[ComponentCalculator::wave] Значимая компонента: ") +
-                                   "pixels=" + std::to_string(pixelCount) +
-                                   ", center=(" + std::to_string(component.center_x) + "," + 
-                                   std::to_string(component.center_y) + ")" +
-                                   ", size=(" + std::to_string(component.max_x - component.min_x) + 
-                                   "x" + std::to_string(component.max_y - component.min_y) + ")");
-                    } else {
-                        Component noiseComponent(logger, componentData, pixelCount);
-                        noiseComponents.push_back(noiseComponent);
-                        
-                        logger.trace(std::string("[ComponentCalculator::wave] Шумовая компонента: ") +
-                                    "pixels=" + std::to_string(pixelCount) +
-                                    ", center=(" + std::to_string(noiseComponent.center_x) + "," + 
-                                    std::to_string(noiseComponent.center_y) + ")");
+    for (int y = 0; y < rows; ++y) {
+        for (int x = 0; x < cols; ++x) {
 
-                        // Удаляем шум из основного поля
-                        for (int i = 0; i < rows; ++i) {
-                            for (int j = 0; j < cols; ++j) {
-                                if (std::fabs(componentData[i][j] - core::WHITE) < core::EPSILON) {
-                                    p->field[i][j] = core::MID_GRAY;
-                                }
-                            }
-                        }
-                    }
+            if (visited[y][x]) {
+                continue;
+            }
+
+            if (std::fabs(binaryMap[y][x] - core::WHITE) > core::EPSILON) {
+                continue;
+            }
+
+            std::vector<algorithms::geometry::Pixel> componentPixels;
+
+            collectComponent(binaryMap,
+                             visited,
+                             x,
+                             y,
+                             componentPixels);
+
+            const int pixelCount =
+                static_cast<int>(componentPixels.size());
+
+            if (pixelCount >= noisy) {
+
+                componenti.emplace_back(logger,
+                                        componentPixels);
+
+            } else {
+
+                // удаляем шум из поля
+                for (const auto& p : componentPixels) {
+
+                    int px = p.x;
+                    int py = p.y;
+
+                    field[py][px] = core::MID_GRAY;
+                    binaryMap[py][px] = core::BLACK;
                 }
             }
         }
-        
-        logger.info("[ComponentCalculator::wave] Обработка завершена");
-        logger.debug(std::string("Найдено значимых компонент: ") + std::to_string(componenti.size()) +
-                   ", шумовых компонент: " + std::to_string(noiseComponents.size()));
     }
+
+    logger.info("[ComponentCalculator::wave] Обработка завершена");
+
+    logger.debug("Найдено значимых компонент: " +
+                 std::to_string(componenti.size()));
+}
 }

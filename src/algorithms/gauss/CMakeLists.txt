@@ -1,6 +1,5 @@
 # Файлы для метода Гаусса и построения поля
 add_library(gauss
-    pole.cpp
     gauss_builder.cpp
 )
 

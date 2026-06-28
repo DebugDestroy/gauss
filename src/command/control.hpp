@@ -8,6 +8,7 @@
 // Локальные заголовки
 // command
 #include "command/dispatcher_params.hpp"
+#include "command/application_state.hpp"
 
 // core
 #include "core/config.hpp"
@@ -21,7 +22,6 @@
 #include "visualization/color.hpp"
 
 // algorithms::gauss
-#include "algorithms/gauss/pole.hpp"
 #include "algorithms/gauss/gauss_builder.hpp"
 
 // algorithms::components
@@ -56,9 +56,8 @@ private:
     void logOperation(core::LogLevel level, const std::string& operation, const std::string& details = "");
 
 public:
-    // Переменные
-    std::vector<std::array<int, 3>> colors;  
-    std::vector<std::vector<double>> CopyPole;
+    // Состояние приложения
+    ApplicationState state;
     
     // core
     core::Config& config;
@@ -72,27 +71,18 @@ public:
     visualization::ColorGenerator colorGenerator;
     
     // algorithms::gauss
-    std::unique_ptr<algorithms::gauss::Pole> p = nullptr;
     algorithms::gauss::GaussBuilder gaussBuilder;
-    std::vector<algorithms::gauss::Gaus> gaussi;
     
     // algorithms::components
     algorithms::components::Copier copier;
     algorithms::components::Binarizer binarizer;
     algorithms::components::ComponentCalculator componentCalculator;
-    std::vector<algorithms::components::Component> componenti;
     algorithms::components::ClusterService clusterService;
     algorithms::components::KMeans kMeans;
     
     // algorithms::geometry
-    std::vector<algorithms::geometry::PointD> clusterCenters;
     algorithms::geometry::Triangulator triangulator;
-    std::vector<algorithms::geometry::Triangle> lastTriangulation;
     algorithms::geometry::VoronoiDiagram voronoi;
-    std::vector<algorithms::geometry::Edge> voronoiEdges;
-    algorithms::geometry::PointD start;
-    algorithms::geometry::PointD end;
-    std::vector<algorithms::geometry::PointD> path;
     
     // algorithms::path::common
     algorithms::path::common::Conditions conditions;

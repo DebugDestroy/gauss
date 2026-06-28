@@ -2,6 +2,7 @@
 add_library(command
     control.cpp
     interface.cpp
+    validator.cpp
 )
 
 target_include_directories(command PUBLIC

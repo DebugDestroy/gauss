@@ -1,5 +1,4 @@
 #include "core/config.hpp"
-#include <fstream>
 #include <iostream>
 
 namespace core {
@@ -7,81 +6,148 @@ namespace core {
 Config::Config(const std::string& filename) {
     std::ifstream configFile(filename);
     if (!configFile.is_open()) {
-        std::cerr << "Failed to open config file." << std::endl;
-        return;
+        throw std::runtime_error(
+            "Failed to open config file: " + filename);
     }
 
     std::string key;
     while (configFile >> key) {
         // HELP
-        if (key == "defaultHelp") configFile >> defaultHelp;
+        if (key == "defaultHelp")
+        readParameter(configFile, defaultHelp, "defaultHelp");
         
         // FIELD PARAMETERS
-        else if (key == "fieldWidth") configFile >> fieldWidth;
-        else if (key == "fieldHeight") configFile >> fieldHeight;
+        else if (key == "fieldWidth")
+        readParameter(configFile, fieldWidth, "fieldWidth");
+        else if (key == "fieldHeight")
+        readParameter(configFile, fieldHeight, "fieldHeight");
         
         // DEFAULT GAUSSIAN PARAMETERS
-        else if (key == "defaultCenterX") configFile >> defaultCenterX;
-        else if (key == "defaultCenterY") configFile >> defaultCenterY;
-        else if (key == "defaultSigmaX") configFile >> defaultSigmaX;
-        else if (key == "defaultSigmaY") configFile >> defaultSigmaY;
-        else if (key == "defaultHeight") configFile >> defaultHeight;
+        else if (key == "defaultCenterX")
+        readParameter(configFile, defaultCenterX, "defaultCenterX");
+        else if (key == "defaultCenterY")
+        readParameter(configFile, defaultCenterY, "defaultCenterY");
+        else if (key == "defaultSigmaX") 
+        readParameter(configFile, defaultSigmaX, "defaultSigmaX");
+        else if (key == "defaultSigmaY")
+        readParameter(configFile, defaultSigmaY, "defaultSigmaY");
+        else if (key == "defaultHeight")
+        readParameter(configFile, defaultHeight, "defaultHeight");
         
         // DEFAULT G_AUTO PARAMETERS
-        else if (key == "xmin") configFile >> xmin;
-        else if (key == "xmax") configFile >> xmax;
-        else if (key == "ymin") configFile >> ymin;
-        else if (key == "ymax") configFile >> ymax;
-        else if (key == "sx_min") configFile >> sx_min;
-        else if (key == "sx_max") configFile >> sx_max;
-        else if (key == "sy_min") configFile >> sy_min;
-        else if (key == "sy_max") configFile >> sy_max;
-        else if (key == "h_min") configFile >> h_min;
-        else if (key == "h_max") configFile >> h_max;
-        else if (key == "count_min") configFile >> count_min;
-        else if (key == "count_max") configFile >> count_max;
+        else if (key == "xmin")
+        readParameter(configFile, xmin, "xmin");
+        else if (key == "xmax")
+        readParameter(configFile, xmax, "xmax");
+        else if (key == "ymin")
+        readParameter(configFile, ymin, "ymin");
+        else if (key == "ymax")
+        readParameter(configFile, ymax, "ymax");
+        else if (key == "sx_min")
+        readParameter(configFile, sx_min, "sx_min");
+        else if (key == "sx_max") 
+        readParameter(configFile, sx_max, "sx_max");
+        else if (key == "sy_min")
+        readParameter(configFile, sy_min, "sy_min");
+        else if (key == "sy_max")
+        readParameter(configFile, sy_max, "sy_max");
+        else if (key == "h_min")
+        readParameter(configFile, h_min, "h_min");
+        else if (key == "h_max")
+        readParameter(configFile, h_max, "h_max");
+        else if (key == "count_min")
+        readParameter(configFile, count_min, "count_min");
+        else if (key == "count_max")
+        readParameter(configFile, count_max, "count_max");
+        else if (key == "defaultGAutoMode") {
+            readParameter(configFile, defaultGAutoMode, "defaultGAutoMode");
+
+            if (defaultGAutoMode == "Fixed") {
+                readParameter(configFile, defaultSeedGAuto, "defaultSeedGAuto");
+            }
+        }
         
         // OUTPUT FILES
-        else if (key == "defaultGnuplot") configFile >> defaultGnuplot;
-        else if (key == "defaultPlotMetedata") configFile >> defaultPlotMetedata;
-        else if (key == "defaultPlotVoronoi") configFile >> defaultPlotVoronoi;
-        else if (key == "defaultPlotDelaunay") configFile >> defaultPlotDelaunay;
-        else if (key == "defaultPlotPath") configFile >> defaultPlotPath;
-        else if (key == "defaultPlot3DPath") configFile >> defaultPlot3DPath;
+        else if (key == "defaultGnuplot")
+        readParameter(configFile, defaultGnuplot, "defaultGnuplot");
+        else if (key == "defaultPlotMetedata")
+        readParameter(configFile, defaultPlotMetedata, "defaultPlotMetedata");
+        else if (key == "defaultPlotKmeans")
+        readParameter(configFile, defaultPlotKmeans, "defaultPlotKmeans");
+        else if (key == "defaultPlotGraph")
+        readParameter(configFile, defaultPlotGraph, "defaultPlotGraph");
+        else if (key == "defaultPlotVoronoi")
+        readParameter(configFile, defaultPlotVoronoi, "defaultPlotVoronoi");
+        else if (key == "defaultPlotDelaunay")
+        readParameter(configFile, defaultPlotDelaunay, "defaultPlotDelaunay");
+        else if (key == "defaultPlotPath")
+        readParameter(configFile, defaultPlotPath, "defaultPlotPath");
+        else if (key == "defaultPlot3DPath")
+        readParameter(configFile, defaultPlot3DPath, "defaultPlot3DPath");
         
-        else if (key == "defaultWrite") configFile >> defaultWrite;
-        else if (key == "defaultWriteModeImage") configFile >> defaultWriteModeImage;
-        else if (key == "defaultRead") configFile >> defaultRead;
+        else if (key == "defaultWrite")
+        readParameter(configFile, defaultWrite, "defaultWrite");
+        else if (key == "defaultWriteModeImage")
+        readParameter(configFile, defaultWriteModeImage, "defaultWriteModeImage");
+        else if (key == "defaultRead")
+        readParameter(configFile, defaultRead, "defaultRead");
         
-        else if (key == "save_g") configFile >> save_g;
+        else if (key == "save_g")
+        readParameter(configFile, save_g, "save_g");
         
         // BINARY
-        else if (key == "defaultThreshold") configFile >> defaultThreshold;
-        else if (key == "defaultBinMode") configFile >> defaultBinMode;
+        else if (key == "defaultThreshold")
+        readParameter(configFile, defaultThreshold, "defaultThreshold");
+        else if (key == "defaultBinMode")
+        readParameter(configFile, defaultBinMode, "defaultBinMode");
         
         // WAVE
-        else if (key == "defaultNoisy") configFile >> defaultNoisy;
+        else if (key == "defaultNoisy")
+        readParameter(configFile, defaultNoisy, "defaultNoisy");
         
         // KMEANS
-        else if (key == "defaultKlaster") configFile >> defaultKlaster;
-        else if (key == "defaultKlasterKern") configFile >> defaultKlasterKern;
+        else if (key == "defaultKlaster")
+        readParameter(configFile, defaultKlaster, "defaultKlaster");
+        else if (key == "defaultKlasterKern")
+        readParameter(configFile, defaultKlasterKern, "defaultKlasterKern");
         
         // PATHS
-        else if (key == "defaultstartPointX") configFile >> defaultstartPointX;
-        else if (key == "defaultstartPointY") configFile >> defaultstartPointY;
-        else if (key == "defaultendPointX") configFile >> defaultendPointX;
-        else if (key == "defaultendPointY") configFile >> defaultendPointY;
+        else if (key == "defaultstartPointX")
+        readParameter(configFile, defaultstartPointX, "defaultstartPointX");
+        else if (key == "defaultstartPointY")
+        readParameter(configFile, defaultstartPointY, "defaultstartPointY");
+        else if (key == "defaultendPointX")
+        readParameter(configFile, defaultendPointX, "defaultendPointX");
+        else if (key == "defaultendPointY")
+        readParameter(configFile, defaultendPointY, "defaultendPointY");
+        else if (key == "defaultConnectMode") {
+            readParameter(configFile, defaultConnectMode, "defaultConnectMode");
+
+            if (defaultConnectMode == "NearestK") {
+                readParameter(configFile, defaultNearestVerticesCount, "defaultNearestVerticesCount");
+            }
+        }
         
-        else if (key == "vehicleRadius") configFile >> vehicleRadius;
-        else if (key == "maxSideAngle") configFile >> maxSideAngle;
-        else if (key == "maxUpDownAngle") configFile >> maxUpDownAngle;
+        else if (key == "vehicleRadius")
+        readParameter(configFile, vehicleRadius, "vehicleRadius");
+        else if (key == "maxSideAngle")
+        readParameter(configFile, maxSideAngle, "maxSideAngle");
+        else if (key == "maxUpDownAngle")
+        readParameter(configFile, maxUpDownAngle, "maxUpDownAngle");
         
         // LOGGER
-        else if (key == "logFileNameInterface") configFile >> logFileNameInterface;
-        else if (key == "logFileNameControl") configFile >> logFileNameControl;
+        else if (key == "logFileNameInterface")
+        readParameter(configFile, logFileNameInterface, "logFileNameInterface");
+        else if (key == "logFileNameControl")
+        readParameter(configFile, logFileNameControl, "logFileNameControl");
         
-        else if (key == "FiltrationLogLevelInterface") configFile >> FiltrationLogLevelInterface;
-        else if (key == "FiltrationLogLevelControl") configFile >> FiltrationLogLevelControl;        
+        else if (key == "FiltrationLogLevelInterface")
+        readParameter(configFile, FiltrationLogLevelInterface, "FiltrationLogLevelInterface");
+        else if (key == "FiltrationLogLevelControl")
+        readParameter(configFile, FiltrationLogLevelControl, "FiltrationLogLevelControl");  
+        
+        // ELSE
+        else throw std::runtime_error("Unknown configuration parameter: '" + key + "'");     
     }
 
     configFile.close();

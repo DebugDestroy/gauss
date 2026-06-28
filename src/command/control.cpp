@@ -5,10 +5,6 @@ namespace command {
     // Конструктор
     Control::Control(core::Config& cfg, core::Logger& log)
       :
-      // Переменные
-      colors(),
-      CopyPole(),
-      
       // core
       config(cfg),
       logger(log),
@@ -21,30 +17,21 @@ namespace command {
       colorGenerator(),
 
       // algorithms::gauss
-      p(nullptr),
       gaussBuilder(log),
-      gaussi(),
 
       // algorithms::components
       copier(log),
       binarizer(log),
       componentCalculator(log),
-      componenti(),
       clusterService(log, kMeans, colorGenerator),
       kMeans(log),
 
       // algorithms::geometry
-      clusterCenters(),
       triangulator(log),
-      lastTriangulation(),
       voronoi(log),
-      voronoiEdges(),
-      start(),
-      end(),
-      path(),
 
       // algorithms::path::common
-      conditions(cfg, log),
+      conditions(log),
       graph(log),
       
       // algorithms::path::a_star
@@ -73,12 +60,12 @@ namespace command {
             logger.logMessage(core::LogLevel::Info, std::string("Processing command: ") + params.command);
                
         if (params.command == "init") {
-            gaussBuilder.init(params.fieldWidth, params.fieldHeight, p);
+            gaussBuilder.init(params.fieldWidth, params.fieldHeight, state.field);
             logOperation(core::LogLevel::Info, std::string("init"), std::string("size: ") + std::to_string(params.fieldWidth) + "x" + std::to_string(params.fieldHeight));
         }
 
         if (params.command == "g") {
-            gaussBuilder.addgauss(params.height, params.centerX, params.centerY, params.sigmaX, params.sigmaY, gaussi);
+            gaussBuilder.addgauss(params.height, params.centerX, params.centerY, params.sigmaX, params.sigmaY, state.gaussi);
             logOperation(core::LogLevel::Info, std::string("addgauss"), 
                 std::string("x=") + std::to_string(params.centerX) + 
                 ", y=" + std::to_string(params.centerY) + 
@@ -93,7 +80,8 @@ namespace command {
             params.sy_min, params.sy_max,
             params.h_min, params.h_max,
             params.count_min, params.count_max,
-            gaussi);
+            params.gAutoMode, params.seedGAuto,
+            state.gaussi);
                 
             logOperation(core::LogLevel::Info, std::string("g_auto"), std::string(
                "x=[" + std::to_string(params.xmin) + ", " + std::to_string(params.xmax) + "], " +
@@ -105,45 +93,59 @@ namespace command {
         }
         
         if (params.command == "generate") {
-            gaussBuilder.generate(p, gaussi);
+            gaussBuilder.generate(state.field, state.gaussi);
             logOperation(core::LogLevel::Info, std::string("generate"));
         }
         
         if (params.command == "save_g") {
-            gaussBuilder.saveGaussiansToFile(params.filename, gaussi);
+            gaussBuilder.saveGaussiansToFile(params.filename, state.gaussi);
             logOperation(core::LogLevel::Info, std::string("save_g"), std::string("file: ") + params.filename);
         }
         
         if (params.command == "gnuplot") {
-            gnuplotInterface.gnuplot(p, params.filename);
+            gnuplotInterface.gnuplot(state.field, params.filename);
             logOperation(core::LogLevel::Info, std::string("gnuplot"), std::string("file: ") + params.filename);
         }
 
         if (params.command == "PlotMetedata") {
-            gnuplotInterface.plotBinaryWithComponents(CopyPole, componenti, params.filename);
+            gnuplotInterface.plotBinaryWithComponents(state.binaryMap, state.components, params.filename);
             logOperation(core::LogLevel::Info, std::string("PlotMetedata"), std::string("file: ") + params.filename);
         }
         
+        if (params.command == "PlotKmeans") {
+            gnuplotInterface.plotKmeans(state.kmeansField, state.kmeansCenters, params.filename);
+            logOperation(core::LogLevel::Info, std::string("gnuplot"), std::string("file: ") + params.filename);
+        }
+        
+        if (params.command == "PlotGraph") {
+            gnuplotInterface.plotGraph(state.binaryMap, 
+                                       state.navigationGraph, 
+                                       params.filename, 
+                                       state.start,
+                                       state.end);
+            logOperation(core::LogLevel::Info, std::string("PlotGraph"), std::string("file: ") + params.filename);
+        }        
+        
         if (params.command == "PlotVoronoi") {
-            gnuplotInterface.plotVoronoi(p, voronoiEdges, clusterCenters, params.filename);
+            gnuplotInterface.plotVoronoi(state.binaryMap, state.voronoiEdges, state.clusterCenters, params.filename);
             logOperation(core::LogLevel::Info, std::string("PlotVoronoi"), std::string("file: ") + params.filename);
         }
         
         if (params.command == "PlotDelaunay") {
-            gnuplotInterface.plotDelaunay(lastTriangulation, p, params.filename);
+            gnuplotInterface.plotDelaunay(state.lastTriangulation, state.binaryMap, params.filename);
             logOperation(core::LogLevel::Info, std::string("PlotDelaunay"), std::string("file: ") + params.filename);
         }
         
         if (params.command == "PlotPath") {
-            gnuplotInterface.plotPath(path, p, params.filename, params, config.vehicleRadius);
+            gnuplotInterface.plotPath(state.path, state.field, state.binaryMap, params.filename, params, params.vehicleRadius);
             logOperation(core::LogLevel::Info, std::string("PlotPath"), std::string("file: ") + params.filename);
         }
 
         if (params.command == "bmp_write") {
             if (params.bmpWriteMode == io::BmpWriteMode::Full) {
-                bmpHandler.bmp_write(p->field, params.filename);
+                bmpHandler.bmp_write(state.field, params.filename);
             } else {
-                bmpHandler.bmp_write(CopyPole, params.filename);
+                bmpHandler.bmp_write(state.binaryMap, params.filename);
             }
             logOperation(core::LogLevel::Info, std::string("bmp_write"), 
                 std::string("mode: ") + std::string(params.bmpWriteMode == io::BmpWriteMode::Full ? "full" : "binary") +
@@ -151,12 +153,12 @@ namespace command {
         }
 
         if (params.command == "bmp_read") {
-            bmpHandler.bmp_read(gaussBuilder, params.filename, CopyPole, p);
+            bmpHandler.bmp_read(gaussBuilder, params.filename, state.field);
             logOperation(core::LogLevel::Info, std::string("bmp_read"), std::string("file: ") + params.filename);
         }
 
         if (params.command == "bin") {
-            binarizer.bin(CopyPole, params.threshold, p, params.thresholdMode);
+            binarizer.bin(state.binaryMap, params.threshold, state.field, params.thresholdMode);
             logOperation(core::LogLevel::Info, std::string("bin"), 
                 std::string("threshold=") + std::to_string(params.threshold) + 
                 ", mode=" + (params.thresholdMode == algorithms::components::ThresholdMode::Peaks ? "peaks" : 
@@ -164,38 +166,42 @@ namespace command {
         }
         
         if (params.command == "wave") {
-            componentCalculator.wave(params.noiseLevel, componenti, CopyPole, p);
+            componentCalculator.wave(params.noiseLevel, state.components, state.binaryMap, state.field);
             logOperation(core::LogLevel::Info, std::string("wave"), 
                 std::string("noiseLevel=") + std::to_string(params.noiseLevel) + 
-                ", components=" + std::to_string(componenti.size()));
-            copier.removeNoise(CopyPole, componenti);
+                ", components=" + std::to_string(state.components.size()));
         }
          
         if (params.command == "k_means") {
-            if (params.clusterCount <= 0 || p == nullptr) {
+            if (params.clusterCount <= 0 || state.field.empty()) {
                 logger.logMessage(core::LogLevel::Error, "Invalid parameters for k_means");
                 return;
             }
             
-            copier.removeNoise(CopyPole, componenti);
-            clusterService.prepareKMeansData(CopyPole);
+            state.kmeansField = state.binaryMap;
+            clusterService.prepareKMeansData(state.kmeansField);
             if (clusterService.getKMeansData().empty()) {
                 logger.logMessage(core::LogLevel::Warning, "No data for k_means clustering");
                 return;
             }
             auto result = kMeans.cluster(clusterService.getKMeansData(), params.clusterCount);
-            clusterService.applyClusterResults(result, CopyPole);
+            state.kmeansCenters.clear();
+            for (const auto& c : result.centers)
+                {
+                    state.kmeansCenters.emplace_back(c[0], c[1]);
+                }
+            clusterService.applyClusterResults(result, state.kmeansField);
             logOperation(core::LogLevel::Info, std::string("k_means"), std::string("clusterCount=") + std::to_string(params.clusterCount));
         }
         
        if (params.command == "k_means_kern") {
-           if (params.clusterCount <= 0 || params.kernelSize <= 0 || p == nullptr) {
+           if (params.clusterCount <= 0 || params.kernelSize <= 0 || state.field.empty()) {
                logger.logMessage(core::LogLevel::Error, "Invalid parameters for k_means_kern");
                return;
            }
     
-             copier.removeNoise(CopyPole, componenti);
-             clusterService.prepareKMeansData(CopyPole);
+             state.kmeansField = state.binaryMap;
+             clusterService.prepareKMeansData(state.kmeansField);
              if (clusterService.getKMeansData().empty()) {
                  logger.logMessage(core::LogLevel::Warning, "No data for k_means_kern clustering");
                  return;
@@ -206,110 +212,132 @@ namespace command {
         params.clusterCount, 
         params.kernelSize
     );
-    
-            clusterService.applyClusterResults(result, CopyPole);
+        state.kmeansCenters.clear();
+            for (const auto& c : result.centers)
+                {
+                    state.kmeansCenters.emplace_back(c[0], c[1]);
+                }
+            clusterService.applyClusterResults(result, state.kmeansField);
             logOperation(core::LogLevel::Info, std::string("k_means_kern"), 
             std::string("clusterCount=") + std::to_string(params.clusterCount) + 
             ", kernelSize=" + std::to_string(params.kernelSize));
         }
         
         if (params.command == "triangulate") {
-            clusterCenters = clusterService.getClusterCenters(componenti, config);  
-            lastTriangulation = triangulator.bowyerWatson(clusterCenters, params.fieldWidth, params.fieldHeight);
-            voronoi.buildFromDelaunay(lastTriangulation, p, voronoiEdges);
+            state.clusterCenters = clusterService.getClusterCenters(state.components, params.fieldWidth, params.fieldHeight);  
+            state.lastTriangulation = triangulator.bowyerWatson(state.clusterCenters, params.fieldWidth, params.fieldHeight);
             logOperation(core::LogLevel::Info, std::string("triangulate"), 
-                std::string("clusters=") + std::to_string(clusterCenters.size()) + 
-                ", triangles=" + std::to_string(lastTriangulation.size()));
+                std::string("clusters=") + std::to_string(state.clusterCenters.size()) + 
+                ", triangles=" + std::to_string(state.lastTriangulation.size()));
         }
+        
+        if (params.command == "voronoi") {
+            voronoi.buildFromDelaunay(state.lastTriangulation, state.field, state.voronoiEdges);
+            logOperation(core::LogLevel::Info, std::string("voronoi"));
+        }
+        if (params.command == "build_nav_graph") {
+            state.navigationGraph = 
+                graph.buildGraphFromEdges(
+                    state.voronoiEdges, 
+                    state.binaryMap, 
+                    state.field, 
+                    conditions, 
+                    params.vehicleRadius,
+                    params.maxSideAngle,
+                    params.maxUpDownAngle);                                                                    
+            logOperation(core::LogLevel::Info, std::string("build_nav_graph"));
+        }
+        if (params.command == "connect_to_graph") {
+            state.start = algorithms::geometry::Pixel(params.startPointX, params.startPointY);
+            state.end = algorithms::geometry::Pixel(params.endPointX, params.endPointY);
+                
+                 graph.connectPointToGraph(
+                     state.navigationGraph,
+                     *state.start,
+                     state.binaryMap,
+                     state.field,
+                     conditions,
+                     params.vehicleRadius,
+                     params.maxSideAngle,
+                     params.maxUpDownAngle,
+                     params.connectMode,
+                     params.nearestVerticesCount);
 
+               graph.connectPointToGraph(
+                     state.navigationGraph,
+                     *state.end,
+                     state.binaryMap,
+                     state.field,
+                     conditions,
+                     params.vehicleRadius,
+                     params.maxSideAngle,
+                     params.maxUpDownAngle,
+                     params.connectMode,
+                     params.nearestVerticesCount);
+
+           logOperation(core::LogLevel::Info, "connect_to_graph");
+        }
         if (params.command == "find_path_astar") {
-            if (!p) {
+            if (state.field.empty()) {
                 logger.logMessage(core::LogLevel::Error, "Pole not initialized for A*");
                 return;
             }
             
-            if (lastTriangulation.empty()) {
-                logger.logMessage(core::LogLevel::Error, "No triangulation for A*");
-                return;
-            }
-            start = algorithms::geometry::PointD(params.startPointX, params.startPointY);
-              end = algorithms::geometry::PointD(params.endPointX, params.endPointY);
-
+            state.path = astarFinder.findPathAStar(*state.start, *state.end, state.navigationGraph);
             
-            copier.removeNoise(CopyPole, componenti);
-            path = astarFinder.findPathAStar(start, end, voronoiEdges, graph, conditions, CopyPole, p);
-            
-            if (path.empty()) {
+            if (state.path.empty()) {
                 logger.logMessage(core::LogLevel::Warning, "Path A* not found");
             } else {
                 logOperation(core::LogLevel::Info, std::string("find_path_astar"), 
-                    std::string("from (") + std::to_string(start.x) + "," + std::to_string(start.y) + ")" +
-                    " to (" + std::to_string(end.x) + "," + std::to_string(end.y) + ")" +
-                    ", points=" + std::to_string(path.size()));
+                    std::string("from (") + std::to_string(state.start->x) + "," + std::to_string(state.start->y) + ")" +
+                    " to (" + std::to_string(state.end->x) + "," + std::to_string(state.end->y) + ")" +
+                    ", points=" + std::to_string(state.path.size()));
             }
         }
 
         if (params.command == "find_path_dekstra") {
-            if (!p) {
+            if (state.field.empty()) {
                 logger.logMessage(core::LogLevel::Error, "Pole not initialized for dekstra");
                 return;
             }
-            
-            if (lastTriangulation.empty()) {
-                logger.logMessage(core::LogLevel::Error, "No triangulation for dekstra");
-                return;
-            }
-            start = algorithms::geometry::PointD(params.startPointX, params.startPointY);
-              end = algorithms::geometry::PointD(params.endPointX, params.endPointY);
 
+            state.path = dekstraFinder.findPathDijkstra(*state.start, *state.end, state.navigationGraph);
             
-            copier.removeNoise(CopyPole, componenti);
-            path = dekstraFinder.findPathDijkstra(start, end, voronoiEdges, graph, conditions, CopyPole, p);
-            
-            if (path.empty()) {
+            if (state.path.empty()) {
                 logger.logMessage(core::LogLevel::Warning, "Path dekstra not found");
             } else {
                 logOperation(core::LogLevel::Info, std::string("find_path_dekstra"), 
-                    std::string("from (") + std::to_string(start.x) + "," + std::to_string(start.y) + ")" +
-                    " to (" + std::to_string(end.x) + "," + std::to_string(end.y) + ")" +
-                    ", points=" + std::to_string(path.size()));
+                    std::string("from (") + std::to_string(state.start->x) + "," + std::to_string(state.start->y) + ")" +
+                    " to (" + std::to_string(state.end->x) + "," + std::to_string(state.end->y) + ")" +
+                    ", points=" + std::to_string(state.path.size()));
             }
         }
 
         if (params.command == "find_path_greedy") {
-            if (!p) {
+            if (state.field.empty()) {
                 logger.logMessage(core::LogLevel::Error, "Pole not initialized for greedy");
                 return;
             }
-            
-            if (lastTriangulation.empty()) {
-                logger.logMessage(core::LogLevel::Error, "No triangulation for greedy");
-                return;
-            }
-            start = algorithms::geometry::PointD(params.startPointX, params.startPointY);
-              end = algorithms::geometry::PointD(params.endPointX, params.endPointY);
 
+            state.path = greedyFinder.findPathGreedy(*state.start, *state.end, state.navigationGraph);
             
-            copier.removeNoise(CopyPole, componenti);
-            path = greedyFinder.findPathGreedy(start, end, voronoiEdges, graph, conditions, CopyPole, p);
-            
-            if (path.empty()) {
+            if (state.path.empty()) {
                 logger.logMessage(core::LogLevel::Warning, "Path greedy not found");
             } else {
                 logOperation(core::LogLevel::Info, std::string("find_path_greedy"), 
-                    std::string("from (") + std::to_string(start.x) + "," + std::to_string(start.y) + ")" +
-                    " to (" + std::to_string(end.x) + "," + std::to_string(end.y) + ")" +
-                    ", points=" + std::to_string(path.size()));
+                    std::string("from (") + std::to_string(state.start->x) + "," + std::to_string(state.start->y) + ")" +
+                    " to (" + std::to_string(state.end->x) + "," + std::to_string(state.end->y) + ")" +
+                    ", points=" + std::to_string(state.path.size()));
             }
         }
         
         if (params.command == "Plot3DPath") {
-            gnuplotInterface.plot3DPath(path, p, params.filename, start, end, config.vehicleRadius);
+            gnuplotInterface.plot3DPath(state.path, state.field, params.filename, *state.start, *state.end, params.vehicleRadius);
             logOperation(core::LogLevel::Info, std::string("Plot3DPath"), std::string("file: ") + params.filename);
         }
         
         if (params.command == "plotInteractive3DPath") {
-            gnuplotInterface.plotInteractive3DPath(path, p, start, end, config.vehicleRadius);
+            gnuplotInterface.plotInteractive3DPath(state.path, state.field, *state.start, *state.end, params.vehicleRadius);
             logOperation(core::LogLevel::Info, std::string("plotInteractive3DPath"));
         }
     }

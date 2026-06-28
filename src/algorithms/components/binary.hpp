@@ -3,8 +3,6 @@
 #include <vector>
 #include <memory>
 #include "core/logger.hpp"
-#include "algorithms/gauss/pole.hpp"
-#include "core/constants.hpp"
 
 namespace algorithms::components {
 
@@ -21,9 +19,9 @@ private:
 public:
     Binarizer(core::Logger& lg);
 
-    void bin(std::vector<std::vector<double>>& CopyPole,
+    void bin(std::vector<std::vector<double>>& binaryMap,
                     int slice,
-                    std::unique_ptr<algorithms::gauss::Pole>& p,
+                    const std::vector<std::vector<double>>& field,
                     ThresholdMode mode);
 };
 

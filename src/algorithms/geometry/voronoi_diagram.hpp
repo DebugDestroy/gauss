@@ -5,7 +5,6 @@
 #include <string>
 #include "core/logger.hpp"
 #include "core/constants.hpp"
-#include "algorithms/gauss/pole.hpp"
 #include "algorithms/geometry/geometry_structures.hpp"
 
 namespace algorithms::geometry {
@@ -15,7 +14,7 @@ public:
     VoronoiDiagram(core::Logger& logger);
 
     void buildFromDelaunay(const std::vector<Triangle>& triangles,
-                           const std::unique_ptr<algorithms::gauss::Pole>& p,
+                           const std::vector<std::vector<double>>& field,
                            std::vector<Edge>& edges);
 
 private:

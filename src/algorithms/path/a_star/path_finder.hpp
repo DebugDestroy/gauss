@@ -6,14 +6,11 @@
 
 #include "core/logger.hpp"
 #include "algorithms/geometry/geometry_structures.hpp"
-#include "algorithms/gauss/pole.hpp"
-#include "algorithms/path/common/graph.hpp"
-#include "algorithms/path/common/conditions.hpp"
 
 namespace algorithms::path::a_star {
 
 struct AStarNode {
-    algorithms::geometry::PointD position;
+    algorithms::geometry::Pixel position;
     double gScore;
     double fScore;
 
@@ -29,14 +26,10 @@ private:
 public:
     explicit PathFinder(core::Logger& lg);
 
-    std::vector<algorithms::geometry::PointD> findPathAStar(
-        const algorithms::geometry::PointD& start,
-        const algorithms::geometry::PointD& goal,
-        std::vector<algorithms::geometry::Edge> voronoiEdges,
-        algorithms::path::common::Graph& graph,
-        const algorithms::path::common::Conditions& conds,
-        const std::vector<std::vector<double>>& binaryMap,
-        const std::unique_ptr<algorithms::gauss::Pole>& elevationData);
+    std::vector<algorithms::geometry::Pixel> findPathAStar(
+        const algorithms::geometry::Pixel& start,
+        const algorithms::geometry::Pixel& goal,
+        const std::unordered_map<algorithms::geometry::Pixel, std::vector<algorithms::geometry::Pixel>>& graph);
 };
 
 }

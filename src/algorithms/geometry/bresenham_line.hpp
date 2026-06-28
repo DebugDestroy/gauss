@@ -4,5 +4,5 @@
 #include "algorithms/geometry/geometry_structures.hpp"
 
 namespace algorithms::geometry {
-    std::vector<PointD> bresenhamLine(const PointD& start, const PointD& end);
+    std::vector<Pixel> bresenhamLine(const Pixel& start, const Pixel& end);
 }

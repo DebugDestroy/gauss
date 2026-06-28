@@ -1,6 +1,5 @@
 # Игнорируем исторические версии и логи
 /archive/
-/.github/
 /var/
 config/commands/gaussians.txt
 *.o

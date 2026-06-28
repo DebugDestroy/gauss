@@ -1,45 +1,67 @@
 #pragma once
 #include <string>
+#include <fstream>
+#include <stdexcept>
 
 namespace core {
 
 class Config {
+private:
+
+template<typename T>
+void readParameter(std::ifstream& file,
+                   T& value,
+                   const std::string& parameterName)
+{
+    if (!(file >> value))
+    {
+        throw std::runtime_error(
+            "Invalid value for parameter '" +
+            parameterName + "'");
+    }
+}
 public:
     // HELP
     std::string defaultHelp;
     
     // FIELD PARAMETERS 
-    int fieldWidth, fieldHeight;
+    int fieldWidth = 0, fieldHeight = 0;
     
     // DEFAULT GAUSSIAN PARAMETERS
-    double defaultCenterX, defaultCenterY, defaultSigmaX, defaultSigmaY, defaultHeight;
+    double defaultCenterX = 0, defaultCenterY = 0, defaultSigmaX = 0, defaultSigmaY = 0, defaultHeight = 0;
     
     // DEFAULT G_AUTO PARAMETERS
-    double xmin, xmax;                                    // Диапазон X координаты центра
-    double ymin, ymax;                                    // Диапазон Y координаты центра
-    double sx_min, sx_max;                                // Диапазон σx
-    double sy_min, sy_max;                                // Диапазон σy
-    double h_min, h_max;                                  // Диапазон высоты
-    int count_min, count_max;                             // Диапазон количества генерируемых гауссов
+    double xmin = 0, xmax = 0;                                    // Диапазон X координаты центра
+    double ymin = 0, ymax = 0;                                    // Диапазон Y координаты центра
+    double sx_min = 0, sx_max = 0;                                // Диапазон σx
+    double sy_min = 0, sy_max = 0;                                // Диапазон σy
+    double h_min = 0, h_max = 0;                                  // Диапазон высоты
+    int count_min = 0, count_max = 0;                             // Диапазон количества генерируемых гауссов
+    std::string defaultGAutoMode;
+    std::uint32_t defaultSeedGAuto = 0;
     
     // OUTPUT FILES
-    std::string defaultGnuplot, defaultPlotMetedata, defaultPlotVoronoi, defaultPlotDelaunay, defaultPlotPath, defaultPlot3DPath,
+    std::string defaultGnuplot, defaultPlotMetedata, defaultPlotKmeans, defaultPlotGraph, defaultPlotVoronoi, defaultPlotDelaunay, defaultPlotPath, defaultPlot3DPath,
     defaultWrite, defaultRead, defaultWriteModeImage,
     save_g;
     
     // BINARY
     std::string defaultBinMode;
-    int defaultThreshold;
+    int defaultThreshold = 0;
     
     // WAVE
-    int defaultNoisy;
+    int defaultNoisy = 0;
     
     // KMEANS
-    int defaultKlaster, defaultKlasterKern;
+    int defaultKlaster = 0, defaultKlasterKern = 0;
     
     // PATHS
-    double defaultstartPointX, defaultstartPointY, defaultendPointX, defaultendPointY;
-    double vehicleRadius, maxSideAngle, maxUpDownAngle;
+    int defaultstartPointX = 0, defaultstartPointY = 0, defaultendPointX = 0, defaultendPointY = 0;
+    std::string defaultConnectMode;
+    int defaultNearestVerticesCount = 0;
+    
+    int vehicleRadius = 0; 
+    double maxSideAngle = 0, maxUpDownAngle = 0;
     
     // LOGGER
     std::string logFileNameInterface, logFileNameControl;

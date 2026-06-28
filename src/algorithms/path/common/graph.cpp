@@ -1,102 +1,189 @@
 #include "graph.hpp"
 #include "utils/hash.hpp"
+#include "algorithms/geometry/math.hpp"
 
 #include <cmath>
 #include <limits>
 #include <string>
+#include <algorithm> // для sort
 
 namespace algorithms::path::common {
 
 Graph::Graph(core::Logger& lg) : logger(lg) {}
 
 // Перегрузка: принимает вектор Edge
-std::unordered_map<algorithms::geometry::PointD, std::vector<algorithms::geometry::PointD>> Graph::buildGraphFromEdges(
+std::unordered_map<algorithms::geometry::Pixel, std::vector<algorithms::geometry::Pixel>> Graph::buildGraphFromEdges(
     const std::vector<algorithms::geometry::Edge>& edges,
     const std::vector<std::vector<double>>& binaryMap,
-    const std::unique_ptr<algorithms::gauss::Pole>& elevationData,
-    const Conditions& conds)
+    const std::vector<std::vector<double>>& field,
+    const Conditions& conds,
+    int vehicleRadius,
+    double maxSideAngle,
+    double maxUpDownAngle)
 {
-    std::unordered_map<algorithms::geometry::PointD, std::vector<algorithms::geometry::PointD>> graph;
+    std::unordered_map<algorithms::geometry::Pixel, std::vector<algorithms::geometry::Pixel>> graph;
 
     for (const auto& edge : edges) {
-        if (!conds.isEdgeNavigable(edge, elevationData, binaryMap)) {
+        logger.trace(
+        "[Graph] Continuous edge: (" +
+        std::to_string(edge.a.x) + ", " +
+        std::to_string(edge.a.y) + ") -> (" +
+        std::to_string(edge.b.x) + ", " +
+        std::to_string(edge.b.y) + ")");
+        
+        algorithms::geometry::Pixel a = algorithms::geometry::toPixel(edge.a);
+        algorithms::geometry::Pixel b = algorithms::geometry::toPixel(edge.b);
+
+        algorithms::geometry::PixelEdge pe(a,b);
+        
+        logger.trace(
+        "[Graph] Discretized edge: (" +
+        std::to_string(pe.a.x) + ", " +
+        std::to_string(pe.a.y) + ") -> (" +
+        std::to_string(pe.b.x) + ", " +
+        std::to_string(pe.b.y) + ")");
+        
+        if (!conds.isEdgeNavigable(pe, field, binaryMap, vehicleRadius, maxSideAngle, maxUpDownAngle)) {
             logger.trace("[PathFinder::buildGraphFromEdges] Ребро непроходимо, пропуск: (" +
-                         std::to_string(edge.a.x) + ", " + std::to_string(edge.a.y) + ") -> (" +
-                         std::to_string(edge.b.x) + ", " + std::to_string(edge.b.y) + ")");
+                         std::to_string(pe.a.x) + ", " + std::to_string(pe.a.y) + ") -> (" +
+                         std::to_string(pe.b.x) + ", " + std::to_string(pe.b.y) + ")");
             continue;
         }
 
-        if (!conds.isVehicleRadiusValid(edge.a, binaryMap)) {
-            logger.trace("[PathFinder::buildGraphFromEdges] Точка edge.a непригодна для радиуса машины: (" +
-                         std::to_string(edge.a.x) + ", " + std::to_string(edge.a.y) + ")");
-            continue;
-        }
-
-        if (!conds.isVehicleRadiusValid(edge.b, binaryMap)) {
-            logger.trace("[PathFinder::buildGraphFromEdges] Точка edge.b непригодна для радиуса машины: (" +
-                         std::to_string(edge.b.x) + ", " + std::to_string(edge.b.y) + ")");
-            continue;
-        }
-
-        graph[edge.a].push_back(edge.b);
-        graph[edge.b].push_back(edge.a);
+        graph[pe.a].push_back(pe.b);
+        graph[pe.b].push_back(pe.a);
     }
 
     return graph;
 }
 
-bool Graph::connectPointToGraph(
-    std::unordered_map<algorithms::geometry::PointD, std::vector<algorithms::geometry::PointD>>& graph,
-    const algorithms::geometry::PointD& p,
+void Graph::connectPointToGraph(
+    std::unordered_map<algorithms::geometry::Pixel, std::vector<algorithms::geometry::Pixel>>& graph,
+    const algorithms::geometry::Pixel& p,
     const std::vector<std::vector<double>>& binaryMap,
-    const std::unique_ptr<gauss::Pole>& elevationData,
-    const Conditions& conds)
+    const std::vector<std::vector<double>>& field,
+    const Conditions& conds,
+    int vehicleRadius,
+    double maxSideAngle,
+    double maxUpDownAngle,
+    ConnectMode mode,
+    int nearestVerticesCount)
 {
-    if (!conds.isVehicleRadiusValid(p, binaryMap)) {
+    if (!conds.isVehicleRadiusValid(p, binaryMap, vehicleRadius)) {
         logger.warning("[Graph::connectPointToGraph] Точка непригодна");
-        return false;
+        return;
     }
-
-    // Добавляем точку заранее, чтобы не было вставки во время итерации
-    graph.emplace(p, std::vector<algorithms::geometry::PointD>{});
-
-    bool connected = false;
+    
+    if (graph.contains(p)) {
+        logger.warning("[Graph::connectPointToGraph] Точка уже присутствует в графе");
+        return;
+    }
+    
+    if (graph.empty()) {
+    logger.warning("[Graph::connectPointToGraph] Граф пустой");
+    return;
+}
+    
+    std::vector<std::pair<double, algorithms::geometry::Pixel>> candidates;
 
     for (const auto& [node, _] : graph)
     {
-        if (node == p)
+        algorithms::geometry::PixelEdge e(p, node);
+
+        if (!conds.isEdgeNavigable(e, field, binaryMap, vehicleRadius, maxSideAngle, maxUpDownAngle))
             continue;
 
-        geometry::Edge e(p, node);
-
-        if (!conds.isEdgeNavigable(e, elevationData, binaryMap))
-            continue;
-
-        graph[p].push_back(node);
-        graph[node].push_back(p);
-
-        connected = true;
+        double dist = std::hypot(
+        p.x - node.x,
+        p.y - node.y);
+    logger.debug(
+        "[Graph::connectPointToGraph] Ребро принято, расстояние = " +
+        std::to_string(dist));
+    candidates.emplace_back(dist, node);
     }
-
-    if (!connected) {
+    logger.debug(
+    "[Graph::connectPointToGraph] Найдено кандидатов: " +
+    std::to_string(candidates.size()));
+     if (candidates.empty()) {
         logger.warning("[Graph::connectPointToGraph] Нет допустимых соединений");
+        return;
     }
+    
+    std::sort(candidates.begin(),
+          candidates.end(),
+          [](const auto& a, const auto& b)
+          {
+              return a.first < b.first;
+          });
+          
+    // Добавляем вершину
+    graph.emplace(p, std::vector<algorithms::geometry::Pixel>{});
 
-    return connected;
-}
+    size_t connectionsCount = 0;
+    
+    switch (mode)
+    {
+        case ConnectMode::All:
+        {
+            connectionsCount = candidates.size();
+            break;
+        }
 
- algorithms::geometry::PointD Graph::findClosestVoronoiNode(const algorithms::geometry::PointD& point, const std::unordered_map<algorithms::geometry::PointD, std::vector<algorithms::geometry::PointD>>& graph) const 
- {
-    double bestDist = std::numeric_limits<double>::max();
-    algorithms::geometry::PointD closest = point;
+        case ConnectMode::Nearest:
+        {
+            connectionsCount = 1;
+            break;
+        }
 
-    for (const auto& [node, _] : graph) {
-        double dist = std::hypot(point.x - node.x, point.y - node.y);
-        if (dist < bestDist) {
-            bestDist = dist;
-            closest = node;
+        case ConnectMode::NearestK:
+        {
+ if (nearestVerticesCount <= 0)
+    {
+        logger.warning(
+            "[Graph::connectPointToGraph] Некорректное число ближайших вершин: " +
+            std::to_string(nearestVerticesCount) +
+            ". Используется 1");
+
+        connectionsCount = std::min<size_t>(1, candidates.size());
+    }
+    else
+    {
+        connectionsCount =
+            std::min(static_cast<size_t>(nearestVerticesCount),
+                     candidates.size());
+
+        if (connectionsCount < static_cast<size_t>(nearestVerticesCount))
+        {
+            logger.warning(
+                "[Graph::connectPointToGraph] Запрошено " +
+                std::to_string(nearestVerticesCount) +
+                " вершин, но доступно только " +
+                std::to_string(connectionsCount)+
+            ". Используется " +
+                std::to_string(connectionsCount));
         }
     }
-    return closest;
- }
+    break;
+    }
+    default:
+    logger.warning("[Graph::connectPointToGraph] Неизвестный режим");
+    return;
+    }
+    for (size_t i = 0; i < connectionsCount; ++i)
+    {
+        const auto& node = candidates[i].second;
+        graph[p].push_back(node);
+        graph[node].push_back(p);
+    }
+
+    logger.debug(
+    "[Graph::connectPointToGraph] Точка (" +
+    std::to_string(p.x) + ", " +
+    std::to_string(p.y) +
+    ") подключена к " +
+    std::to_string(connectionsCount) +
+    " вершинам");
+
+    return;
+}
 }
