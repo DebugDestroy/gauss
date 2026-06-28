@@ -15,52 +15,43 @@ PathFinder::PathFinder(core::Logger& lg) : logger(lg) {
     logger.trace("[PathFinder] Инициализация поисковика пути A*");
 }
 
-std::vector<algorithms::geometry::PointD> PathFinder::findPathAStar(
-    const algorithms::geometry::PointD& start,
-    const algorithms::geometry::PointD& goal,
-    std::vector<algorithms::geometry::Edge> voronoiEdges,
-    algorithms::path::common::Graph& graph,
-    const algorithms::path::common::Conditions& conds,
-    const std::vector<std::vector<double>>& binaryMap,
-    const std::unique_ptr<algorithms::gauss::Pole>& elevationData)
+std::vector<algorithms::geometry::Pixel> PathFinder::findPathAStar(
+    const algorithms::geometry::Pixel& start,
+    const algorithms::geometry::Pixel& goal,
+    const  std::unordered_map<algorithms::geometry::Pixel, std::vector<algorithms::geometry::Pixel>>& graph)
 {
     logger.info("[PathFinder::findPathAStar] Начало поиска пути...");
     
     PathMetrics metrics;
     metrics.startTimer();
     
-    // Строим локальный граф
-auto localGraph = graph.buildGraphFromEdges(
-    voronoiEdges, binaryMap, elevationData, conds);
-
-logger.debug("[PathFinder::findPathAStar] Подключаем старт и цель ко всем видимым вершинам");
-
-if (!graph.connectPointToGraph(localGraph, start, binaryMap, elevationData, conds)) { // Добавили старт
-    logger.warning("[PathFinder::findPathAStar] Старт не подключен в граф!");
-    
-metrics.finishAndLog(logger, "A* (Failed)");
-
-    return {};
-}
-
-if (!graph.connectPointToGraph(localGraph, goal, binaryMap, elevationData, conds)) { // Добавили финиш
-    logger.warning("[PathFinder::findPathAStar] Финиш не подключен в граф!");
-
-metrics.finishAndLog(logger, "A* (Failed)");
-
-    return {};
-}
-
     // =============================
     //              A*
     // =============================
-    
+    if (graph.empty()) {
+    logger.warning(
+        "[PathFinder::findPathAStar] Граф пуст");
+    return {};
+}
+
+if (!graph.contains(start)) {
+    logger.warning(
+        "[PathFinder::findPathAStar] Старт отсутствует в графе");
+    return {};
+}
+
+if (!graph.contains(goal)) {
+    logger.warning(
+        "[PathFinder::findPathAStar] Финиш отсутствует в графе");
+    return {};
+}
+
     //ОБЪВЛЕНИЕ ПЕРЕМЕННЫХ
     std::priority_queue<AStarNode, std::vector<AStarNode>, std::greater<AStarNode>> openSet;
-    std::unordered_set<algorithms::geometry::PointD> closedSet;
-    std::unordered_map<algorithms::geometry::PointD, algorithms::geometry::PointD> cameFrom;
-    std::unordered_map<algorithms::geometry::PointD, double> gScore;
-    std::unordered_map<algorithms::geometry::PointD, double> fScore;
+    std::unordered_set<algorithms::geometry::Pixel> closedSet;
+    std::unordered_map<algorithms::geometry::Pixel, algorithms::geometry::Pixel> cameFrom;
+    std::unordered_map<algorithms::geometry::Pixel, double> gScore;
+    std::unordered_map<algorithms::geometry::Pixel, double> fScore;
 
     gScore[start] = 0.0;
     fScore[start] = algorithms::path::common::euclidean(start, goal);
@@ -82,8 +73,8 @@ metrics.finishAndLog(logger, "A* (Failed)");
         if (current.position == goal) {
             logger.info("[PathFinder::findPathAStar] Цель достигнута!");
 
-            std::vector<algorithms::geometry::PointD> path;
-            for (algorithms::geometry::PointD node = current.position; cameFrom.count(node); node = cameFrom[node])
+            std::vector<algorithms::geometry::Pixel> path;
+            for (algorithms::geometry::Pixel node = current.position; cameFrom.count(node); node = cameFrom[node])
                 path.push_back(node);
             path.push_back(start);
             std::reverse(path.begin(), path.end());
@@ -96,7 +87,7 @@ metrics.finishAndLog(logger, "A*");
         
         closedSet.insert(current.position);
 
-        for (const algorithms::geometry::PointD& neighbor : localGraph[current.position]) {
+        for (const algorithms::geometry::Pixel& neighbor : graph.at(current.position)) {
             double tentativeG = gScore[current.position] + std::hypot(current.position.x - neighbor.x, current.position.y - neighbor.y);
 
             if (closedSet.count(neighbor))

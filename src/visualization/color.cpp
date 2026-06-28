@@ -78,7 +78,7 @@ std::vector<std::array<int, 3>> ColorGenerator::generateColors(int numColors, co
         logColorConversion(hue, rgb, logger);
     }
 
-    logger.info("[ColorGenerator::generateColors] Successfully generated " +
+    logger.debug("[ColorGenerator::generateColors] Successfully generated " +
                 std::to_string(colors.size()) + " distinct colors");
 
     return colors;

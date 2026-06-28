@@ -1,4 +1,6 @@
 #include "command/interface.hpp"
+#include "command/validator.hpp"
+
 #include <iostream>
 #include <sstream>
 
@@ -9,8 +11,7 @@ namespace command {
     logger.info("Showing help information");
     
     // Содержимое справки
-    const std::string helpContent = R"(
-# Terrain Navigation System
+const std::string helpContent = R"(# Terrain Navigation System
 
 Программа для анализа рельефа местности, построения триангуляции Делоне, диаграмм Вороного и поиска оптимальных маршрутов с учетом препятствий.
 
@@ -43,11 +44,13 @@ chmod +x run.sh
 | help                 | -                                                                                                  | Создание файла с пояснением команд                                       |
 | init                 | -                                                                                                  | Инициализация поля                                                       |
 | g                    | x y sx sy h                                                                                        | Создает гаусс с центром (x,y), размерами (sx,sy) и высотой h             |
-| g_auto               | xmin, xmax, ymin, ymax, sx_min, sx_max, sy_min, sy_max, h_min, h_max, int count_min, int count_max | Создает случайные гаусы с параметрами в промежутках                      |
+| g_auto               | xmin, xmax, ymin, ymax, ... , h_min, h_max, [Random/Fixed seed]                                    | Создает случайные гаусы с параметрами в промежутках + режим генерации    |
 | generate             | -                                                                                                  | Складывает все добавленные гауссы в итоговое поле                        |
 | save_g               | filename.png                                                                                       | Сохраняет параметры g в txt файл                                         |
 | gnuplot              | filename.png                                                                                       | Сохраняет 3D-визуализацию поля в PNG файл                                |
 | PlotMetedata         | filename.png                                                                                       | Визуализирует метаданные компонент с границами и центрами                |
+| PlotKmeans           | filename.png                                                                                       | Визуализирует k_means                                                    |
+| PlotGraph            | filename.png                                                                                       | Визуализирует граф                                                       |
 | PlotVoronoi          | filename.png                                                                                       | Строит диаграмму Вороного по текущей триангуляции                        |
 | PlotDelaunay         | filename.png                                                                                       | Визуализирует триангуляцию Делоне                                        |
 | PlotPath             | filename.png                                                                                       | Отображает найденный путь между точками A и B                            |
@@ -58,9 +61,12 @@ chmod +x run.sh
 | k_means              | k                                                                                                  | Кластеризует данные в k кластеров                                        |
 | k_means_kern         | kk                                                                                                 | Кластеризация с ядрами размера kk                                        |
 | triangulate          | -                                                                                                  | Строит триангуляцию Делоне по центрам компонент                          |
-| find_path_astar      | Ax Ay Bx By                                                                                        | A* ищет путь между точками A и B через триангуляцию                      |
-| find_path_dekstra    | Ax Ay Bx By                                                                                        | Dekstra ищет путь между точками A и B через триангуляцию                 |
-| find_path_greedy     | Ax Ay Bx By                                                                                        | Greedy ищет путь между точками A и B через триангуляцию                  |
+| voronoi              | -                                                                                                  | Строит диаграмму Вороного                                                |
+| build_nav_graph      | vehicleRadius maxSideAngle maxUpDownAngle                                                          | Строит граф проходимости по диаграмме Вороного, учитывая наклон и радиус |
+| connect_to_graph     | Ax Ay Bx By [Nearest/NearestK k/All]                                                               | Подключает старт и финиш к графу с разными режимами                      |
+| find_path_astar      | -                                                                                                  | A* ищет путь между точками A и B                                         |
+| find_path_dekstra    | -                                                                                                  | Dekstra ищет путь между точками A и B                                    |
+| find_path_greedy     | -                                                                                                  | Greedy ищет путь между точками A и B                                     |
 | Plot3DPath           | filename.png                                                                                       | Сохраняет 3D-визуализацию путя в PNG файл                                |
 | plotInteractive3DPath| -                                                                                                  | Интерактвный 3D режим с путем                                            |
 | end                  | -                                                                                                  | Завершает работу программы                                               |
@@ -89,9 +95,12 @@ chmod +x run.sh
 | h_max                        | `h_max`                                        | Максимальная высота гаусса при g_auto                                            |
 | count_min                    | `count_min`                                    | Минимальное количество генерируемых гауссов                                      |
 | count_max                    | `count_max`                                    | Максимальное количество генерируемых гауссов                                     |
+| defaultGAutoMode             | 'GAutoMode'                                    | Режим генерации (Random/Fixed seed) по умолчанию                                 |
 | save_g                       | `filename_save_g`                              | Путь к файлу для сохранения параметров g                                         |
 | defaultGnuplot               | `filename_gnuplot.png`                         | Путь к файлу для сохранения 3D-визуализации по умолчанию                         |
 | defaultPlotMetedata          | `filename_metadata.png`                        | Путь к файлу для визуализации метаданных компонент по умолчанию                  |
+| defaultPlotKmeans            | `filename_kmeans.png`                          | Путь к файлу для k_means по умолчанию                                            |
+| defaultPlotGraph             | `filename_graph.png`                           | Путь к файлу для графа по умолчанию                                              |
 | defaultPlotVoronoi           | `filename_voronoi.png`                         | Путь к файлу для диаграммы Вороного по умолчанию                                 |
 | defaultPlotDelaunay          | `filename_delaunay.png`                        | Путь к файлу для триангуляции Делоне по умолчанию                                |
 | defaultPlotPath              | `filename_path.png`                            | Путь к файлу для визуализации маршрута по умолчанию                              |
@@ -107,6 +116,7 @@ chmod +x run.sh
 | defaultpointA_y              | `pointA_y`                                     | Y-координата точки A для поиска пути по умолчанию                                |
 | defaultpointB_x              | `pointB_x`                                     | X-координата точки B для поиска пути по умолчанию                                |
 | defaultpointB_y              | `pointB_y`                                     | Y-координата точки B для поиска пути по умолчанию                                |
+| defaultConnectMode           | `connectMode`                                  | Режимы подключения старта и финиша к графу (Nearest/NearestK k/All) по умолчанию |
 | defaultPlot3DPath            | `filename_plot3dpath.png`                      | Путь к файлу для 3D-визуализации маршрута по умолчанию                           |
 | vehicleRadius                | `vehicleRadius`                                | Радиус транспортного средства                                                    |
 | maxSideAngle                 | `maxSideAngle`                                 | Максимальный угол поворота вбок (градусы)                                        |
@@ -120,16 +130,16 @@ chmod +x run.sh
 
 ## ⚠️ Важно
 1. Всегда начинайте с команды init
-2. Точки A/B задаются в config.txt
-3. Маршрут будет найден не всегда!
-4. Для триангуляции и построения пути, нужно чтобы количество компонент было больше 3
-5. Если пользуетесь программой, то важно использовать ту же файловую структуру!
-6. Путь к файлу пишем относительный
-7. Важен порядок команд, не забывайте делать картинки после команд
-8. Для команды bmp_write не полагайтесь на значения по умолчанию
-9. Точки A и B должны попадать в триангуляцию
-10. Уровень "равнины" = 127, чтобы метод записи поля по гаусам согласовался с записью по картике
-11. Условия проходимости: 1)Если угол наклона в любом пикселе путя превосходит допустимый (по направлению или вбок) 2) Расстояние до препятсвия на срезе меньше радиуса
+2. Маршрут будет найден не всегда!
+3. Для триангуляции и построения пути, нужно чтобы количество компонент было больше 3
+4. Если пользуетесь программой, то важно использовать ту же файловую структуру!
+5. Путь к файлу пишем относительный
+6. Важен порядок команд, не забывайте делать картинки после команд
+7. Для команды bmp_write не полагайтесь на значения по умолчанию
+8. Для команды PlotKmeans не полагайтесь на значения по умолчанию (иначе вывод совпадет для kmeans и kmeans_with_kernels)
+8. Точки A и B должны попадать в безопасную зону иначе путь не будет найден
+9. Уровень "равнины" = 127, чтобы метод записи поля по гаусам согласовался с записью по картике bmp
+11. Условия проходимости: 1) Если угол наклона в любом пикселе путя не превосходит допустимый (по направлению или вбок) 2) Расстояние до препятсвия на срезе меньше радиуса
 
 ## 📜 Командный файл (примеры)
 1) Если нужно прочитать данные с файла Read.bmp
@@ -144,10 +154,14 @@ bmp_write results/visualizations/Slice.bmp Binary
 wave 10
 PlotMetedata results/visualizations/Metadata.png
 k_means 5
-bmp_write results/visualizations/kmeans.bmp Binary
+PlotKmeans results/visualizations/kmeans.png
 triangulate
-PlotVoronoi results/visualizations/Diagramma_Voronova.png
 PlotDelaunay results/visualizations/Triangulation_Delone.png
+voronoi
+PlotVoronoi results/visualizations/Diagramma_Voronova.png
+build_nav_graph
+PlotGraph results/visualizations/Graph.png
+connect_to_graph
 find_path_astar
 PlotPath results/visualizations/Path.png
 end
@@ -169,11 +183,15 @@ bmp_write results/visualizations/Slice.bmp Binary
 wave 10
 PlotMetedata results/visualizations/Metadata.png
 k_means 10
-bmp_write results/visualizations/kmeans.bmp Binary
+PlotKmeans results/visualizations/kmeans.png
 triangulate
-PlotVoronoi results/visualizations/Diagramma_Voronova.png
 PlotDelaunay results/visualizations/Triangulation_Delone.png
-find_path_astar 60 130 150 135
+voronoi
+PlotVoronoi results/visualizations/Diagramma_Voronova.png
+build_nav_graph
+PlotGraph results/visualizations/Graph.png
+connect_to_graph 60 130 150 135
+find_path_astar
 PlotPath results/visualizations/Path.png
 Plot3DPath results/visualizations/Plot3DPath.png
 plotInteractive3DPath
@@ -208,10 +226,13 @@ h_min -120
 h_max 120
 count_min 50
 count_max 100
+defaultGAutoMode Fixed 42
 
 
 defaultGnuplot results/visualizations/Gnuplot.png
 defaultPlotMetedata results/visualizations/Metadata.png
+defaultPlotKmeans results/visualizations/kmeans.png
+defaultPlotGraph results/visualizations/Graph.png
 defaultPlotVoronoi results/visualizations/Voronoi.png
 defaultPlotDelaunay results/visualizations/Delaunay.png
 defaultPlotPath results/visualizations/Path.png
@@ -235,10 +256,11 @@ defaultKlaster 5
 defaultKlasterKern 5
 
 
-defaultstartPointX 150.0
-defaultstartPointY 150.0
-defaultendPointX 160.0
-defaultendPointY 160.0
+defaultstartPointX 150
+defaultstartPointY 150
+defaultendPointX 160
+defaultendPointY 160
+defaultConnectMode All
 
 vehicleRadius 1
 maxSideAngle 90.0
@@ -297,8 +319,9 @@ FiltrationLogLevelControl INFO
     void Interface::processKeyboardCommands() {
         
         while (true) {
-            const std::string commandshow = R"(Enter the command and its parameters immediately (help, init, g, generate, gnuplot, bmp_write, bmp_read, bin, wave,
-             PlotMetedata, PlotVoronoi, PlotDelaunay, PlotPath, k_means, k_means_kern, triangulate, find_path, Plot3DPath, plotInteractive3DPath, end):)";
+            const std::string commandshow = R"(Enter the command and its parameters immediately (help, init, g, g_auto, generate, save_g, gnuplot, PlotKmeans, PlotMetedata, PlotVoronoi, PlotDelaunay,
+PlotPath, bmp_write, bmp_read, bin, wave, k_means, k_means_kern, triangulate, voronoi, build_nav_graph, connect_to_graph, find_path_astar, find_path_dekstra, find_path_greedy, Plot3DPath,
+plotInteractive3DPath, end):)";
             std::cout << commandshow;
             std::cin >> params.command;
             std::cout << "\n";
@@ -325,15 +348,23 @@ FiltrationLogLevelControl INFO
     bool Interface::processCommand(std::istream& input, bool fromKeyboard) {
     std::string line;
     std::string showInfo;
-    std::string modeWrite, modeBin;
+    std::string modeGAuto, modeWrite, modeBin, modeConnect;
     
     if (params.command == "init") {
-        if (n != 0) {
+        if (initState) {
             std::cout << "The init command has already been called.\nError\n";
             logger.error("Error: Multiple init commands.");
             return false;
         }
-        n = 1;
+        
+        params.fieldWidth = config.fieldWidth;
+        params.fieldHeight = config.fieldHeight;
+        
+        if (!Validator::validateFieldSize(params.fieldWidth, params.fieldHeight, logger))
+            return false;
+    
+        initState = true;
+            
         showInfo = std::string("Initializing field with size: ") + std::to_string(params.fieldWidth) + " x " + std::to_string(params.fieldHeight);
         
         if (fromKeyboard) {
@@ -345,12 +376,12 @@ FiltrationLogLevelControl INFO
         control.Dispetcher(params);
         logger.info("Field initialized.");
     }
-    else if (n != 1) {
+    else if (!initState) {
         std::cout << "The init command was not used.\nError\n";
         logger.error("Error: The init command was not used.");
         return false;
     }
-    else if (params.command == "g") {      
+    else if (params.command == "g") {
         params.centerX = config.defaultCenterX;
         params.centerY = config.defaultCenterY;
         params.sigmaX = config.defaultSigmaX;
@@ -360,12 +391,15 @@ FiltrationLogLevelControl INFO
             std::getline(input, line);
             std::istringstream iss(line);
             iss >> params.centerX >> params.centerY >> params.sigmaX >> params.sigmaY >> params.height;
-      
-         showInfo = std::string("Adding Gaussian: x=") + std::to_string(params.centerX) + 
-                  ", y=" + std::to_string(params.centerY) + 
-                  ", sx=" + std::to_string(params.sigmaX) + 
-                  ", sy=" + std::to_string(params.sigmaY) + 
-                  ", h=" + std::to_string(params.height);
+            
+        if (!Validator::validateGaussian(params, logger))
+            return false;
+         
+        showInfo = std::string("Adding Gaussian: x=") + std::to_string(params.centerX) + 
+                 ", y=" + std::to_string(params.centerY) + 
+                 ", sx=" + std::to_string(params.sigmaX) + 
+                 ", sy=" + std::to_string(params.sigmaY) + 
+                 ", h=" + std::to_string(params.height);
                   
          if (fromKeyboard) {
             std::cout << "\n";
@@ -387,22 +421,40 @@ FiltrationLogLevelControl INFO
         params.h_max = config.h_max;
         params.count_min = config.count_min;
         params.count_max = config.count_max;
+        modeGAuto = config.defaultGAutoMode;
+        params.seedGAuto = config.defaultSeedGAuto;
 
             std::getline(input, line);
             std::istringstream iss(line);
             iss >> params.xmin >> params.xmax >> params.ymin >> params.ymax 
             >> params.sx_min >> params.sx_max >> params.sy_min >> params.sy_max
             >> params.h_min >> params.h_max
-            >> params.count_min >> params.count_max;
+            >> params.count_min >> params.count_max
+            >> modeGAuto;
       
+      if (modeGAuto == "Random") {
+            params.gAutoMode = algorithms::gauss::GAutoMode::Random;
+        } 
+ else if (modeGAuto == "Fixed") {
+            params.gAutoMode = algorithms::gauss::GAutoMode::Fixed;
+            iss >> params.seedGAuto;
+        }
+                
+      if (!Validator::validateAutoGaussian(params, modeGAuto, logger))
+          return false;
+        
          showInfo = std::string("Автогенерация гауссов: ") +
                "x=[" + std::to_string(params.xmin) + ", " + std::to_string(params.xmax) + "], " +
                "y=[" + std::to_string(params.ymin) + ", " + std::to_string(params.ymax) + "], " +
                "sx=[" + std::to_string(params.sx_min) + ", " + std::to_string(params.sx_max) + "], " +
                "sy=[" + std::to_string(params.sy_min) + ", " + std::to_string(params.sy_max) + "], " +
                "h=[" + std::to_string(params.h_min) + ", " + std::to_string(params.h_max) + "], " +
-               "count=[" + std::to_string(params.count_min) + ", " + std::to_string(params.count_max) + "]";
-                  
+               "count=[" + std::to_string(params.count_min) + ", " + std::to_string(params.count_max) + "], " +
+               "gAutoMode=" + modeGAuto;
+               
+         if (modeGAuto == "Fixed")
+          showInfo += ", seedGAuto=" + std::to_string(params.seedGAuto);
+                   
          if (fromKeyboard) {
             std::cout << "\n";
             std::cout << showInfo << std::endl;
@@ -444,7 +496,10 @@ FiltrationLogLevelControl INFO
             std::getline(input, line);
             std::istringstream iss(line);
             iss >> params.filename;
-
+            
+       if (!Validator::validateFileName(params.filename, logger))
+           return false;
+           
             showInfo = std::string("Calling gnuplot with filename: ") + params.filename;
             
             if (fromKeyboard) {
@@ -463,6 +518,9 @@ FiltrationLogLevelControl INFO
             std::istringstream iss(line);
             iss >> params.filename;
             
+            if (!Validator::validateFileName(params.filename, logger))
+                return false;
+                
             showInfo = std::string("Plotting metadata to: ") + params.filename;
             
             if (fromKeyboard) {
@@ -474,13 +532,58 @@ FiltrationLogLevelControl INFO
         control.Dispetcher(params);
         logger.info("Metadata plotting completed");
     }
+    else if (params.command == "PlotKmeans") {
+        params.filename = config.defaultPlotKmeans;
+        
+            std::getline(input, line);
+            std::istringstream iss(line);
+            iss >> params.filename;
+            
+            if (!Validator::validateFileName(params.filename, logger))
+                return false;
+ 
+            showInfo = std::string("Plotting kmeans to: ") + params.filename;
+            
+            if (fromKeyboard) {
+            std::cout << "\n";
+            std::cout << showInfo << std::endl;
+         }
+         
+        logger.info(showInfo);
+        control.Dispetcher(params);
+        logger.info("Kmeans plotting completed");
+    }
+    else if (params.command == "PlotGraph") {
+        params.filename = config.defaultPlotGraph;
+        
+            std::getline(input, line);
+            std::istringstream iss(line);
+            iss >> params.filename;
+                        
+            if (!Validator::validateFileName(params.filename, logger))
+                return false;
+ 
+            showInfo = std::string("Plotting graph to: ") + params.filename;
+            
+            if (fromKeyboard) {
+            std::cout << "\n";
+            std::cout << showInfo << std::endl;
+         }
+         
+        logger.info(showInfo);
+        control.Dispetcher(params);
+        logger.info("Graph plotting completed");
+    }
     else if (params.command == "PlotVoronoi") {
         params.filename = config.defaultPlotVoronoi;
         
             std::getline(input, line);
             std::istringstream iss(line);
             iss >> params.filename;
-            
+                        
+            if (!Validator::validateFileName(params.filename, logger))
+                return false;
+ 
         showInfo = std::string("Plotting Voronoi diagram to: ") + params.filename;
             
             if (fromKeyboard) {
@@ -498,7 +601,10 @@ FiltrationLogLevelControl INFO
             std::getline(input, line);
             std::istringstream iss(line);
             iss >> params.filename;
-             
+                         
+            if (!Validator::validateFileName(params.filename, logger))
+                return false;
+ 
         showInfo = std::string("Plotting Delaunay triangulation to: ") + params.filename;
             
             if (fromKeyboard) {
@@ -516,7 +622,10 @@ FiltrationLogLevelControl INFO
             std::getline(input, line);
             std::istringstream iss(line);
             iss >> params.filename;
-             
+                         
+            if (!Validator::validateFileName(params.filename, logger))
+                return false;
+ 
         showInfo = std::string("Plotting path to: ") + params.filename;
             
             if (fromKeyboard) {
@@ -535,12 +644,16 @@ FiltrationLogLevelControl INFO
             std::getline(input, line);
             std::istringstream iss(line);
             iss >> params.filename >> modeWrite;
-         
-        if (modeWrite == "Full") {
+            
+            if (modeWrite == "Full") {
             params.bmpWriteMode = io::BmpWriteMode::Full;
-        } else {
+        } 
+       else if (modeWrite == "Binary") {
             params.bmpWriteMode = io::BmpWriteMode::Binary;
-        }
+        } 
+        
+            if (!Validator::validateBmpWriteMode(params.filename, modeWrite, logger))
+                return false;
                     
         showInfo = std::string("Writing BMP file: ") + params.filename + " with mode: " + modeWrite;
             
@@ -559,7 +672,10 @@ FiltrationLogLevelControl INFO
             std::getline(input, line);
             std::istringstream iss(line);
             iss >> params.filename;
-            
+                        
+            if (!Validator::validateFileName(params.filename, logger))
+                return false;
+ 
         showInfo = std::string("Reading BMP file: ") + params.filename;
             
             if (fromKeyboard) {
@@ -578,7 +694,10 @@ FiltrationLogLevelControl INFO
             std::getline(input, line);
             std::istringstream iss(line);
             iss >> params.threshold >> modeBin;
-
+                        
+            if (!Validator::validateBinaryParameters(params.threshold, modeBin, logger))
+                return false;
+ 
         if (modeBin == "Peaks") {
             params.thresholdMode = algorithms::components::ThresholdMode::Peaks;
         } else if (modeBin == "Valleys") {
@@ -604,7 +723,10 @@ FiltrationLogLevelControl INFO
             std::getline(input, line);
             std::istringstream iss(line);
             iss >> params.noiseLevel;
-                  
+                                
+            if (!Validator::validateNoiseSize(params.noiseLevel, logger))
+                return false;
+           
         showInfo = std::string("Applying wave filter with noisy level: ") + std::to_string(params.noiseLevel);
             
             if (fromKeyboard) {
@@ -615,7 +737,7 @@ FiltrationLogLevelControl INFO
         logger.info(showInfo);
         control.Dispetcher(params);
         logger.info(std::string("Wave filtering completed. Components count: ") + 
-                   std::to_string(control.componenti.size()));
+                   std::to_string(state.components.size()));
     }
     else if (params.command == "k_means") {
         params.clusterCount = config.defaultKlaster;
@@ -623,7 +745,10 @@ FiltrationLogLevelControl INFO
             std::getline(input, line);
             std::istringstream iss(line);
             iss >> params.clusterCount;
-                  
+                                         
+            if (!Validator::validateKMeans(params.clusterCount, logger))
+                return false;
+          
         showInfo = std::string("Running k-means with k: ") + std::to_string(params.clusterCount);
             
             if (fromKeyboard) {
@@ -636,13 +761,18 @@ FiltrationLogLevelControl INFO
         logger.info("k-means clustering completed");
     }
     else if (params.command == "k_means_kern") {
+        params.clusterCount = config.defaultKlaster;
         params.kernelSize = config.defaultKlasterKern;
         
             std::getline(input, line);
             std::istringstream iss(line);
-            iss >> params.kernelSize;
-                  
-        showInfo = std::string("Running k-means with kernel size: ") + std::to_string(params.kernelSize);
+            iss >> params.clusterCount >> params.kernelSize;
+                                        
+            if (!Validator::validateKernelSize(params.clusterCount, params.kernelSize, logger))
+                return false;
+           
+        showInfo = std::string("Running k-means with k:") + std::to_string(params.clusterCount) + 
+                   std::string(", kernel size: ") + std::to_string(params.kernelSize);
             
             if (fromKeyboard) {
             std::cout << "\n";
@@ -665,20 +795,94 @@ FiltrationLogLevelControl INFO
         control.Dispetcher(params);
         logger.info("Delaunay triangulation completed");
     }
-    else if (params.command == "find_path_astar") {
-        params.startPointX = config.defaultstartPointX;
-        params.startPointY = config.defaultstartPointY;
-        params.endPointX = config.defaultendPointX;
-        params.endPointY = config.defaultendPointY;
+    else if (params.command == "voronoi") {              
+        showInfo = "Building Voronoi diagram";
+            
+            if (fromKeyboard) {
+            std::cout << "\n";
+            std::cout << showInfo << std::endl;
+         }
+         
+        logger.info(showInfo);
+        control.Dispetcher(params);
+        logger.info("Voronoi diagram construction completed");
+    }
+    else if (params.command == "build_nav_graph") {
+        params.vehicleRadius = config.vehicleRadius;
+        params.maxSideAngle = config.maxSideAngle;
+        params.maxUpDownAngle = config.maxUpDownAngle;
         
             std::getline(input, line);
             std::istringstream iss(line);
-            iss >> params.startPointX >> params.startPointY >> params.endPointX >> params.endPointY;
+            iss >> params.vehicleRadius >> params.maxSideAngle >> params.maxUpDownAngle;
+        
+                                        
+            if (!Validator::validateNavigationParameters(params.vehicleRadius, params.maxSideAngle, params.maxUpDownAngle, logger))
+                return false;
+                  
+        showInfo = std::string("Building navigation graph with vehicleRadius = ") + std::to_string(params.vehicleRadius) + 
+                                std::string(", maxSideAngle = ") + std::to_string(params.maxSideAngle) +
+                                std::string(", maxUpDownAngle = ") + std::to_string(params.maxUpDownAngle);
             
-        showInfo = std::string("Finding path A* from (") + std::to_string(params.startPointX) + "," + 
-                   std::to_string(params.startPointY) + ") to (" + 
-                   std::to_string(params.endPointX) + "," + 
-                   std::to_string(params.endPointY) + ")";
+            if (fromKeyboard) {
+            std::cout << "\n";
+            std::cout << showInfo << std::endl;
+         }
+         
+        logger.info(showInfo);
+        control.Dispetcher(params);
+        logger.info("Navigation graph construction completed");
+    }
+    else if (params.command == "connect_to_graph") {
+        params.startPointX = config.defaultstartPointX;
+        params.startPointY = config.defaultstartPointY;
+        params.endPointX = config.defaultendPointX;
+        params.endPointY = config.defaultendPointY;        
+        modeConnect = config.defaultConnectMode;
+        params.nearestVerticesCount = config.defaultNearestVerticesCount;
+        
+            std::getline(input, line);
+            std::istringstream iss(line);
+            iss >> params.startPointX >> params.startPointY >> params.endPointX >> params.endPointY >> modeConnect;
+            
+            if (modeConnect == "Nearest")
+            params.connectMode =
+                algorithms::path::common::ConnectMode::Nearest;
+
+        else if (modeConnect == "All")
+            params.connectMode =
+                algorithms::path::common::ConnectMode::All;
+
+        else if (modeConnect == "NearestK") {
+            params.connectMode =
+                algorithms::path::common::ConnectMode::NearestK;
+            iss >> params.nearestVerticesCount;
+        }
+                
+            if (!Validator::validateConnectParameters(params, modeConnect, logger))
+                return false;
+ 
+            showInfo =
+                std::string("Connecting points (") +
+                std::to_string(params.startPointX) + ", " +
+                std::to_string(params.startPointY) + ") and (" +
+                std::to_string(params.endPointX) + ", " +
+                std::to_string(params.endPointY) + ") to navigation graph" + ", mode [" + modeConnect + "]";
+    
+            if (modeConnect == "NearestK")
+            showInfo +=", k = " + std::to_string(params.nearestVerticesCount);
+
+            if (fromKeyboard) {
+            std::cout << "\n";
+            std::cout << showInfo << std::endl;
+         }
+
+        logger.info(showInfo);
+        control.Dispetcher(params);
+        logger.info("Connection completed");
+    }
+    else if (params.command == "find_path_astar") {
+        showInfo = "Starting A* path search";
             
             if (fromKeyboard) {
             std::cout << "\n";
@@ -687,22 +891,10 @@ FiltrationLogLevelControl INFO
 
         logger.info(showInfo);
         control.Dispetcher(params);
-        logger.info("Path A* finding completed");
+        logger.info("A* path search completed");
     }
     else if (params.command == "find_path_dekstra") {
-        params.startPointX = config.defaultstartPointX;
-        params.startPointY = config.defaultstartPointY;
-        params.endPointX = config.defaultendPointX;
-        params.endPointY = config.defaultendPointY;
-        
-            std::getline(input, line);
-            std::istringstream iss(line);
-            iss >> params.startPointX >> params.startPointY >> params.endPointX >> params.endPointY;
-            
-        showInfo = std::string("Finding path dekstra from (") + std::to_string(params.startPointX) + "," + 
-                   std::to_string(params.startPointY) + ") to (" + 
-                   std::to_string(params.endPointX) + "," + 
-                   std::to_string(params.endPointY) + ")";
+        showInfo = "Starting dekstra path search";
             
             if (fromKeyboard) {
             std::cout << "\n";
@@ -711,22 +903,10 @@ FiltrationLogLevelControl INFO
 
         logger.info(showInfo);
         control.Dispetcher(params);
-        logger.info("Path dekstra finding completed");
+        logger.info("Dekstra path search completed");
     }
     else if (params.command == "find_path_greedy") {
-        params.startPointX = config.defaultstartPointX;
-        params.startPointY = config.defaultstartPointY;
-        params.endPointX = config.defaultendPointX;
-        params.endPointY = config.defaultendPointY;
-        
-            std::getline(input, line);
-            std::istringstream iss(line);
-            iss >> params.startPointX >> params.startPointY >> params.endPointX >> params.endPointY;
-            
-        showInfo = std::string("Finding path greedy from (") + std::to_string(params.startPointX) + "," + 
-                   std::to_string(params.startPointY) + ") to (" + 
-                   std::to_string(params.endPointX) + "," + 
-                   std::to_string(params.endPointY) + ")";
+        showInfo = "Starting greedy path search";
             
             if (fromKeyboard) {
             std::cout << "\n";
@@ -735,7 +915,7 @@ FiltrationLogLevelControl INFO
 
         logger.info(showInfo);
         control.Dispetcher(params);
-        logger.info("Path greedy finding completed");
+        logger.info("Greedy path search completed");
     }  
     else if (params.command == "Plot3DPath") {
         params.filename = config.defaultPlot3DPath;
@@ -743,7 +923,10 @@ FiltrationLogLevelControl INFO
             std::getline(input, line);
             std::istringstream iss(line);
             iss >> params.filename;
-            
+                               
+            if (!Validator::validateFileName(params.filename, logger))
+                return false;
+     
         showInfo = std::string("Plotting 3D path to: ") + params.filename;
             
             if (fromKeyboard) {
@@ -781,9 +964,6 @@ FiltrationLogLevelControl INFO
         logger.info("Interface initialized");
         logger.debug(std::string("Field dimensions: ") + std::to_string(config.fieldWidth) + 
                    "x" + std::to_string(config.fieldHeight));
-        
-        params.fieldWidth = config.fieldWidth;
-        params.fieldHeight = config.fieldHeight;
     }
     
     void Interface::print() {

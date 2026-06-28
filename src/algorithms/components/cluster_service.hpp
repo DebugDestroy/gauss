@@ -1,6 +1,5 @@
 #pragma once
 #include <vector>
-#include "core/config.hpp"
 #include "core/logger.hpp"
 #include "algorithms/components/components_analysis.hpp"
 #include "algorithms/components/kmeans.hpp"
@@ -19,7 +18,7 @@ public:
     ClusterService(core::Logger& log, KMeans& kmeans, visualization::ColorGenerator& colorGen);
     
     std::vector<std::array<int, 3>> getClusterColors(int clusterCount);
-    std::vector<algorithms::geometry::PointD> getClusterCenters(const std::vector<Component>& components, const core::Config& config);
+    std::vector<algorithms::geometry::PointD> getClusterCenters(const std::vector<Component>& components, double fieldWidth, double fieldHeight);
     void prepareKMeansData(const std::vector<std::vector<double>>& copyPole);
     void applyClusterResults(const KMeans::ClusterResult& result, std::vector<std::vector<double>>& pixelMatrix);
     const std::vector<std::vector<double>>& getKMeansData() const;

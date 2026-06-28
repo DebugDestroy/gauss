@@ -7,52 +7,80 @@
 #include "algorithms/components/copier_service.hpp"
 
 namespace algorithms::components {
-    Copier::Copier(core::Logger& lg) : logger(lg) {}
 
-    void Copier::removeNoise(std::vector<std::vector<double>>& field, const std::vector<Component>& components) {
-        logger.trace("[Copier::removeNoise] Starting noise removal");
-        
-        // Логируем исходные параметры
-             logger.debug(std::string("[Copier::removeNoise] Input parameters: ") +
-             std::to_string(field.size()) + "x" + 
-             std::to_string(field.empty() ? 0 : field[0].size()) + " field, " +
-             std::to_string(components.size()) + " components");
-             
-        // Обнуляем поле
-        size_t total_zeroed = 0;
-        for (auto& row : field) {
-            total_zeroed += row.size();
-            std::fill(row.begin(), row.end(), core::BLACK);
-        }
-        logger.debug(std::string("[Copier::removeNoise] Zeroed ") + std::to_string(total_zeroed) + std::string(" pixels"));
+Copier::Copier(core::Logger& lg)
+    : logger(lg) {}
 
-        // Копируем только значимые компоненты
-        size_t total_copied = 0;
-        size_t components_processed = 0;
-        
-        for (const auto& comp : components) {
-            const auto& compData = comp.componenta;
-            size_t component_pixels = 0;
-            
-            for (size_t i = 0; i < compData.size(); ++i) {
-                for (size_t j = 0; j < compData[i].size(); ++j) {
-                    if (std::fabs(compData[i][j] - core::WHITE) < core::EPSILON) {
-                        field[i][j] = core::WHITE;
-                        component_pixels++;
-                        total_copied++;
-                    }
-                }
-            }
-            
-            components_processed++;
-            logger.debug(std::string("[Copier::removeNoise] Component #") + std::to_string(components_processed) + 
-                       std::string(": copied ") + std::to_string(component_pixels) + std::string(" pixels"));
-        }
+void Copier::removeNoise(
+        std::vector<std::vector<double>>& field,
+        const std::vector<Component>& components)
+{
+    logger.trace("[Copier::removeNoise] Starting noise removal");
 
-        // Итоговая статистика
-        logger.info(std::string("[Copier::removeNoise] Completed. Stats:\n") +
-                  std::string("  Total components processed: ") + std::to_string(components_processed) + std::string("\n") +
-                  std::string("  Total pixels copied: ") + std::to_string(total_copied) + std::string("\n") +
-                  std::string("  Zeroed pixels: ") + std::to_string(total_zeroed - total_copied));
+    logger.debug(
+        std::string("[Copier::removeNoise] Input parameters: ") +
+        std::to_string(field.size()) + "x" +
+        std::to_string(field.empty() ? 0 : field[0].size()) +
+        " field, " +
+        std::to_string(components.size()) +
+        " components");
+
+    // Очищаем поле
+    size_t totalZeroed = 0;
+
+    for (auto& row : field) {
+        totalZeroed += row.size();
+        std::fill(row.begin(), row.end(), core::BLACK);
     }
+
+    logger.debug(
+        "[Copier::removeNoise] Zeroed " +
+        std::to_string(totalZeroed) +
+        " pixels");
+
+    size_t totalCopied = 0;
+    size_t componentsProcessed = 0;
+
+    for (const auto& comp : components) {
+
+        const auto& compData = comp.componenta;
+        size_t componentPixels = 0;
+
+        for (const auto& pixel : compData) {
+
+            int x = pixel.x;
+            int y = pixel.y;
+
+            if (y < 0 || y >= static_cast<int>(field.size()) ||
+                x < 0 || x >= static_cast<int>(field[0].size()))
+            {
+                continue;
+            }
+
+            field[y][x] = core::WHITE;
+
+            componentPixels++;
+            totalCopied++;
+        }
+
+        componentsProcessed++;
+
+        logger.debug(
+            "[Copier::removeNoise] Component #" +
+            std::to_string(componentsProcessed) +
+            ": copied " +
+            std::to_string(componentPixels) +
+            " pixels");
+    }
+
+    logger.debug(
+        std::string("[Copier::removeNoise] Completed. Stats:\n") +
+        "  Total components processed: " +
+        std::to_string(componentsProcessed) + "\n" +
+        "  Total pixels copied: " +
+        std::to_string(totalCopied) + "\n" +
+        "  Zeroed pixels: " +
+        std::to_string(totalZeroed - totalCopied));
 }
+
+} // namespace algorithms::components

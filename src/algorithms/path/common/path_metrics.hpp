@@ -25,7 +25,7 @@ struct PathMetrics {
     }
 
     // Вычислить метрики по пути
-    void computeFromPath(const std::vector<geometry::PointD>& path) {
+    void computeFromPath(const std::vector<geometry::Pixel>& path) {
         pathNodes = path.size();
         euclideanLength = 0.0;
         pixelLength = 0;

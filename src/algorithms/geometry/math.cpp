@@ -4,6 +4,19 @@
 #include <array>
 
 namespace algorithms::geometry {
+Pixel toPixel(const PointD& p)
+{
+    return Pixel(
+        static_cast<int>(std::round(p.x)),
+        static_cast<int>(std::round(p.y))
+    );
+}
+
+PointD toPointD(const Pixel& p)
+{
+    return PointD(p.x, p.y);
+}
+
     double distance(const PointD& p1, const PointD& p2) {
         return std::hypot(p1.x - p2.x, p1.y - p2.y);
 }
@@ -19,13 +32,26 @@ namespace algorithms::geometry {
     return PointD(-(e.b.y - e.a.y), e.b.x - e.a.x);
 }
 
+PointD makeCodirected(const PointD& direction,
+                      const PointD& reference)
+{
+    double dot = direction.x * reference.x +
+                 direction.y * reference.y;
+
+    if (dot < 0.0) {
+        return PointD(-direction.x, -direction.y);
+    }
+
+    return direction;
+}
+
     bool areCollinear(const PointD& a, const PointD& b, const PointD& c) {
     double area = (b.y - a.y) * (c.x - b.x) - (c.y - b.y) * (b.x - a.x);
     return std::fabs(area) < core::EPSILON; // Проверяем, близко ли значение к нулю
 }
 
     bool isPointInsideField(const PointD& p, int width, int height) {
-        bool inside = p.x >= 0 && p.y >= 0 && p.x < width && p.y < height;
+        bool inside = p.x > -core::EPSILON && p.y > -core::EPSILON && p.x < width + core::EPSILON && p.y < height + core::EPSILON;
         return inside;
     }
 
@@ -54,6 +80,18 @@ namespace algorithms::geometry {
             return true;
         }
     }
+    return false;
+}
+
+bool containsEdge(const std::vector<Edge>& edges,
+                  const Edge& edge)
+{
+    for (const auto& e : edges) {
+        if (e == edge) {
+            return true;
+        }
+    }
+
     return false;
 }
    
@@ -152,5 +190,18 @@ namespace algorithms::geometry {
                 (c.x * c.x + c.y * c.y) * (b.x - a.x)) / d;
 
     return PointD(x, y);
+}
+
+PointD calculateIncenter(const Triangle& tri) {
+    double a = distance(tri.b, tri.c);
+    double b = distance(tri.c, tri.a);
+    double c = distance(tri.a, tri.b);
+
+    double sum = a + b + c;
+
+    return {
+        (a * tri.a.x + b * tri.b.x + c * tri.c.x) / sum,
+        (a * tri.a.y + b * tri.b.y + c * tri.c.y) / sum
+    };
 }
 }

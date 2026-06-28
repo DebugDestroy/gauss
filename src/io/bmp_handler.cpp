@@ -103,8 +103,7 @@ BmpHandler::BmpHandler(core::Logger& lg) : logger(lg) {}
                   "  File size: ~" + std::to_string(54 + (width*3 + padding)*height) + " bytes");
     }
     
-   void BmpHandler::bmp_read(algorithms::gauss::GaussBuilder& gaussBuilder, const std::string& filename, 
-                 std::vector<std::vector<double>>& pixelMatrix, std::unique_ptr<algorithms::gauss::Pole>& p) {
+   void BmpHandler::bmp_read(algorithms::gauss::GaussBuilder& gaussBuilder, const std::string& filename, std::vector<std::vector<double>>& field) {
         logger.trace(std::string("[BmpHandler::bmp_read] Starting BMP read operation: ") + filename);
         
         std::ifstream bmpFile(filename, std::ios::binary);
@@ -128,8 +127,7 @@ BmpHandler::BmpHandler(core::Logger& lg) : logger(lg) {}
 
         // Initialize field
         logger.trace("[BmpHandler::bmp_read] Initializing field through GaussBuilder");
-        gaussBuilder.init(height, width, p);
-        pixelMatrix.resize(height, std::vector<double>(width));
+        gaussBuilder.init(height, width, field);
 
         // Read pixel data
         size_t pixels_read = 0;
@@ -143,8 +141,7 @@ BmpHandler::BmpHandler(core::Logger& lg) : logger(lg) {}
                 bmpFile.get(); // R
                 
                 double value = static_cast<double>(color);
-                pixelMatrix[y][x] = value;
-                p->field[y][x] = value;
+                field[y][x] = value;
                 
                 min_val = std::min(min_val, value);
                 max_val = std::max(max_val, value);

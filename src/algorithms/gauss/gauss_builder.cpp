@@ -34,12 +34,21 @@ void GaussBuilder::addgaussRandom(
     double sy_min, double sy_max,
     double h_min, double h_max,
     int count_min, int count_max,
+    GAutoMode gAutoMode, std::uint32_t seedGAuto,
     std::vector<Gaus>& gaussi)
 {
     logger.info("[GaussBuilder] Автогенерация гауссов");
 
+    std::mt19937 gen;
+
+if (gAutoMode == GAutoMode::Fixed) {
+    gen.seed(seedGAuto);
+    logger.info("Fixed mode seed = " + std::to_string(seedGAuto));
+} else {
     std::random_device rd;
-    std::mt19937 gen(rd());
+    gen.seed(rd());
+    logger.info("Random mode");
+}
 
     std::uniform_real_distribution<> dx(xmin, xmax);
     std::uniform_real_distribution<> dy(ymin, ymax);
@@ -63,37 +72,28 @@ void GaussBuilder::addgaussRandom(
     logger.info("[GaussBuilder] Сгенерировано " + std::to_string(count) + " гауссов");
 }
     
-    void GaussBuilder::init(int A, int B, std::unique_ptr<Pole>& p) {
-        logger.trace(std::string("[GaussBuilder::init] Initializing field with size ") +
-                   std::to_string(A) + "x" + std::to_string(B));
-        
-        if (!p) {
-            logger.debug("[GaussBuilder::init] Creating new Pole object");
-            p = std::make_unique<Pole>(A, B, logger);
-        } else {
-            logger.debug("[GaussBuilder::init] Resizing existing Pole object");
-            p->resize(A, B);
-        }
-        
-        logger.info("[GaussBuilder::init] Field initialized successfully");
+    void GaussBuilder::init(int A, int B, std::vector<std::vector<double>>& field) {
+         logger.trace("[GaussBuilder::init] Initializing field");
+         field.assign(A, std::vector<double>(B, 0));
+         logger.info("[GaussBuilder::init] Field initialized");
     }
     
-    void GaussBuilder::generate(std::unique_ptr<Pole>& p, std::vector<Gaus>& gaussi) {
+    void GaussBuilder::generate(std::vector<std::vector<double>>& field, std::vector<Gaus>& gaussi) {
         logger.trace("[GaussBuilder::generate] Starting field generation");
         
-        if (p == nullptr) {
+        if (field.empty()) {
             logger.error("[GaussBuilder::generate] Pole not initialized!");
             return;
         }
 
-        const size_t width = p->field[0].size();
-        const size_t height = p->field.size();
+        const size_t width = field[0].size();
+        const size_t height = field.size();
         logger.debug(std::string("[GaussBuilder::generate] Generating field ") +
                    std::to_string(width) + "x" + std::to_string(height) + 
                    " with " + std::to_string(gaussi.size()) + " Gaussians");
 
         // Заполнение базовым значением
-        for (auto& row : p->field) {
+        for (auto& row : field) {
             std::fill(row.begin(), row.end(), core::MID_GRAY);
         }
         logger.debug(std::string("[GaussBuilder::generate] Base level set to core::MID_GRAY = ") + std::to_string(core::MID_GRAY));
@@ -102,33 +102,66 @@ void GaussBuilder::addgaussRandom(
         size_t total_pixels = 0;
         size_t clamped_pixels = 0;
         
-        for (const auto& g : gaussi) {
-            logger.trace(std::string("[GaussBuilder::generate] Applying Gaussian at (") +
-                       std::to_string(g.x0) + "," + std::to_string(g.y0) + ")");
-            
-            if (g.sigma_x <= 0 || g.sigma_y <= 0) {
+for (const auto& g : gaussi) {
+
+    logger.trace(std::string("[GaussBuilder::generate] Applying Gaussian at (") +
+                 std::to_string(g.x0) + "," +
+                 std::to_string(g.y0) + ")");
+
+    if (g.sigma_x <= 0 || g.sigma_y <= 0) {
         logger.warning("[GaussBuilder::generate] Skipping Gaussian with zero sigma");
         continue;
     }
-    
-            for (size_t x = 0; x < width; ++x) {
-                for (size_t y = 0; y < height; ++y) {
-                    double value = g.h * exp(-((pow((x - g.x0)/g.sigma_x, 2) + 
-                                             pow((y - g.y0)/g.sigma_y, 2))/2));
-                    p->field[y][x] += value;
-                    
-                    // Логирование clamping
-                    if (p->field[y][x] <= core::BLACK || p->field[y][x] >= core::WHITE) {
-                        clamped_pixels++;
-                    }
-                    total_pixels++;
-                    
-                    p->field[y][x] = std::clamp(p->field[y][x], 
-                           static_cast<double>(core::BLACK), 
-                           static_cast<double>(core::WHITE));
-                }
+
+    // Ограничиваем область 3 сигмами
+
+    int minX = std::max(
+        0,
+        static_cast<int>(std::floor(g.x0 - 3.0 * g.sigma_x))
+    );
+
+    int maxX = std::min(
+        static_cast<int>(width - 1),
+        static_cast<int>(std::ceil(g.x0 + 3.0 * g.sigma_x))
+    );
+
+    int minY = std::max(
+        0,
+        static_cast<int>(std::floor(g.y0 - 3.0 * g.sigma_y))
+    );
+
+    int maxY = std::min(
+        static_cast<int>(height - 1),
+        static_cast<int>(std::ceil(g.y0 + 3.0 * g.sigma_y))
+    );
+
+    for (int y = minY; y <= maxY; ++y) {
+        for (int x = minX; x <= maxX; ++x) {
+
+            double dx = (x - g.x0) / g.sigma_x;
+            double dy = (y - g.y0) / g.sigma_y;
+
+            double value =
+                g.h * std::exp(-(dx * dx + dy * dy) / 2.0);
+
+            field[y][x] += value;
+
+            if (field[y][x] < core::BLACK ||
+                field[y][x] > core::WHITE)
+            {
+                ++clamped_pixels;
             }
+
+            ++total_pixels;
+
+            field[y][x] = std::clamp(
+                field[y][x],
+                static_cast<double>(core::BLACK),
+                static_cast<double>(core::WHITE)
+            );
         }
+    }
+}
 
     if (total_pixels != 0) {
        

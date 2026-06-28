@@ -14,7 +14,7 @@ struct PointD {
     PointD(double x_ = 0, double y_ = 0) : x(x_), y(y_) {}
     
     bool operator==(const PointD& other) const {
-        return std::fabs(x - other.x) < core::EPSILON && std::fabs(y - other.y) < core::EPSILON;
+         return x == other.x && y == other.y;
     }
     
     bool operator!=(const PointD& other) const {
@@ -45,4 +45,35 @@ struct Triangle {
                (a == other.c && b == other.b && c == other.a);
     }
 };
+
+struct Pixel {
+    int x, y;
+
+    Pixel(int x_ = 0, int y_ = 0)
+        : x(x_), y(y_) {}
+
+    bool operator==(const Pixel& other) const {
+        return x == other.x && y == other.y;
+    }
+
+    bool operator!=(const Pixel& other) const {
+        return !(*this == other);
+    }
+};
+
+struct PixelEdge
+{
+    Pixel a, b;
+
+    PixelEdge(Pixel a_ = {}, Pixel b_ = {})
+        : a(a_), b(b_) {}
+
+    bool operator==(const PixelEdge& other) const
+    {
+        return (a == other.a && b == other.b) ||
+               (a == other.b && b == other.a);
+    }
+};
+
+
 }

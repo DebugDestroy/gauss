@@ -13,56 +13,46 @@ PathFinder::PathFinder(core::Logger& lg)
     logger.trace("[PathFinder] Инициализация Greedy поисковика пути");
 }
 
-std::vector<algorithms::geometry::PointD> PathFinder::findPathGreedy(
-    const algorithms::geometry::PointD& start,
-    const algorithms::geometry::PointD& goal,
-    std::vector<algorithms::geometry::Edge> voronoiEdges,
-    algorithms::path::common::Graph& graph,
-    const algorithms::path::common::Conditions& conds,
-    const std::vector<std::vector<double>>& binaryMap,
-    const std::unique_ptr<algorithms::gauss::Pole>& elevationData)
+std::vector<algorithms::geometry::Pixel> PathFinder::findPathGreedy(
+    const algorithms::geometry::Pixel& start,
+        const algorithms::geometry::Pixel& goal,
+        const std::unordered_map<algorithms::geometry::Pixel, std::vector<algorithms::geometry::Pixel>>& graph)
 {
     logger.info("[PathFinder::findPathGreedy] Начало поиска пути...");
     
     PathMetrics metrics;
     metrics.startTimer();
     
-        // Строим локальный граф
-auto localGraph = graph.buildGraphFromEdges(
-    voronoiEdges, binaryMap, elevationData, conds);
-
-logger.debug("[PathFinder::findPathGreedy] Подключаем старт и цель ко всем видимым вершинам");
-
-if (!graph.connectPointToGraph(localGraph, start, binaryMap, elevationData, conds)) { // Добавили старт
-    logger.warning("[PathFinder::findPathGreedy] Старт не подключен в граф!");
-    
-metrics.finishAndLog(logger, "Greedy (Failed)");
-
-    return {};
-}
-
-if (!graph.connectPointToGraph(localGraph, goal, binaryMap, elevationData, conds)) { // Добавили финиш
-    logger.warning("[PathFinder::findPathGreedy] Финиш не подключен в граф!");
-
-metrics.finishAndLog(logger, "Greedy (Failed)");
-
-    return {};
-}
-    
     // =============================
     //            Greedy
     // =============================
+if (graph.empty()) {
+    logger.warning(
+        "[PathFinder::findPathAStar] Граф пуст");
+    return {};
+}
 
-    std::vector<algorithms::geometry::PointD> path;
-    algorithms::geometry::PointD current = start;
+if (!graph.contains(start)) {
+    logger.warning(
+        "[PathFinder::findPathAStar] Старт отсутствует в графе");
+    return {};
+}
+
+if (!graph.contains(goal)) {
+    logger.warning(
+        "[PathFinder::findPathAStar] Финиш отсутствует в графе");
+    return {};
+}
+    std::vector<algorithms::geometry::Pixel> path;
+    algorithms::geometry::Pixel current = start;
     path.push_back(current);
 
-    std::unordered_set<algorithms::geometry::PointD> visited;
+    std::unordered_set<algorithms::geometry::Pixel> visited;
     visited.insert(current);
 
     while (!(current == goal)) {
-        const auto& neighbors = localGraph[current];
-        std::vector<algorithms::geometry::PointD> candidates;
+        const auto& neighbors = graph.at(current);
+        std::vector<algorithms::geometry::Pixel> candidates;
         metrics.expandedNodes++; 
 
 for (const auto& n : neighbors) {

@@ -39,7 +39,7 @@ namespace algorithms::geometry {
          PointD p2(0, super_size);               // Левый верхний угол
          PointD p3(super_size, 0);               // Правый нижний угол
          
-        logger.info("[Triangulator::bowyerWatson] Начало триангуляции Боуера-Ватсона");
+        logger.trace("[Triangulator::bowyerWatson] Начало триангуляции Боуера-Ватсона");
         logger.debug(std::string("Количество точек: ") + std::to_string(points.size()));
 
         // Проверка на минимальное количество точек
@@ -58,10 +58,10 @@ namespace algorithms::geometry {
 
 // Создаём и логируем супер-треугольник
 triangles.emplace_back(p1, p2, p3);
-logger.info("[Triangulator] Создан супер-треугольник с вершинами:");
-logger.info("  A(0, 0)");
-logger.info("  B(0, " + std::to_string(super_size) + ")");
-logger.info("  C(" + std::to_string(super_size) + ", 0)");
+logger.trace("[Triangulator] Создан супер-треугольник с вершинами:");
+logger.trace("  A(0, 0)");
+logger.trace("  B(0, " + std::to_string(super_size) + ")");
+logger.trace("  C(" + std::to_string(super_size) + ", 0)");
 
         // Основной алгоритм
         size_t pointIndex = 0;

@@ -6,7 +6,7 @@
 
 namespace algorithms::path::common {
    
-    double euclidean(const algorithms::geometry::PointD& a, const algorithms::geometry::PointD& b) {
+    double euclidean(const algorithms::geometry::Pixel& a, const algorithms::geometry::Pixel& b) {
         double dist = std::hypot(a.x - b.x, a.y - b.y);
         return dist;
     }

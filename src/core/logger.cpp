@@ -11,7 +11,8 @@ Logger::Logger(const std::string& fileName, const std::string& module, const std
     if (currentLogLevel != LogLevel::Off) {
         logFile.open(fileName, std::ios::out | std::ios::app);
         if (!logFile.is_open()) {
-            std::cerr << "Failed to open log file: " << fileName << std::endl;
+            throw std::runtime_error(
+                "Failed to open log file: " + fileName);
         }
     }
 }
@@ -30,7 +31,9 @@ LogLevel Logger::stringToLevel(const std::string& levelStr) {
     if (levelStr == "ERROR")    return LogLevel::Error;
     if (levelStr == "CRITICAL") return LogLevel::Critical;
     if (levelStr == "OFF")      return LogLevel::Off;
-    return LogLevel::Info;
+    
+    throw std::runtime_error(
+        "Unknown log level: '" + levelStr + "'");
 }
 
 const char* Logger::levelToString(LogLevel level) {
