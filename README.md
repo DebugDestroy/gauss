@@ -14,10 +14,10 @@
 ![kmeans](results/visualizations/kmeans.png)
 
 - Триангуляция Делоне с учетом высот
-![delaunay](results/visualizations/Delaunay.png)
+![delaunay](results/visualizations/Triangulation_Delone.png)
 
 - Построение диаграммы Вороного
-![voronoi](results/visualizations/Voronoi.png)
+![voronoi](results/visualizations/Diagramma_Voronova.png)
 
 - Навигационный граф, построенный по диаграмме Вороного с ограничениями по углу наклона тележки и ее радиуса
 ![graph](results/visualizations/Graph.png)
@@ -33,8 +33,8 @@ chmod +x run.sh
 ```
 
 ## 📚 Документация
-- 📘 [User Guide](docs/User%20Guide.md) — описание всех команд и сценариев использования  
-- 🛠 [Developer Guide](docs/Developer%20Guide.md) — архитектура и расширение системы
+- 📘 [User Guide](docs/UserGuide.md) — описание всех команд и сценариев использования  
+- 🛠 [Developer Guide](docs/DeveloperGuide.md) — архитектура и расширение системы
 - 🚧 [WIP / Research Notes](docs/WIP.md) — текущие задачи, исследовательские направления и последние изменения проекта
 
 ## 📄 Лицензия
