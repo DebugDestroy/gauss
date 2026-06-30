@@ -107,7 +107,7 @@ chmod +x run.sh
 | Команда              | Параметры                                                                                          | Описание                                                                 |
 |----------------------|----------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------|
 | help                 | -                                                                                                  | Создание файла с пояснением команд                                       |
-| init                 | -                                                                                                  | Инициализация поля                                                       |
+| init                 | fieldWidth fieldHeight                                                                             | Инициализация поля с заданой шириной и длиной                            |
 | g                    | x y sx sy h                                                                                        | Создает гаусс с центром (x,y), размерами (sx,sy) и высотой h             |
 | g_auto               | xmin, xmax, ymin, ymax, ... , h_min, h_max, [Random/Fixed seed]                                    | Создает случайные гаусы с параметрами в промежутках + режим генерации    |
 | generate             | -                                                                                                  | Складывает все добавленные гауссы в итоговое поле                        |
@@ -132,6 +132,7 @@ chmod +x run.sh
 | find_path_astar      | -                                                                                                  | A* ищет путь между точками A и B                                         |
 | find_path_dekstra    | -                                                                                                  | Dekstra ищет путь между точками A и B                                    |
 | find_path_greedy     | -                                                                                                  | Greedy ищет путь между точками A и B                                     |
+| save_metrics         | filename.csv                                                                                       | Сохраняет метрики в файле csv                                            |
 | Plot3DPath           | filename.png                                                                                       | Сохраняет 3D-визуализацию пути в PNG файл                                |
 | plotInteractive3DPath| -                                                                                                  | Интерактвный 3D режим с путем                                            |
 | end                  | -                                                                                                  | Завершает работу программы                                               |
@@ -155,8 +156,8 @@ init -> g несколько раз или один раз g_auto или bmp_rea
 
 | Параметр                     | Значение                                       | Описание                                                                         |
 |------------------------------|------------------------------------------------|----------------------------------------------------------------------------------|
-| fieldWidth                   | `fieldWidth`                                   | Ширина рабочего поля в пикселях                                                  |  
-| fieldHeight                  | `fieldHeight`                                  | Высота рабочего поля в пикселях                                                  |
+| defaultfieldWidth            | `fieldWidth`                                   | Ширина рабочего поля в пикселях по умолчанию                                     |  
+| defaultfieldHeight           | `fieldHeight`                                  | Высота рабочего поля в пикселях по умолчанию                                     |
 | defaultCenterX               | `defaultCenterX`                               | Стандартная X-координата центра гауссова распределения по умолчанию              |
 | defaultCenterY               | `defaultCenterY`                               | Стандартная Y-координата центра гауссова распределения по умолчанию              |
 | defaultSigmaX                | `defaultSigmaX`                                | Стандартное отклонение по оси X по умолчанию                                     |
@@ -200,6 +201,7 @@ init -> g несколько раз или один раз g_auto или bmp_rea
 | vehicleRadius                | `vehicleRadius`                                | Радиус транспортного средства                                                    |
 | maxSideAngle                 | `maxSideAngle`                                 | Максимальный угол поворота вбок (градусы)                                        |
 | maxUpDownAngle               | `maxUpDownAngle`                               | Максимальный угол наклона вверх/вниз (градусы)                                   |
+| defaultsave_metrics          | `filename.csv`                                 | Путь к файлу по умолчанию для сохранения метрик                                  |
 | logFileNameInterface         | `filename_log_interface.txt`                   | Путь к лог-файлу интерфейса                                                      |
 | logFileNameControl           | `filename_log_control.txt`                     | Путь к лог-файлу управления                                                      |
 | defaultHelp                  | `/home/log/Gauss/results/docs/help.txt`        | Путь где сохранить help файл                                                     |
@@ -244,6 +246,7 @@ build_nav_graph
 PlotGraph results/visualizations/Graph.png
 connect_to_graph
 find_path_astar
+save_metrics
 PlotPath results/visualizations/Path.png
 end
 ```
@@ -273,6 +276,7 @@ build_nav_graph
 PlotGraph results/visualizations/Graph.png
 connect_to_graph 60 130 150 135
 find_path_astar
+save_metrics
 PlotPath results/visualizations/Path.png
 Plot3DPath results/visualizations/Plot3DPath.png
 plotInteractive3DPath
@@ -342,6 +346,7 @@ build_nav_graph
 PlotGraph results/visualizations/Graph.png
 connect_to_graph 20 27 100 298
 find_path_astar
+save_metrics
 PlotPath results/visualizations/Path.png
 Plot3DPath results/visualizations/Plot3DPath.png
 plotInteractive3DPath
@@ -350,11 +355,11 @@ end
 
 ## 📃️ Конфигурационный файл (пример)
 ```
-defaultHelp results/help.txt
+defaultHelp var/help/help.txt
 
 
-fieldWidth 300
-fieldHeight 300
+defaultfieldWidth 300
+defaultfieldHeight 300
 
 
 defaultCenterX 50.0
@@ -415,6 +420,9 @@ defaultConnectMode All
 vehicleRadius 1
 maxSideAngle 90.0
 maxUpDownAngle 90.0
+
+
+defaultsave_metrics var/metrics/metrics.csv
 
 
 logFileNameInterface var/logs/log_interface.txt

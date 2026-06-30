@@ -15,13 +15,11 @@ PathFinder::PathFinder(core::Logger& lg)
 
 std::vector<algorithms::geometry::Pixel> PathFinder::findPathGreedy(
     const algorithms::geometry::Pixel& start,
-        const algorithms::geometry::Pixel& goal,
-        const std::unordered_map<algorithms::geometry::Pixel, std::vector<algorithms::geometry::Pixel>>& graph)
+    const algorithms::geometry::Pixel& goal,
+    const std::unordered_map<algorithms::geometry::Pixel, std::vector<algorithms::geometry::Pixel>>& graph,
+    algorithms::path::PathMetrics& metrics)
 {
     logger.info("[PathFinder::findPathGreedy] Начало поиска пути...");
-    
-    PathMetrics metrics;
-    metrics.startTimer();
     
     // =============================
     //            Greedy
@@ -68,9 +66,6 @@ logger.debug("[Greedy] Current: (" +
 if (candidates.empty()) {
     logger.warning("[Greedy] Все соседи посещены, тупик");
     
-metrics.computeFromPath(path);
-metrics.finishAndLog(logger, "Greedy (Failed)");
-    
     return path;
 }
 
@@ -89,10 +84,7 @@ auto nextIt = std::min_element(
     }
 
     logger.info("[PathFinder::findPathGreedy] Цель достигнута!");
-    
-metrics.computeFromPath(path);
-metrics.finishAndLog(logger, "Greedy");
-    
+    metrics.pathFound = true;
     return path;
 }
 

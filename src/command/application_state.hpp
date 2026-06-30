@@ -16,6 +16,8 @@
 
 #include "utils/hash.hpp" // Для навигационного графа
 
+#include "algorithms/path/common/path_metrics.hpp" // Для метрик
+
 namespace command {
 
 struct ApplicationState {
@@ -49,6 +51,7 @@ struct ApplicationState {
     std::optional<algorithms::geometry::Pixel> start;
     std::optional<algorithms::geometry::Pixel> end;
     std::vector<algorithms::geometry::Pixel> path;
+    algorithms::path::PathMetrics graphPathMetrics;
 };
 
 } // namespace command

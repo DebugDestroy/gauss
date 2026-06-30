@@ -1,6 +1,5 @@
 #include "algorithms/path/dekstra/path_finder.hpp"
 #include "utils/hash.hpp"
-#include "algorithms/path/common/path_metrics.hpp"
 
 #include <queue>
 #include <cmath>
@@ -18,13 +17,11 @@ PathFinder::PathFinder(core::Logger& lg)
 
 std::vector<algorithms::geometry::Pixel> PathFinder::findPathDijkstra(
     const algorithms::geometry::Pixel& start,
-        const algorithms::geometry::Pixel& goal,
-        const std::unordered_map<algorithms::geometry::Pixel, std::vector<algorithms::geometry::Pixel>>& graph)
+    const algorithms::geometry::Pixel& goal,
+    const std::unordered_map<algorithms::geometry::Pixel, std::vector<algorithms::geometry::Pixel>>& graph,
+    algorithms::path::PathMetrics& metrics)
 {
     logger.info("[PathFinder::findPathDijkstra] Начало поиска пути...");
-    
-    PathMetrics metrics;
-    metrics.startTimer();
 
     // =============================
     //         Dijkstra
@@ -91,10 +88,7 @@ if (!graph.contains(goal)) {
 
             path.push_back(start);
             std::reverse(path.begin(), path.end());
-            
-metrics.computeFromPath(path);
-metrics.finishAndLog(logger, "Dijkstra");
-    
+            metrics.pathFound = true;
             return path;
         }
 
@@ -119,11 +113,8 @@ metrics.finishAndLog(logger, "Dijkstra");
         }
     }
 
-    logger.warning(
-        "[PathFinder::findPathDijkstra] Путь не найден!");
-
-metrics.finishAndLog(logger, "Dijkstra (Failed)");
-
+    logger.warning("[PathFinder::findPathDijkstra] Путь не найден!");
+    
     return {};
 }
 

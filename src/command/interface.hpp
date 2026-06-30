@@ -5,6 +5,8 @@
 #include "command/dispatcher_params.hpp"
 #include "command/application_state.hpp"
 #include "command/control.hpp"
+#include "core/config.hpp"
+#include "core/logger.hpp"
 
 namespace command {
 

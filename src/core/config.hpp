@@ -25,7 +25,7 @@ public:
     std::string defaultHelp;
     
     // FIELD PARAMETERS 
-    int fieldWidth = 0, fieldHeight = 0;
+    int defaultfieldWidth = 0, defaultfieldHeight = 0;
     
     // DEFAULT GAUSSIAN PARAMETERS
     double defaultCenterX = 0, defaultCenterY = 0, defaultSigmaX = 0, defaultSigmaY = 0, defaultHeight = 0;
@@ -43,7 +43,8 @@ public:
     // OUTPUT FILES
     std::string defaultGnuplot, defaultPlotMetedata, defaultPlotKmeans, defaultPlotGraph, defaultPlotVoronoi, defaultPlotDelaunay, defaultPlotPath, defaultPlot3DPath,
     defaultWrite, defaultRead, defaultWriteModeImage,
-    save_g;
+    save_g,
+    defaultsave_metrics;
     
     // BINARY
     std::string defaultBinMode;

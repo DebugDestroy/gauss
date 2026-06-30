@@ -16,7 +16,7 @@ int main() {
             "Control",
             config.FiltrationLogLevelControl);
 
-        command::Control c(config, loggercontrol);
+        command::Control c(loggercontrol);
         command::Interface i(config, loggerinterface, c);
 
         i.print();

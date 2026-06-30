@@ -1,7 +1,6 @@
 #include "algorithms/path/a_star/path_finder.hpp"
 #include "algorithms/path/common/heuristics.hpp"
 #include "utils/hash.hpp"
-#include "algorithms/path/common/path_metrics.hpp"
 
 #include <queue>
 #include <cmath>
@@ -18,12 +17,10 @@ PathFinder::PathFinder(core::Logger& lg) : logger(lg) {
 std::vector<algorithms::geometry::Pixel> PathFinder::findPathAStar(
     const algorithms::geometry::Pixel& start,
     const algorithms::geometry::Pixel& goal,
-    const  std::unordered_map<algorithms::geometry::Pixel, std::vector<algorithms::geometry::Pixel>>& graph)
+    const  std::unordered_map<algorithms::geometry::Pixel, std::vector<algorithms::geometry::Pixel>>& graph,
+    algorithms::path::PathMetrics& metrics)
 {
     logger.info("[PathFinder::findPathAStar] Начало поиска пути...");
-    
-    PathMetrics metrics;
-    metrics.startTimer();
     
     // =============================
     //              A*
@@ -78,10 +75,7 @@ if (!graph.contains(goal)) {
                 path.push_back(node);
             path.push_back(start);
             std::reverse(path.begin(), path.end());
-            
-metrics.computeFromPath(path);
-metrics.finishAndLog(logger, "A*");
-
+            metrics.pathFound = true;
             return path;
         }
         
@@ -103,8 +97,6 @@ metrics.finishAndLog(logger, "A*");
     }
 
     logger.warning("[PathFinder::findPathAStar] Путь не найден!");
-    
-metrics.finishAndLog(logger, "A* (Failed)");
 
     return {};
 }

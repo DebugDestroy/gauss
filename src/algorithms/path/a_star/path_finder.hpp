@@ -6,6 +6,7 @@
 
 #include "core/logger.hpp"
 #include "algorithms/geometry/geometry_structures.hpp"
+#include "algorithms/path/common/path_metrics.hpp"
 
 namespace algorithms::path::a_star {
 
@@ -29,7 +30,8 @@ public:
     std::vector<algorithms::geometry::Pixel> findPathAStar(
         const algorithms::geometry::Pixel& start,
         const algorithms::geometry::Pixel& goal,
-        const std::unordered_map<algorithms::geometry::Pixel, std::vector<algorithms::geometry::Pixel>>& graph);
+        const std::unordered_map<algorithms::geometry::Pixel, std::vector<algorithms::geometry::Pixel>>& graph,
+        algorithms::path::PathMetrics& metrics);
 };
 
 }
