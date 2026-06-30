@@ -1,8 +1,9 @@
-# Игнорируем исторические версии и логи
-/archive/
+# Игнорируем логи и тд.
 /var/
 config/commands/gaussians.txt
 *.o
+/.venv/
+**/.ipynb_checkpoints/
 
 # Сборка CMake
 /build/

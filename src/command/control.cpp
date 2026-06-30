@@ -3,10 +3,9 @@
 namespace command {
 
     // Конструктор
-    Control::Control(core::Config& cfg, core::Logger& log)
+    Control::Control(core::Logger& log)
       :
       // core
-      config(cfg),
       logger(log),
 
       // io
@@ -15,7 +14,11 @@ namespace command {
       // visualization
       gnuplotInterface(log),
       colorGenerator(),
-
+      
+      // statistics
+      statisticsManager(),
+      csvWriter(log),
+      
       // algorithms::gauss
       gaussBuilder(log),
 
@@ -44,9 +47,6 @@ namespace command {
       greedyFinder(log)    
 {
     logger.info("Control system initialized");
-    logger.debug(std::string("Field dimensions: ") +
-                 std::to_string(cfg.fieldWidth) + "x" +
-                 std::to_string(cfg.fieldHeight));
 }
     void Control::logOperation(core::LogLevel level, const std::string& operation, const std::string& details) {
         std::string message = std::string("Operation: ") + operation;
@@ -54,6 +54,21 @@ namespace command {
             message += std::string(", ") + details;
         }
         logger.logMessage(level, message);
+    }
+    
+    std::string Control::formatPathMetricsLog(
+        const algorithms::path::PathMetrics& m,
+        const algorithms::geometry::Pixel& start,
+        const algorithms::geometry::Pixel& end)
+    {
+        return std::string("from (") + std::to_string(start.x) + "," + std::to_string(start.y) + ")" +
+               " to (" + std::to_string(end.x) + "," + std::to_string(end.y) + ")" +
+               " | path_found=" + (m.pathFound ? "true" : "false") +
+               " | time=" + std::to_string(m.executionTimeMs) + " ms" +
+               " | path_nodes=" + std::to_string(m.pathNodes) +
+               " | expanded_nodes=" + std::to_string(m.expandedNodes) +
+               " | euclidean_len=" + std::to_string(m.euclideanLength) +
+               " | pixel_len=" + std::to_string(m.pixelLength);
     }
     
     void Control::Dispetcher(command::DispatcherParams& params) {
@@ -283,16 +298,27 @@ namespace command {
                 return;
             }
             
-            state.path = astarFinder.findPathAStar(*state.start, *state.end, state.navigationGraph);
+            state.graphPathMetrics.environment = "graph";
+            statisticsManager.reset(state.graphPathMetrics);
+            state.graphPathMetrics.algorithmName = "A*";
+            statisticsManager.startTimer();       
             
-            if (state.path.empty()) {
-                logger.logMessage(core::LogLevel::Warning, "Path A* not found");
+            state.path = astarFinder.findPathAStar(*state.start, *state.end, state.navigationGraph, state.graphPathMetrics);
+            
+            statisticsManager.finishTimer(state.graphPathMetrics);
+            statisticsManager.computePathMetrics(state.graphPathMetrics, state.path);
+            
+            if (!state.graphPathMetrics.pathFound) {
+                logger.logMessage(core::LogLevel::Warning,
+                                  "[A*] Path not found");
+
             } else {
-                logOperation(core::LogLevel::Info, std::string("find_path_astar"), 
-                    std::string("from (") + std::to_string(state.start->x) + "," + std::to_string(state.start->y) + ")" +
-                    " to (" + std::to_string(state.end->x) + "," + std::to_string(state.end->y) + ")" +
-                    ", points=" + std::to_string(state.path.size()));
-            }
+                logOperation(
+                    core::LogLevel::Info,
+                    "find_path_astar",
+                    Control::formatPathMetricsLog(state.graphPathMetrics, *state.start, *state.end)
+                );
+           }
         }
 
         if (params.command == "find_path_dekstra") {
@@ -300,16 +326,25 @@ namespace command {
                 logger.logMessage(core::LogLevel::Error, "Pole not initialized for dekstra");
                 return;
             }
-
-            state.path = dekstraFinder.findPathDijkstra(*state.start, *state.end, state.navigationGraph);
             
-            if (state.path.empty()) {
+            state.graphPathMetrics.environment = "graph";            
+            statisticsManager.reset(state.graphPathMetrics);
+            state.graphPathMetrics.algorithmName = "Dijekstra";
+            statisticsManager.startTimer();       
+            
+            state.path = dekstraFinder.findPathDijkstra(*state.start, *state.end, state.navigationGraph, state.graphPathMetrics);
+             
+            statisticsManager.finishTimer(state.graphPathMetrics);
+            statisticsManager.computePathMetrics(state.graphPathMetrics, state.path);
+            
+            if (!state.graphPathMetrics.pathFound) {
                 logger.logMessage(core::LogLevel::Warning, "Path dekstra not found");
             } else {
-                logOperation(core::LogLevel::Info, std::string("find_path_dekstra"), 
-                    std::string("from (") + std::to_string(state.start->x) + "," + std::to_string(state.start->y) + ")" +
-                    " to (" + std::to_string(state.end->x) + "," + std::to_string(state.end->y) + ")" +
-                    ", points=" + std::to_string(state.path.size()));
+                logOperation(
+                    core::LogLevel::Info,
+                    "find_path_dekstra",
+                    Control::formatPathMetricsLog(state.graphPathMetrics, *state.start, *state.end)
+                );
             }
         }
 
@@ -318,17 +353,31 @@ namespace command {
                 logger.logMessage(core::LogLevel::Error, "Pole not initialized for greedy");
                 return;
             }
-
-            state.path = greedyFinder.findPathGreedy(*state.start, *state.end, state.navigationGraph);
             
-            if (state.path.empty()) {
+            state.graphPathMetrics.environment = "graph";
+            statisticsManager.reset(state.graphPathMetrics);
+            state.graphPathMetrics.algorithmName = "Greedy";
+            statisticsManager.startTimer();       
+            
+            state.path = greedyFinder.findPathGreedy(*state.start, *state.end, state.navigationGraph, state.graphPathMetrics);
+                         
+            statisticsManager.finishTimer(state.graphPathMetrics);
+            statisticsManager.computePathMetrics(state.graphPathMetrics, state.path);
+            
+            if (!state.graphPathMetrics.pathFound) {
                 logger.logMessage(core::LogLevel::Warning, "Path greedy not found");
             } else {
-                logOperation(core::LogLevel::Info, std::string("find_path_greedy"), 
-                    std::string("from (") + std::to_string(state.start->x) + "," + std::to_string(state.start->y) + ")" +
-                    " to (" + std::to_string(state.end->x) + "," + std::to_string(state.end->y) + ")" +
-                    ", points=" + std::to_string(state.path.size()));
+                logOperation(
+                    core::LogLevel::Info,
+                    "find_path_greedy",
+                    Control::formatPathMetricsLog(state.graphPathMetrics, *state.start, *state.end)
+                );
             }
+        }
+        
+        if (params.command == "save_metrics") {
+            csvWriter.writeMetrics(state.graphPathMetrics, params.filename);
+            logOperation(core::LogLevel::Info, std::string("save_metrics"), std::string("file: ") + params.filename);
         }
         
         if (params.command == "Plot3DPath") {

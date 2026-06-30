@@ -11,7 +11,6 @@
 #include "command/application_state.hpp"
 
 // core
-#include "core/config.hpp"
 #include "core/logger.hpp"
 
 // io
@@ -20,6 +19,10 @@
 // visualization
 #include "visualization/gnuplot.hpp"
 #include "visualization/color.hpp"
+
+// statistics
+#include "statistics/statistics_manager.hpp"
+#include "statistics/csv_writer.hpp"
 
 // algorithms::gauss
 #include "algorithms/gauss/gauss_builder.hpp"
@@ -38,6 +41,7 @@
 // algorithms::path::common
 #include "algorithms/path/common/conditions.hpp"
 #include "algorithms/path/common/graph.hpp"
+#include "algorithms/path/common/path_metrics.hpp"
 
 // algorithms::path::a_star
 #include "algorithms/path/a_star/path_finder.hpp"
@@ -54,13 +58,16 @@ class Control {
 private:
 
     void logOperation(core::LogLevel level, const std::string& operation, const std::string& details = "");
-
+    
+    std::string formatPathMetricsLog(
+        const algorithms::path::PathMetrics& m,
+        const algorithms::geometry::Pixel& start,
+        const algorithms::geometry::Pixel& end);
 public:
     // Состояние приложения
     ApplicationState state;
     
     // core
-    core::Config& config;
     core::Logger& logger;
     
     // io
@@ -69,6 +76,10 @@ public:
     // visualization
     visualization::GnuplotInterface gnuplotInterface;
     visualization::ColorGenerator colorGenerator;
+    
+    // statistics
+    statistics::StatisticsManager statisticsManager;
+    statistics::CsvWriter csvWriter;
     
     // algorithms::gauss
     algorithms::gauss::GaussBuilder gaussBuilder;
@@ -98,7 +109,7 @@ public:
     algorithms::path::greedy::PathFinder greedyFinder;
     
     // Конструктор
-    Control(core::Config& cfg, core::Logger& log);
+    Control(core::Logger& log);
 
     // Основной диспетчер команд
     void Dispetcher(command::DispatcherParams& params);

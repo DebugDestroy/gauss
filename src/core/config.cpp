@@ -17,10 +17,10 @@ Config::Config(const std::string& filename) {
         readParameter(configFile, defaultHelp, "defaultHelp");
         
         // FIELD PARAMETERS
-        else if (key == "fieldWidth")
-        readParameter(configFile, fieldWidth, "fieldWidth");
-        else if (key == "fieldHeight")
-        readParameter(configFile, fieldHeight, "fieldHeight");
+        else if (key == "defaultfieldWidth")
+        readParameter(configFile, defaultfieldWidth, "defaultfieldWidth");
+        else if (key == "defaultfieldHeight")
+        readParameter(configFile, defaultfieldHeight, "defaultfieldHeight");
         
         // DEFAULT GAUSSIAN PARAMETERS
         else if (key == "defaultCenterX")
@@ -94,6 +94,9 @@ Config::Config(const std::string& filename) {
         
         else if (key == "save_g")
         readParameter(configFile, save_g, "save_g");
+        
+        else if (key == "defaultsave_metrics")
+        readParameter(configFile, defaultsave_metrics, "defaultsave_metrics");
         
         // BINARY
         else if (key == "defaultThreshold")

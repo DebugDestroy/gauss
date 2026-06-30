@@ -26,16 +26,13 @@
 ![path](results/visualizations/AstarPlot3DPath.png)
 
 
-## 🚀 Запуск
-```bash
-chmod +x run.sh
-./run.sh
-```
-
 ## 📚 Документация
 - 📘 [User Guide](docs/UserGuide.md) — описание всех команд и сценариев использования  
 - 🛠 [Developer Guide](docs/DeveloperGuide.md) — архитектура и расширение системы
 - 🚧 [WIP / Research Notes](docs/WIP.md) — текущие задачи, исследовательские направления и последние изменения проекта
+
+## 📊 Исследования
+- [Project 1 — Graph-based Path Planning](notebooks/project1.ipynb) — сравнение алгоритмов A*, Dijkstra и Greedy на навигационном графе, построеным на основе диаграммы Вороного
 
 ## 📄 Лицензия
 Этот проект лицензирован под MIT License. Вы можете свободно использовать, изменять и распространять код, при условии, что вы укажете автора.

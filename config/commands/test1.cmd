@@ -1,4 +1,4 @@
-init
+init 300 300
 
 g 181.218 156.906 2.95652 4.98358 -110.343
 g 6.58783 226.935 3.71665 4.4861 -30.7227
@@ -135,14 +135,17 @@ connect_to_graph 5 5 260 295
 PlotGraph results/visualizations/ConnectedGraph.png
 
 find_path_astar
+save_metrics
 PlotPath results/visualizations/AstarPath.png
 Plot3DPath results/visualizations/AstarPlot3DPath.png
 plotInteractive3DPath
 find_path_dekstra
+save_metrics
 PlotPath results/visualizations/DekstraPath.png
 Plot3DPath results/visualizations/DekstraPlot3DPath.png
 plotInteractive3DPath
 find_path_greedy
+save_metrics
 PlotPath results/visualizations/GreedyPath.png
 Plot3DPath results/visualizations/GreedyPlot3DPath.png
 plotInteractive3DPath

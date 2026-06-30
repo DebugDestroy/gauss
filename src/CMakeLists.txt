@@ -15,6 +15,7 @@ add_subdirectory(command)
 add_subdirectory(core)
 add_subdirectory(io)
 add_subdirectory(visualization)
+add_subdirectory(statistics)
 
 # Линкуем библиотеки к исполняемому файлу
 target_link_libraries(terrain_navigator
@@ -23,6 +24,7 @@ target_link_libraries(terrain_navigator
     core
     io
     visualization
+    statistics
 )
 
 # Копирование конфига после сборки
