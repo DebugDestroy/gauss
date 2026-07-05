@@ -80,6 +80,12 @@ Config::Config(const std::string& filename) {
         readParameter(configFile, defaultPlotVoronoi, "defaultPlotVoronoi");
         else if (key == "defaultPlotDelaunay")
         readParameter(configFile, defaultPlotDelaunay, "defaultPlotDelaunay");
+        else if (key == "defaultPlotGrid")
+        readParameter(configFile, defaultPlotGrid, "defaultPlotGrid");
+        else if (key == "defaultPlotNavGrid")
+        readParameter(configFile, defaultPlotNavGrid, "defaultPlotNavGrid");
+        else if (key == "defaultPlotGridPath")
+        readParameter(configFile, defaultPlotGridPath, "defaultPlotGridPath");
         else if (key == "defaultPlotPath")
         readParameter(configFile, defaultPlotPath, "defaultPlotPath");
         else if (key == "defaultPlot3DPath")
@@ -105,14 +111,20 @@ Config::Config(const std::string& filename) {
         readParameter(configFile, defaultBinMode, "defaultBinMode");
         
         // WAVE
-        else if (key == "defaultNoisy")
-        readParameter(configFile, defaultNoisy, "defaultNoisy");
+        else if (key == "defaultWaveNoisy")
+        readParameter(configFile, defaultWaveNoisy, "defaultWaveNoisy");
         
         // KMEANS
         else if (key == "defaultKlaster")
         readParameter(configFile, defaultKlaster, "defaultKlaster");
         else if (key == "defaultKlasterKern")
         readParameter(configFile, defaultKlasterKern, "defaultKlasterKern");
+        
+        // GRID
+        else if (key == "defaultgridWidth")
+        readParameter(configFile, defaultgridWidth, "defaultgridWidth");
+        else if (key == "defaultgridNoisy")
+        readParameter(configFile, defaultgridNoisy, "defaultgridNoisy");
         
         // PATHS
         else if (key == "defaultstartPointX")

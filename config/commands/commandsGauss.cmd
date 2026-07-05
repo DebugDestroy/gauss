@@ -1,4 +1,4 @@
-init
+init 300 300
 
 g 4 100 5 5 100
 g 50 50 1.5 1.5 40 
@@ -54,7 +54,7 @@ bmp_write results/visualizations/Slice.bmp Binary
 wave 10
 PlotMetedata results/visualizations/Metadata.png
 
-k_means 100
+k_means 10
 PlotKmeans results/visualizations/kmeans.png
 k_means_kern 10
 PlotKmeans results/visualizations/kmeans_with_kernel.png
@@ -63,24 +63,32 @@ triangulate
 PlotDelaunay results/visualizations/Triangulation_Delone.png
 voronoi
 PlotVoronoi results/visualizations/Diagramma_Voronova.png
-build_nav_graph
+build_nav_graph 1 40 40
 PlotGraph results/visualizations/Graph.png
-connect_to_graph
+connect_to_graph 5 5 295 295 All
 PlotGraph results/visualizations/ConnectedGraph.png
 
-find_path_astar
-save_metrics
-PlotPath results/visualizations/AstarPath.png
-Plot3DPath results/visualizations/AstarPlot3DPath.png
-plotInteractive3DPath
-find_path_dekstra
-save_metrics
-PlotPath results/visualizations/DekstraPath.png
-Plot3DPath results/visualizations/DekstraPlot3DPath.png
-plotInteractive3DPath
-find_path_greedy
-save_metrics
-PlotPath results/visualizations/GreedyPath.png
-Plot3DPath results/visualizations/GreedyPlot3DPath.png
-plotInteractive3DPath
+astar_graph
+PlotPath results/visualizations/AstarPathGraph.png
+Plot3DPath results/visualizations/AstarPlot3DPathGraph.png
+dekstra_graph
+PlotPath results/visualizations/DekstraPathGraph.png
+Plot3DPath results/visualizations/DekstraPlot3DPathGraph.png
+greedy_graph
+PlotPath results/visualizations/GreedyPathGraph.png
+Plot3DPath results/visualizations/GreedyPlot3DPathGraph.png
+
+grid 5
+PlotGrid results/visualizations/Grid.png
+build_nav_grid 5
+PlotNavGrid results/visualizations/NavigationGrid.png
+connect_to_grid 5 5 295 295
+PlotNavGrid results/visualizations/ConnectedGrid.png
+
+astar_grid
+PlotGridPath results/visualizations/AstarPathGrid.png
+dekstra_grid
+PlotGridPath results/visualizations/DekstraPathGrid.png
+greedy_grid
+PlotGridPath results/visualizations/GreedyPathGrid.png
 end

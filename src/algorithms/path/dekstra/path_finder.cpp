@@ -15,7 +15,7 @@ PathFinder::PathFinder(core::Logger& lg)
     logger.trace("[PathFinder] Инициализация поисковика пути Dijkstra");
 }
 
-std::vector<algorithms::geometry::Pixel> PathFinder::findPathDijkstra(
+std::vector<algorithms::geometry::Pixel> PathFinder::findPathDijkstraGraph(
     const algorithms::geometry::Pixel& start,
     const algorithms::geometry::Pixel& goal,
     const std::unordered_map<algorithms::geometry::Pixel, std::vector<algorithms::geometry::Pixel>>& graph,
@@ -28,25 +28,25 @@ std::vector<algorithms::geometry::Pixel> PathFinder::findPathDijkstra(
     // =============================
 if (graph.empty()) {
     logger.warning(
-        "[PathFinder::findPathAStar] Граф пуст");
+        "[PathFinder::findPathDijkstra] Граф пуст");
     return {};
 }
 
 if (!graph.contains(start)) {
     logger.warning(
-        "[PathFinder::findPathAStar] Старт отсутствует в графе");
+        "[PathFinder::findPathDijkstra] Старт отсутствует в графе");
     return {};
 }
 
 if (!graph.contains(goal)) {
     logger.warning(
-        "[PathFinder::findPathAStar] Финиш отсутствует в графе");
+        "[PathFinder::findPathDijkstra] Финиш отсутствует в графе");
     return {};
 }
     std::priority_queue<
-        DijkstraNode,
-        std::vector<DijkstraNode>,
-        std::greater<DijkstraNode>
+        NodeGraph,
+        std::vector<NodeGraph>,
+        std::greater<NodeGraph>
     > openSet;
 
     std::unordered_set<algorithms::geometry::Pixel> closedSet;
@@ -60,7 +60,7 @@ if (!graph.contains(goal)) {
 
     while (!openSet.empty()) {
 
-        DijkstraNode current = openSet.top();
+        NodeGraph current = openSet.top();
         openSet.pop();
         
         logger.debug("[DEKSTRA] Current: (" +
@@ -115,6 +115,120 @@ if (!graph.contains(goal)) {
 
     logger.warning("[PathFinder::findPathDijkstra] Путь не найден!");
     
+    return {};
+}
+
+std::vector<algorithms::path::common::GridCell>
+PathFinder::findPathDijkstraGrid(
+        const algorithms::path::common::GridCell& startCell,
+        const algorithms::path::common::GridCell& endCell,
+        const algorithms::path::common::Grid& grid,
+        algorithms::path::PathMetrics& metrics)
+{
+    logger.debug("[PathFinder::findPathDijkstraGrid] Start Dijkstra on grid");
+
+    if (grid.cells.empty()) {
+        logger.warning("[Dijkstra Grid] Grid is empty");
+        return {};
+    }
+    
+     auto index = [&](int row, int col) {
+        return row * grid.cols + col;
+    };
+    
+    int startIdx = index(startCell.row, startCell.col);
+    int goalIdx  = index(endCell.row, endCell.col);
+    
+    if (!grid.cells[startIdx].traversable ||
+    !grid.cells[goalIdx].traversable)
+    {
+        logger.warning("[Dijkstra Grid] Start or goal cell is blocked");
+        return {};
+    }
+
+    std::priority_queue<
+        NodeGrid,
+        std::vector<NodeGrid>,
+        std::greater<NodeGrid>
+    > openSet;
+    
+    const int nodeCount = grid.cells.size();
+    std::vector<bool> closedSet(nodeCount, false);
+    std::vector<int> cameFrom(nodeCount, -1);
+    std::vector<double> gScore(nodeCount, std::numeric_limits<double>::infinity());
+
+    gScore[startIdx] = 0.0;
+
+    openSet.push({startIdx, 0.0});
+
+    while (!openSet.empty()) {
+
+        NodeGrid current = openSet.top();
+        openSet.pop();
+
+        int curIdx = current.idx;
+        const algorithms::path::common::GridCell& curCell = grid.cells[curIdx];
+
+        if (closedSet[curIdx])
+            continue;
+
+        metrics.expandedNodes++;
+
+        if (curIdx == goalIdx) {
+
+            logger.debug("[Dijkstra Grid] Goal reached");
+
+            std::vector<algorithms::path::common::GridCell> path;
+
+            for (int at = curIdx;
+                 at != -1;
+                 at = cameFrom[at])
+            {
+                  path.push_back(grid.cells[at]);
+            }
+
+            std::reverse(path.begin(), path.end());
+
+            metrics.pathFound = true;
+            return path;
+        }
+
+        closedSet[curIdx] = true;
+
+        auto neighbours = getNeighbours(grid, curCell);
+
+        for (const algorithms::path::common::GridCell& neighbor : neighbours)
+        {
+            if (!neighbor.traversable)
+                continue;
+        
+            int nIdx = index(neighbor.row, neighbor.col);
+
+            if (closedSet[nIdx])
+                continue;
+
+            double stepCost =
+                (neighbor.row != curCell.row && neighbor.col != curCell.col)
+                    ? std::sqrt(2.0)
+                    : 1.0;
+
+            double tentativeG = gScore[curIdx] + stepCost;
+
+            if (tentativeG < gScore[nIdx]) {
+
+                cameFrom[nIdx] = curIdx;
+                gScore[nIdx] = tentativeG;
+
+                openSet.push({
+                    nIdx,
+                    tentativeG
+                });
+            }
+        }
+
+    }
+
+    logger.warning("[Dijkstra Grid] Path not found");
     return {};
 }
 

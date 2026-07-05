@@ -69,8 +69,9 @@ chmod +x run.sh
 .
 ├── CMakeLists.txt            # Главный файл сборки CMake
 ├── LICENSE                   # Лицензия проекта
+├── notebooks                 # Исследования
 ├── README.md                 # Витрина проекта
-├── docs
+├── docs                      # Документы
 │   ├── UserGuide.md          # Гайд пользователю (этот файл)
 │   ├── WIP.md                # План и незакомиченные изменения
 │   └──DeveloperGuide.md      # Гайд разработчику
@@ -118,6 +119,9 @@ chmod +x run.sh
 | PlotGraph            | filename.png                                                                                       | Визуализирует граф                                                       |
 | PlotVoronoi          | filename.png                                                                                       | Строит диаграмму Вороного по текущей триангуляции                        |
 | PlotDelaunay         | filename.png                                                                                       | Визуализирует триангуляцию Делоне                                        |
+| PlotGrid             | filename.png                                                                                       | Визуализирует сетку                                                      |
+| PlotNavGrid          | filename.png                                                                                       | Визуализирует навигационную сетку                                        |
+| PlotGridPath         | filename.png                                                                                       | Визуализирует путь на сетке                                              |
 | PlotPath             | filename.png                                                                                       | Отображает найденный путь между точками A и B                            |
 | bmp_write            | filename.bmp [Full/Binary]                                                                         | Сохраняет поле в BMP: Full - полное, Binary - бинаризованное             |
 | bmp_read             | filename.bmp                                                                                       | Загружает поле из BMP файла                                              |
@@ -128,10 +132,16 @@ chmod +x run.sh
 | triangulate          | -                                                                                                  | Строит триангуляцию Делоне по центрам компонент                          |
 | voronoi              | -                                                                                                  | Строит диаграмму Вороного                                                |
 | build_nav_graph      | vehicleRadius maxSideAngle maxUpDownAngle                                                          | Строит граф проходимости по диаграмме Вороного, учитывая наклон и радиус |
+| grid                 | widht                                                                                              | Строит квадратную сетку на поле (ячейка размера widht x widht)           |
+| build_nav_grid       | noisy                                                                                              | Удаляет ячейки с числом опасных пикселей >= noisy                        |
+| connect_to_grid      | Ax Ay Bx By                                                                                        | Подключает стартовую и финишную ячейку к сетке                           |
 | connect_to_graph     | Ax Ay Bx By [Nearest/NearestK k/All]                                                               | Подключает старт и финиш к графу с разными режимами                      |
-| find_path_astar      | -                                                                                                  | A* ищет путь между точками A и B                                         |
-| find_path_dekstra    | -                                                                                                  | Dekstra ищет путь между точками A и B                                    |
-| find_path_greedy     | -                                                                                                  | Greedy ищет путь между точками A и B                                     |
+| astar_graph          | -                                                                                                  | A* ищет путь между точками A и B на графе                                |
+| dekstra_graph        | -                                                                                                  | Dekstra ищет путь между точками A и B на графе                           |
+| greedy_graph         | -                                                                                                  | Greedy ищет путь между точками A и B на графе                            |
+| astar_grid           | -                                                                                                  | A* ищет путь между точками A и B на сетке                                |
+| dekstra_grid         | -                                                                                                  | Dekstra ищет путь между точками A и B на сетке                           |
+| greedy_grid          | -                                                                                                  | Greedy ищет путь между точками A и B на сетке                            |
 | save_metrics         | filename.csv                                                                                       | Сохраняет метрики в файле csv                                            |
 | Plot3DPath           | filename.png                                                                                       | Сохраняет 3D-визуализацию пути в PNG файл                                |
 | plotInteractive3DPath| -                                                                                                  | Интерактвный 3D режим с путем                                            |
@@ -183,15 +193,20 @@ init -> g несколько раз или один раз g_auto или bmp_rea
 | defaultPlotGraph             | `filename_graph.png`                           | Путь к файлу для графа по умолчанию                                              |
 | defaultPlotVoronoi           | `filename_voronoi.png`                         | Путь к файлу для диаграммы Вороного по умолчанию                                 |
 | defaultPlotDelaunay          | `filename_delaunay.png`                        | Путь к файлу для триангуляции Делоне по умолчанию                                |
+| defaultPlotGrid              | `filename_grid.png`                            | Путь к файлу для сетки по умолчанию                                              |
+| defaultPlotNavGrid           | `filename_nav_grid.png`                        | Путь к файлу для навигационной сетки по умолчанию                                |
+| defaultPlotGridPath          | `filename_grid_path.png`                       | Путь к файлу для пути на сетке по умолчанию                                      |
 | defaultPlotPath              | `filename_path.png`                            | Путь к файлу для визуализации маршрута по умолчанию                              |
 | defaultWrite                 | `filename_write.bmp`                           | Путь к файлу для сохранения BMP-изображения по умолчанию                         |
 | defaultWriteModeImage        | `writeMode`                                    | Режим сохранения BMP (Full/Binary) по умолчанию                                  |
 | defaultRead                  | `filename_read.bmp`                            | Путь к файлу для загрузки BMP-изображения по умолчанию                           |
 | defaultThreshold             | `defaultThreshold`                             | Порог бинаризации по умолчанию                                                   |
 | defaultBinMode               | `binMode`                                      | Режим бинаризации (Peaks/Valleys/All) по умолчанию                               |
-| defaultNoisy                 | `defaultNoisy`                                 | Порог для удаления шумовых компонент по умолчанию                                |
+| defaultWaveNoisy             | `defaultWaveNoisy`                             | Порог для удаления шумовых компонент по умолчанию                                |
 | defaultKlaster               | `defaultKlaster`                               | Количество кластеров для k-mean по умолчанию                                     |
 | defaultKlasterKern           | `defaultKlasterKern`                           | Размер ядра для кластеризации по умолчанию                                       |
+| defaultgridWidht             | `defaultgridWidht`                             | Размер ячейки для сетки по умолчанию                                             |
+| defaultgridNoisy             | `defaultgridNoisy`                             | Шум для опасных пикселей в ячейки по умолчанию                                   |
 | defaultpointA_x              | `pointA_x`                                     | X-координата точки A для поиска пути по умолчанию                                |
 | defaultpointA_y              | `pointA_y`                                     | Y-координата точки A для поиска пути по умолчанию                                |
 | defaultpointB_x              | `pointB_x`                                     | X-координата точки B для поиска пути по умолчанию                                |
@@ -245,7 +260,7 @@ PlotVoronoi results/visualizations/Diagramma_Voronova.png
 build_nav_graph
 PlotGraph results/visualizations/Graph.png
 connect_to_graph
-find_path_astar
+astar_graph
 save_metrics
 PlotPath results/visualizations/Path.png
 end
@@ -275,7 +290,7 @@ PlotVoronoi results/visualizations/Diagramma_Voronova.png
 build_nav_graph
 PlotGraph results/visualizations/Graph.png
 connect_to_graph 60 130 150 135
-find_path_astar
+astar_graph
 save_metrics
 PlotPath results/visualizations/Path.png
 Plot3DPath results/visualizations/Plot3DPath.png
@@ -345,7 +360,7 @@ PlotVoronoi results/visualizations/Diagramma_Voronova.png
 build_nav_graph
 PlotGraph results/visualizations/Graph.png
 connect_to_graph 20 27 100 298
-find_path_astar
+astar_graph
 save_metrics
 PlotPath results/visualizations/Path.png
 Plot3DPath results/visualizations/Plot3DPath.png
@@ -390,6 +405,9 @@ defaultPlotKmeans results/visualizations/kmeans.png
 defaultPlotGraph results/visualizations/Graph.png
 defaultPlotVoronoi results/visualizations/Voronoi.png
 defaultPlotDelaunay results/visualizations/Delaunay.png
+defaultPlotGrid results/visualizations/Grid.png
+defaultPlotNavGrid results/visualizations/NavGrid.png
+defaultPlotGridPath results/visualizations/GridPath.png
 defaultPlotPath results/visualizations/Path.png
 defaultPlot3DPath results/visualizations/Plot3DPath.png
 
@@ -404,11 +422,15 @@ defaultThreshold 130
 defaultBinMode All
 
 
-defaultNoisy 10
+defaultWaveNoisy 10
 
 
 defaultKlaster 5
 defaultKlasterKern 5
+
+
+defaultgridWidht 1
+defaultgridNoisy 0
 
 
 defaultstartPointX 150

@@ -35,11 +35,15 @@ struct DispatcherParams {
     algorithms::components::ThresholdMode thresholdMode;      // Режим бинаризации (Peaks/Valleys/All)
     
     // ----- wave -----
-    int noiseLevel;                                           // Максимальный размер шумовых компонент (в пикселях)
+    int waveNoisy;                                            // Максимальный размер шумовых компонент (в пикселях)
     
     // ----- kmeans -----
     int clusterCount;                                         // Количество кластеров для k-means
     int kernelSize;                                           // Размер ядра для кластеризации
+    
+    // ----- grid -----
+    int gridWidth;  
+    int gridNoisy;                                            // Размер ячейки gridWidht x gridWidht
     
     // ----- Путь -----
     int startPointX, startPointY;                             // Координаты начальной точки маршрута (Ax, Ay)

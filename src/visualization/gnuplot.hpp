@@ -11,6 +11,7 @@
 #include "algorithms/components/components_analysis.hpp" // Для Component
 #include "algorithms/geometry/geometry_structures.hpp"   // Для PointD, Edge
 #include "algorithms/geometry/bresenham_line.hpp"        // Для bresenhamLine
+#include "algorithms/path/common/grid.hpp"               // Для сетки
 
 namespace visualization {
 
@@ -44,6 +45,26 @@ public:
                    const std::string& filename,
                    std::optional<algorithms::geometry::Pixel> start = std::nullopt,
                    std::optional<algorithms::geometry::Pixel> goal = std::nullopt);
+    
+    void plotGrid(
+    const algorithms::path::common::Grid& grid,
+    const std::vector<std::vector<double>>& binaryMap,
+    const std::string& filename);
+    
+    void plotNavGrid(
+    const algorithms::path::common::Grid& grid,
+    const std::vector<std::vector<double>>& binaryMap,
+    const std::string& filename,
+    const std::optional<algorithms::path::common::GridCell> start = std::nullopt,
+    const std::optional<algorithms::path::common::GridCell> end = std::nullopt);
+    
+    void plotGridPath(
+    const algorithms::path::common::Grid& grid,
+    std::vector<algorithms::path::common::GridCell> gridPath,
+    const algorithms::path::common::GridCell& start,
+    const algorithms::path::common::GridCell& end,
+    const std::vector<std::vector<double>>& binaryMap,
+    const std::string& filename);
                      
     void plotDelaunay(const std::vector<algorithms::geometry::Triangle>& triangles, 
                      const std::vector<std::vector<double>>& binaryMap, 

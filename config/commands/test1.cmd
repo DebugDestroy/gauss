@@ -134,19 +134,36 @@ PlotGraph results/visualizations/Graph.png
 connect_to_graph 5 5 260 295
 PlotGraph results/visualizations/ConnectedGraph.png
 
-find_path_astar
+astar_graph
 save_metrics
-PlotPath results/visualizations/AstarPath.png
-Plot3DPath results/visualizations/AstarPlot3DPath.png
-plotInteractive3DPath
-find_path_dekstra
+PlotPath results/visualizations/AstarPathGraph.png
+Plot3DPath results/visualizations/AstarPlot3DPathGraph.png
+dekstra_graph
 save_metrics
-PlotPath results/visualizations/DekstraPath.png
-Plot3DPath results/visualizations/DekstraPlot3DPath.png
-plotInteractive3DPath
-find_path_greedy
+PlotPath results/visualizations/DekstraPathGraph.png
+Plot3DPath results/visualizations/DekstraPlot3DPathGraph.png
+greedy_graph
 save_metrics
-PlotPath results/visualizations/GreedyPath.png
-Plot3DPath results/visualizations/GreedyPlot3DPath.png
-plotInteractive3DPath
+PlotPath results/visualizations/GreedyPathGraph.png
+Plot3DPath results/visualizations/GreedyPlot3DPathGraph.png
+
+grid 5
+PlotGrid results/visualizations/Grid.png
+build_nav_grid 5
+PlotNavGrid results/visualizations/NavigationGrid.png
+connect_to_grid 5 5 260 295
+PlotNavGrid results/visualizations/ConnectedGrid.png
+
+astar_grid
+save_metrics
+PlotGridPath results/visualizations/AstarPathGrid.png
+PlotPath results/visualizations/AstarPathGrid2D.png
+dekstra_grid
+save_metrics
+PlotGridPath results/visualizations/DekstraPathGrid.png
+PlotPath results/visualizations/DekstraPathGrid2D.png
+greedy_grid
+save_metrics
+PlotGridPath results/visualizations/GreedyPathGrid.png
+PlotPath results/visualizations/GreedyPathGrid2D.png
 end

@@ -41,8 +41,10 @@ public:
     std::uint32_t defaultSeedGAuto = 0;
     
     // OUTPUT FILES
-    std::string defaultGnuplot, defaultPlotMetedata, defaultPlotKmeans, defaultPlotGraph, defaultPlotVoronoi, defaultPlotDelaunay, defaultPlotPath, defaultPlot3DPath,
-    defaultWrite, defaultRead, defaultWriteModeImage,
+    std::string defaultGnuplot, defaultPlotMetedata, defaultPlotKmeans, defaultPlotGraph, defaultPlotVoronoi, defaultPlotDelaunay, defaultPlotGrid, defaultPlotNavGrid, defaultPlotGridPath, 
+    defaultPlotPath, defaultPlot3DPath;
+    
+    std::string defaultWrite, defaultRead, defaultWriteModeImage,
     save_g,
     defaultsave_metrics;
     
@@ -51,10 +53,14 @@ public:
     int defaultThreshold = 0;
     
     // WAVE
-    int defaultNoisy = 0;
+    int defaultWaveNoisy = 0;
     
     // KMEANS
     int defaultKlaster = 0, defaultKlasterKern = 0;
+    
+    // GRID
+    int defaultgridWidth = 0;
+    int defaultgridNoisy = 0;
     
     // PATHS
     int defaultstartPointX = 0, defaultstartPointY = 0, defaultendPointX = 0, defaultendPointY = 0;

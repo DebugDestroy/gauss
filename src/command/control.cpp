@@ -36,6 +36,7 @@ namespace command {
       // algorithms::path::common
       conditions(log),
       graph(log),
+      grid(log),
       
       // algorithms::path::a_star
       astarFinder(log),
@@ -63,12 +64,24 @@ namespace command {
     {
         return std::string("from (") + std::to_string(start.x) + "," + std::to_string(start.y) + ")" +
                " to (" + std::to_string(end.x) + "," + std::to_string(end.y) + ")" +
+
+               " | env=" + m.environment +
+               " | algo=" + m.algorithmName +
+    
                " | path_found=" + (m.pathFound ? "true" : "false") +
                " | time=" + std::to_string(m.executionTimeMs) + " ms" +
-               " | path_nodes=" + std::to_string(m.pathNodes) +
-               " | expanded_nodes=" + std::to_string(m.expandedNodes) +
-               " | euclidean_len=" + std::to_string(m.euclideanLength) +
-               " | pixel_len=" + std::to_string(m.pixelLength);
+    
+               " | nodes=" + std::to_string(m.pathNodes) +
+               " | expanded=" + std::to_string(m.expandedNodes) +
+    
+               " | euclid_len=" + std::to_string(m.euclideanLength) +
+               " | pixel_len=" + std::to_string(m.pixelLength) +
+
+               " | min_obs_euc=" + std::to_string(m.minObstacleDistance) +
+               " | min_obs_px=" + std::to_string(m.minObstacleDistancePixel) +
+
+               " | max_side_angle=" + std::to_string(m.maxSideAngle) +
+               " | max_updown_angle=" + std::to_string(m.maxUpDownAngle);
     }
     
     void Control::Dispetcher(command::DispatcherParams& params) {
@@ -151,6 +164,21 @@ namespace command {
             logOperation(core::LogLevel::Info, std::string("PlotDelaunay"), std::string("file: ") + params.filename);
         }
         
+        if (params.command == "PlotGrid") {
+            gnuplotInterface.plotGrid(state.grid, state.binaryMap, params.filename);
+            logOperation(core::LogLevel::Info, std::string("PlotGrid"), std::string("file: ") + params.filename);
+        }
+        
+        if (params.command == "PlotNavGrid") {
+            gnuplotInterface.plotNavGrid(state.grid, state.binaryMap, params.filename, state.startCell, state.endCell);
+            logOperation(core::LogLevel::Info, std::string("PlotNavGrid"), std::string("file: ") + params.filename);
+        }
+        
+        if (params.command == "PlotGridPath") {
+            gnuplotInterface.plotGridPath(state.grid, state.gridPath, *state.startCell, *state.endCell, state.binaryMap, params.filename);
+            logOperation(core::LogLevel::Info, std::string("PlotGridPath"), std::string("file: ") + params.filename);
+        }
+        
         if (params.command == "PlotPath") {
             gnuplotInterface.plotPath(state.path, state.field, state.binaryMap, params.filename, params, params.vehicleRadius);
             logOperation(core::LogLevel::Info, std::string("PlotPath"), std::string("file: ") + params.filename);
@@ -181,9 +209,9 @@ namespace command {
         }
         
         if (params.command == "wave") {
-            componentCalculator.wave(params.noiseLevel, state.components, state.binaryMap, state.field);
+            componentCalculator.wave(params.waveNoisy, state.components, state.binaryMap, state.field);
             logOperation(core::LogLevel::Info, std::string("wave"), 
-                std::string("noiseLevel=") + std::to_string(params.noiseLevel) + 
+                std::string("waveNoisy=") + std::to_string(params.waveNoisy) + 
                 ", components=" + std::to_string(state.components.size()));
         }
          
@@ -250,6 +278,7 @@ namespace command {
             voronoi.buildFromDelaunay(state.lastTriangulation, state.field, state.voronoiEdges);
             logOperation(core::LogLevel::Info, std::string("voronoi"));
         }
+        
         if (params.command == "build_nav_graph") {
             state.navigationGraph = 
                 graph.buildGraphFromEdges(
@@ -262,6 +291,31 @@ namespace command {
                     params.maxUpDownAngle);                                                                    
             logOperation(core::LogLevel::Info, std::string("build_nav_graph"));
         }
+        
+        if (params.command == "grid") {
+            grid.buildGrid(state.grid, params.fieldWidth, params.fieldHeight, params.gridWidth);
+            logOperation(core::LogLevel::Info, std::string("grid"));
+        }
+        
+        if (params.command == "build_nav_grid") {
+                grid.buildNavGrid(
+                    state.grid,
+                    state.binaryMap,
+                    conditions,
+                    params.gridNoisy);                                                                    
+            logOperation(core::LogLevel::Info, std::string("build_nav_grid"));
+        }
+        
+        if (params.command == "connect_to_grid") {
+            state.start = algorithms::geometry::Pixel(params.startPointX, params.startPointY);
+            state.end = algorithms::geometry::Pixel(params.endPointX, params.endPointY);
+                
+                 state.startCell = grid.connectPointToGrid(state.grid, *state.start);
+                 state.endCell = grid.connectPointToGrid(state.grid, *state.end);
+
+           logOperation(core::LogLevel::Info, "connect_to_grid");
+        }
+        
         if (params.command == "connect_to_graph") {
             state.start = algorithms::geometry::Pixel(params.startPointX, params.startPointY);
             state.end = algorithms::geometry::Pixel(params.endPointX, params.endPointY);
@@ -292,91 +346,201 @@ namespace command {
 
            logOperation(core::LogLevel::Info, "connect_to_graph");
         }
-        if (params.command == "find_path_astar") {
+        
+        if (params.command == "astar_graph") {
             if (state.field.empty()) {
                 logger.logMessage(core::LogLevel::Error, "Pole not initialized for A*");
                 return;
             }
             
-            state.graphPathMetrics.environment = "graph";
-            statisticsManager.reset(state.graphPathMetrics);
-            state.graphPathMetrics.algorithmName = "A*";
+            state.PathMetrics.environment = "graph";
+            statisticsManager.reset(state.PathMetrics);
+            state.PathMetrics.algorithmName = "A*";
             statisticsManager.startTimer();       
             
-            state.path = astarFinder.findPathAStar(*state.start, *state.end, state.navigationGraph, state.graphPathMetrics);
+            state.path = astarFinder.findPathAStarGraph(*state.start, *state.end, state.navigationGraph, state.PathMetrics);
             
-            statisticsManager.finishTimer(state.graphPathMetrics);
-            statisticsManager.computePathMetrics(state.graphPathMetrics, state.path);
+            statisticsManager.finishTimer(state.PathMetrics);
             
-            if (!state.graphPathMetrics.pathFound) {
-                logger.logMessage(core::LogLevel::Warning,
-                                  "[A*] Path not found");
-
-            } else {
+            if (state.PathMetrics.pathFound) {
+                statisticsManager.computePathLength(state.PathMetrics, state.path);
+                statisticsManager.computeMaxTerrainAngles(state.PathMetrics, state.path, state.field, params.vehicleRadius);
+                statisticsManager.computeMinObstacleDistance(state.PathMetrics, state.path, state.binaryMap, conditions);
+            
                 logOperation(
                     core::LogLevel::Info,
-                    "find_path_astar",
-                    Control::formatPathMetricsLog(state.graphPathMetrics, *state.start, *state.end)
+                    "astar_graph",
+                    Control::formatPathMetricsLog(state.PathMetrics, *state.start, *state.end)
                 );
+            } else {
+                logger.logMessage(core::LogLevel::Warning,
+                                  "[astar_graph] Path not found");
            }
         }
 
-        if (params.command == "find_path_dekstra") {
+        if (params.command == "dekstra_graph") {
             if (state.field.empty()) {
                 logger.logMessage(core::LogLevel::Error, "Pole not initialized for dekstra");
                 return;
             }
             
-            state.graphPathMetrics.environment = "graph";            
-            statisticsManager.reset(state.graphPathMetrics);
-            state.graphPathMetrics.algorithmName = "Dijekstra";
+            state.PathMetrics.environment = "graph";            
+            statisticsManager.reset(state.PathMetrics);
+            state.PathMetrics.algorithmName = "Dijkstra";
             statisticsManager.startTimer();       
             
-            state.path = dekstraFinder.findPathDijkstra(*state.start, *state.end, state.navigationGraph, state.graphPathMetrics);
+            state.path = dekstraFinder.findPathDijkstraGraph(*state.start, *state.end, state.navigationGraph, state.PathMetrics);
              
-            statisticsManager.finishTimer(state.graphPathMetrics);
-            statisticsManager.computePathMetrics(state.graphPathMetrics, state.path);
+            statisticsManager.finishTimer(state.PathMetrics);
             
-            if (!state.graphPathMetrics.pathFound) {
-                logger.logMessage(core::LogLevel::Warning, "Path dekstra not found");
-            } else {
+            if (state.PathMetrics.pathFound) {
+                statisticsManager.computePathLength(state.PathMetrics, state.path);
+                statisticsManager.computeMaxTerrainAngles(state.PathMetrics, state.path, state.field, params.vehicleRadius);
+                statisticsManager.computeMinObstacleDistance(state.PathMetrics, state.path, state.binaryMap, conditions);
+            
                 logOperation(
                     core::LogLevel::Info,
-                    "find_path_dekstra",
-                    Control::formatPathMetricsLog(state.graphPathMetrics, *state.start, *state.end)
+                    "dekstra_graph",
+                    Control::formatPathMetricsLog(state.PathMetrics, *state.start, *state.end)
                 );
-            }
+            } else {
+                logger.logMessage(core::LogLevel::Warning,
+                                  "[dekstra_graph] Path not found");
+           }
         }
 
-        if (params.command == "find_path_greedy") {
+        if (params.command == "greedy_graph") {
             if (state.field.empty()) {
                 logger.logMessage(core::LogLevel::Error, "Pole not initialized for greedy");
                 return;
             }
             
-            state.graphPathMetrics.environment = "graph";
-            statisticsManager.reset(state.graphPathMetrics);
-            state.graphPathMetrics.algorithmName = "Greedy";
+            state.PathMetrics.environment = "graph";
+            statisticsManager.reset(state.PathMetrics);
+            state.PathMetrics.algorithmName = "Greedy";
             statisticsManager.startTimer();       
             
-            state.path = greedyFinder.findPathGreedy(*state.start, *state.end, state.navigationGraph, state.graphPathMetrics);
+            state.path = greedyFinder.findPathGreedyGraph(*state.start, *state.end, state.navigationGraph, state.PathMetrics);
                          
-            statisticsManager.finishTimer(state.graphPathMetrics);
-            statisticsManager.computePathMetrics(state.graphPathMetrics, state.path);
+            statisticsManager.finishTimer(state.PathMetrics);
             
-            if (!state.graphPathMetrics.pathFound) {
-                logger.logMessage(core::LogLevel::Warning, "Path greedy not found");
-            } else {
+            if (state.PathMetrics.pathFound) {
+                statisticsManager.computePathLength(state.PathMetrics, state.path);
+                statisticsManager.computeMaxTerrainAngles(state.PathMetrics, state.path, state.field, params.vehicleRadius);
+                statisticsManager.computeMinObstacleDistance(state.PathMetrics, state.path, state.binaryMap, conditions);
+            
                 logOperation(
                     core::LogLevel::Info,
-                    "find_path_greedy",
-                    Control::formatPathMetricsLog(state.graphPathMetrics, *state.start, *state.end)
+                    "greedy_graph",
+                    Control::formatPathMetricsLog(state.PathMetrics, *state.start, *state.end)
                 );
+            } else {
+                logger.logMessage(core::LogLevel::Warning,
+                                  "[greedy_graph] Path not found");
+           }
+        }
+        
+        if (params.command == "astar_grid") {
+            if (state.field.empty()) {
+                logger.logMessage(core::LogLevel::Error, "Pole not initialized for A*");
+                return;
             }
+            
+            state.PathMetrics.environment = "grid";
+            statisticsManager.reset(state.PathMetrics);
+            state.PathMetrics.algorithmName = "A*";
+            statisticsManager.startTimer();       
+            
+            state.gridPath = astarFinder.findPathAStarGrid(*state.startCell, *state.endCell, state.grid, state.PathMetrics);
+            
+            statisticsManager.finishTimer(state.PathMetrics);
+            
+            state.path = algorithms::geometry::toPixelPath(state.gridPath, params.gridWidth);
+             
+            if (state.PathMetrics.pathFound) {
+                statisticsManager.computePathLength(state.PathMetrics, state.path);
+                statisticsManager.computeMaxTerrainAngles(state.PathMetrics, state.path, state.field, params.vehicleRadius);
+                statisticsManager.computeMinObstacleDistance(state.PathMetrics, state.path, state.binaryMap, conditions);
+            
+                logOperation(
+                    core::LogLevel::Info,
+                    "astar_grid",
+                    Control::formatPathMetricsLog(state.PathMetrics, *state.start, *state.end)
+                );
+            } else {
+                logger.logMessage(core::LogLevel::Warning,
+                                  "[astar_grid] Path not found");
+           }
+        }
+
+        if (params.command == "dekstra_grid") {
+            if (state.field.empty()) {
+                logger.logMessage(core::LogLevel::Error, "Pole not initialized for dekstra");
+                return;
+            }
+            
+            state.PathMetrics.environment = "grid";            
+            statisticsManager.reset(state.PathMetrics);
+            state.PathMetrics.algorithmName = "Dijkstra";
+            statisticsManager.startTimer();       
+            
+            state.gridPath = dekstraFinder.findPathDijkstraGrid(*state.startCell, *state.endCell, state.grid, state.PathMetrics);
+            
+            statisticsManager.finishTimer(state.PathMetrics);
+            
+            state.path = algorithms::geometry::toPixelPath(state.gridPath, params.gridWidth);
+             
+            if (state.PathMetrics.pathFound) {
+                statisticsManager.computePathLength(state.PathMetrics, state.path);
+                statisticsManager.computeMaxTerrainAngles(state.PathMetrics, state.path, state.field, params.vehicleRadius);
+                statisticsManager.computeMinObstacleDistance(state.PathMetrics, state.path, state.binaryMap, conditions);
+            
+                logOperation(
+                    core::LogLevel::Info,
+                    "dekstra_grid",
+                    Control::formatPathMetricsLog(state.PathMetrics, *state.start, *state.end)
+                );
+            } else {
+                logger.logMessage(core::LogLevel::Warning,
+                                  "[dekstra_grid] Path not found");
+           }
+        }
+
+        if (params.command == "greedy_grid") {
+            if (state.field.empty()) {
+                logger.logMessage(core::LogLevel::Error, "Pole not initialized for greedy");
+                return;
+            }
+            
+            state.PathMetrics.environment = "grid";
+            statisticsManager.reset(state.PathMetrics);
+            state.PathMetrics.algorithmName = "Greedy";
+            statisticsManager.startTimer();       
+            
+            state.gridPath = greedyFinder.findPathGreedyGrid(*state.startCell, *state.endCell, state.grid, state.PathMetrics);
+            
+            statisticsManager.finishTimer(state.PathMetrics);
+            
+            state.path = algorithms::geometry::toPixelPath(state.gridPath, params.gridWidth);
+             
+            if (state.PathMetrics.pathFound) {
+                statisticsManager.computePathLength(state.PathMetrics, state.path);
+                statisticsManager.computeMaxTerrainAngles(state.PathMetrics, state.path, state.field, params.vehicleRadius);
+                statisticsManager.computeMinObstacleDistance(state.PathMetrics, state.path, state.binaryMap, conditions);
+            
+                logOperation(
+                    core::LogLevel::Info,
+                    "greedy_grid",
+                    Control::formatPathMetricsLog(state.PathMetrics, *state.start, *state.end)
+                );
+            } else {
+                logger.logMessage(core::LogLevel::Warning,
+                                  "[greedy_grid] Path not found");
+           }
         }
         
         if (params.command == "save_metrics") {
-            csvWriter.writeMetrics(state.graphPathMetrics, params.filename);
+            csvWriter.writeMetrics(state.PathMetrics, params.filename);
             logOperation(core::LogLevel::Info, std::string("save_metrics"), std::string("file: ") + params.filename);
         }
         

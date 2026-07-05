@@ -37,10 +37,12 @@
 // algorithms::geometry
 #include "algorithms/geometry/triangulator.hpp"
 #include "algorithms/geometry/voronoi_diagram.hpp"
+#include "algorithms/geometry/math.hpp"
 
 // algorithms::path::common
 #include "algorithms/path/common/conditions.hpp"
 #include "algorithms/path/common/graph.hpp"
+#include "algorithms/path/common/grid.hpp"
 #include "algorithms/path/common/path_metrics.hpp"
 
 // algorithms::path::a_star
@@ -98,6 +100,7 @@ public:
     // algorithms::path::common
     algorithms::path::common::Conditions conditions;
     algorithms::path::common::Graph graph;
+    algorithms::path::common::GridBuilder grid;
     
     // algorithms::path::a_star
     algorithms::path::a_star::PathFinder astarFinder;

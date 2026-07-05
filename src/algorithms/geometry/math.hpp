@@ -1,9 +1,14 @@
 #pragma once
 #include "algorithms/geometry/geometry_structures.hpp"
+#include "algorithms/path/common/grid.hpp"
 #include <vector>
 
 namespace algorithms::geometry {
 Pixel toPixel(const PointD& p); // Из точки в пиксель
+
+Pixel toPixel(const algorithms::path::common::GridCell& c, int cellSize); // Из ячейки в пиксель
+
+std::vector<algorithms::geometry::Pixel> toPixelPath(const std::vector<algorithms::path::common::GridCell>& gridPath, int cellSize);
 
 PointD toPointD(const Pixel& p); // Из пикселя в точку
 

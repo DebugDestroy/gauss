@@ -6,6 +6,7 @@
 
 #include "algorithms/geometry/geometry_structures.hpp" // для PointD, Triangle, Edge...
 #include "algorithms/path/common/conditions.hpp"              // Conditions
+#include "core/logger.hpp"
 
 namespace algorithms::path::common {
 

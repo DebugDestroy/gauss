@@ -1,7 +1,7 @@
 #!/bin/bash
 
 N=1000
-filename="project1.cmd"
+filename="grid.cmd"
 
 for ((i=1; i<=N; i++))
 do
