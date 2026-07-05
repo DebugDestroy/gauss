@@ -14,7 +14,7 @@ PathFinder::PathFinder(core::Logger& lg) : logger(lg) {
     logger.trace("[PathFinder] Инициализация поисковика пути A*");
 }
 
-std::vector<algorithms::geometry::Pixel> PathFinder::findPathAStar(
+std::vector<algorithms::geometry::Pixel> PathFinder::findPathAStarGraph(
     const algorithms::geometry::Pixel& start,
     const algorithms::geometry::Pixel& goal,
     const  std::unordered_map<algorithms::geometry::Pixel, std::vector<algorithms::geometry::Pixel>>& graph,
@@ -44,7 +44,7 @@ if (!graph.contains(goal)) {
 }
 
     //ОБЪВЛЕНИЕ ПЕРЕМЕННЫХ
-    std::priority_queue<AStarNode, std::vector<AStarNode>, std::greater<AStarNode>> openSet;
+    std::priority_queue<NodeGraph, std::vector<NodeGraph>, std::greater<NodeGraph>> openSet;
     std::unordered_set<algorithms::geometry::Pixel> closedSet;
     std::unordered_map<algorithms::geometry::Pixel, algorithms::geometry::Pixel> cameFrom;
     std::unordered_map<algorithms::geometry::Pixel, double> gScore;
@@ -55,7 +55,7 @@ if (!graph.contains(goal)) {
     openSet.push({start, 0.0, fScore[start]});
 
     while (!openSet.empty()) {
-        AStarNode current = openSet.top();
+        NodeGraph current = openSet.top();
         openSet.pop();
         
         logger.debug("[ASTAR] Current: (" +
@@ -98,6 +98,125 @@ if (!graph.contains(goal)) {
 
     logger.warning("[PathFinder::findPathAStar] Путь не найден!");
 
+    return {};
+}
+
+std::vector<algorithms::path::common::GridCell>
+PathFinder::findPathAStarGrid(
+        const algorithms::path::common::GridCell& startCell,
+        const algorithms::path::common::GridCell& endCell,
+        const algorithms::path::common::Grid& grid,
+        algorithms::path::PathMetrics& metrics)
+{
+    logger.debug("[PathFinder::findPathAStarGrid] Start A* on grid");
+
+    if (grid.cells.empty()) {
+        logger.warning("[A* Grid] Grid is empty");
+        return {};
+    }
+    
+    auto index = [&](int row, int col) {
+        return row * grid.cols + col;
+    };
+    
+    int startIdx = index(startCell.row, startCell.col);
+    int goalIdx  = index(endCell.row, endCell.col);
+    
+    if (!grid.cells[startIdx].traversable ||
+    !grid.cells[goalIdx].traversable)
+    {
+        logger.warning("[A* Grid] Start or goal cell is blocked");
+        return {};
+    }
+
+    std::priority_queue<
+        NodeGrid,
+        std::vector<NodeGrid>,
+        std::greater<NodeGrid>
+    > openSet;
+    
+    const int nodeCount = grid.cells.size();
+    std::vector<bool> closedSet(nodeCount, false);
+    std::vector<int> cameFrom(nodeCount, -1);
+    std::vector<double> gScore(nodeCount, std::numeric_limits<double>::infinity());
+    std::vector<double> fScore(nodeCount, std::numeric_limits<double>::infinity());
+
+    gScore[startIdx] = 0.0;
+    fScore[startIdx] = algorithms::path::common::euclidean(startCell, endCell);
+
+    openSet.push({startIdx, 0.0, fScore[startIdx]});
+
+    while (!openSet.empty()) {
+
+        NodeGrid current = openSet.top();
+        openSet.pop();
+
+        int curIdx = current.idx;
+        const algorithms::path::common::GridCell& curCell = grid.cells[curIdx];
+
+        if (closedSet[curIdx])
+            continue;
+
+        metrics.expandedNodes++;
+
+        if (curIdx == goalIdx) {
+
+            logger.debug("[A* Grid] Goal reached");
+
+            std::vector<algorithms::path::common::GridCell> path;
+
+            for (int at = curIdx;
+                 at != -1;
+                 at = cameFrom[at])
+            {
+                  path.push_back(grid.cells[at]);
+            }
+
+            std::reverse(path.begin(), path.end());
+
+            metrics.pathFound = true;
+            return path;
+        }
+
+        closedSet[curIdx] = true;
+
+        auto neighbours = getNeighbours(grid, curCell);
+
+        for (const algorithms::path::common::GridCell& neighbor : neighbours)
+        {
+            if (!neighbor.traversable)
+                continue;
+        
+            int nIdx = index(neighbor.row, neighbor.col);
+
+            if (closedSet[nIdx])
+                continue;
+
+            double stepCost =
+                (neighbor.row != curCell.row && neighbor.col != curCell.col)
+                    ? std::sqrt(2.0)
+                    : 1.0;
+
+            double tentativeG = gScore[curIdx] + stepCost;
+
+            if (tentativeG < gScore[nIdx]) {
+
+                cameFrom[nIdx] = curIdx;
+                gScore[nIdx] = tentativeG;
+                fScore[nIdx] = tentativeG +
+                    algorithms::path::common::euclidean(neighbor, endCell);
+
+                openSet.push({
+                    nIdx,
+                    tentativeG,
+                    fScore[nIdx]
+                });
+            }
+        }
+
+    }
+
+    logger.warning("[A* Grid] Path not found");
     return {};
 }
 

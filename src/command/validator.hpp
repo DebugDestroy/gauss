@@ -59,7 +59,7 @@ public:
         const std::string& mode,
         core::Logger& logger);
         
-    static bool validateNoiseSize(
+    static bool validateWaveNoiseSize(
         int noisy,
         core::Logger& logger);
 
@@ -73,6 +73,16 @@ public:
         int kernelSize,
         core::Logger& logger);
         
+    static bool validateGrid(
+        int width,
+        int height,
+        int gridWidth,
+        core::Logger& logger);
+        
+    static bool validateGridNoiseSize(
+        int noisy,
+        core::Logger& logger);
+        
     static bool validateNavigationParameters(
         int vehicleRadius,
         double maxSideAngle,
@@ -82,6 +92,10 @@ public:
     static bool validateConnectParameters(
         const DispatcherParams& params,
         const std::string& mode,
+        core::Logger& logger);
+        
+    static bool validateConnectParameters(
+        const DispatcherParams& params,
         core::Logger& logger);
 };
 

@@ -48,7 +48,7 @@ void CsvWriter::writeHeader() {
         return;
     }
     
-    file << "environment,algorithm,executionTimeMs,pathNodes,expandedNodes,euclideanLength,pixelLength,pathFound\n";
+    file << "environment,algorithmName,executionTimeMs,pathNodes,expandedNodes,euclideanLength,pixelLength,pathFound,minObstacleDistance,minObstacleDistancePixel,maxSideAngle,maxUpDownAngle\n";
     headerWritten = true;
     
     logger.info("CsvWriter: header written");
@@ -71,8 +71,11 @@ void CsvWriter::writeMetrics(const algorithms::path::PathMetrics& metrics,
         << metrics.expandedNodes << ","
         << metrics.euclideanLength << ","
         << metrics.pixelLength << ","
-        << metrics.pathFound
-        << "\n";
+        << metrics.pathFound << ","
+        << metrics.minObstacleDistance << ","
+        << metrics.minObstacleDistancePixel << ","
+        << metrics.maxSideAngle << ","
+        << metrics.maxUpDownAngle << "\n";
 
     file.flush();
     logger.info("CsvWriter: metrics written successfully");

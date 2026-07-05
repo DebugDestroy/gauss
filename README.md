@@ -22,8 +22,11 @@
 - Навигационный граф, построенный по диаграмме Вороного с ограничениями по углу наклона тележки и ее радиуса
 ![graph](results/visualizations/Graph.png)
 
-- Поиск пути
-![path](results/visualizations/AstarPlot3DPath.png)
+- Поиск пути на графе
+![pathGraph](results/visualizations/AstarPlot3DPathGraph.png)
+
+- Поиск пути на сетке
+![pathGrid](results/visualizations/AstarPathGrid.png)
 
 
 ## 📚 Документация
@@ -32,7 +35,9 @@
 - 🚧 [WIP / Research Notes](docs/WIP.md) — текущие задачи, исследовательские направления и последние изменения проекта
 
 ## 📊 Исследования
-- [Project 1 — Graph-based Path Planning](notebooks/project1.ipynb) — сравнение алгоритмов A*, Dijkstra и Greedy на навигационном графе, построеным на основе диаграммы Вороного
+- [Graph — Graph-based Path Planning](notebooks/graph.ipynb) — сравнение алгоритмов A*, Dijkstra и Greedy на навигационном графе, построеным на основе диаграммы Вороного
+- [Grid — Grid-based Path Planning](notebooks/grid.ipynb) — сравнение алгоритмов A*, Dijkstra и Greedy на сетке
+
 
 ## 📄 Лицензия
 Этот проект лицензирован под MIT License. Вы можете свободно использовать, изменять и распространять код, при условии, что вы укажете автора.

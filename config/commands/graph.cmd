@@ -1,6 +1,6 @@
 init 1000 1000
 
-g_auto 10 990 10 990 2 5 2 5 -30 30 1000 1001 Random
+g_auto 10 990 10 990 3 6 3 6 -20 20 900 901 Random
 
 generate
 
@@ -10,16 +10,16 @@ wave 10
 
 triangulate
 voronoi
-build_nav_graph 1 90.0 90.0
+build_nav_graph 1 30.0 30.0
 connect_to_graph 3 997 997 3 All
 
-find_path_astar
+astar_graph
 save_metrics var/metrics/graph.csv
 
-find_path_dekstra
+dekstra_graph
 save_metrics var/metrics/graph.csv
 
-find_path_greedy
+greedy_graph
 save_metrics var/metrics/graph.csv
 
 end

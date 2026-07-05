@@ -12,6 +12,26 @@ Pixel toPixel(const PointD& p)
     );
 }
 
+Pixel toPixel(const algorithms::path::common::GridCell& c, int cellSize)
+{
+    return toPixel(PointD{c.col * cellSize + cellSize * 0.5, c.row * cellSize + cellSize * 0.5});
+}
+
+std::vector<algorithms::geometry::Pixel>
+toPixelPath(const std::vector<algorithms::path::common::GridCell>& gridPath,
+            int cellSize)
+{
+    std::vector<algorithms::geometry::Pixel> result;
+    result.reserve(gridPath.size());
+
+    for (const auto& cell : gridPath)
+    {
+        result.push_back(toPixel(cell, cellSize));
+    }
+
+    return result;
+}
+
 PointD toPointD(const Pixel& p)
 {
     return PointD(p.x, p.y);

@@ -438,7 +438,277 @@ if (goal)
 
     logPlotEnd("NavigationGraph");
 }
-                   
+
+void GnuplotInterface::plotGrid(
+    const algorithms::path::common::Grid& grid,
+    const std::vector<std::vector<double>>& binaryMap,
+    const std::string& filename)
+{
+    logPlotStart("Grid", filename);
+
+    if (binaryMap.empty() || grid.cells.empty()) {
+        logger.warning("[plotGrid] пустые данные");
+        return;
+    }
+
+    const int height = binaryMap.size();
+    const int width  = binaryMap[0].size();
+
+    FILE* gnuplotPipe = popen("gnuplot -persist", "w");
+    if (!gnuplotPipe) {
+        logger.error("[plotGrid] Не удалось открыть gnuplot");
+        return;
+    }
+
+    applyNiceStyle(gnuplotPipe, "Grid");
+
+    fprintf(gnuplotPipe, "set output '%s'\n", filename.c_str());
+    fprintf(gnuplotPipe, "set size ratio -1\n");
+    fprintf(gnuplotPipe, "set xrange [0:%d]\n", width - 1);
+    fprintf(gnuplotPipe, "set yrange [0:%d]\n", height - 1);
+    fprintf(gnuplotPipe, "unset key\n");
+
+    fprintf(gnuplotPipe,
+            "plot '-' matrix with image, \\\n"
+            "'-' with lines lc rgb 'white' lw 1, \\\n"
+            "'-' with lines lc rgb 'white' lw 1\n");
+
+    // =====================================================
+    // 1. Карта
+    // =====================================================
+
+    for (int y = height - 1; y >= 0; --y) {
+        for (int x = 0; x < width; ++x) {
+            fprintf(gnuplotPipe, "%f ", binaryMap[y][x]);
+        }
+        fprintf(gnuplotPipe, "\n");
+    }
+    fprintf(gnuplotPipe, "e\n");
+
+    // =====================================================
+    // 2. Вертикальные линии
+    // =====================================================
+
+    const int cs = grid.cellSize;
+
+    for (int col = 0; col <= grid.cols; ++col)
+    {
+        const double x = col * cs;
+
+        fprintf(gnuplotPipe,
+                "%f %f\n"
+                "%f %f\n\n",
+                x, 0.0,
+                x, static_cast<double>(height - 1));
+    }
+
+    fprintf(gnuplotPipe, "e\n");
+
+    // =====================================================
+    // 3. Горизонтальные линии
+    // =====================================================
+
+    for (int row = 0; row <= grid.rows; ++row)
+    {
+        double y = row * cs;
+        y = transformY(y, height);
+
+        fprintf(gnuplotPipe,
+                "%f %f\n"
+                "%f %f\n\n",
+                0.0, y,
+                static_cast<double>(width - 1), y);
+    }
+
+    fprintf(gnuplotPipe, "e\n");
+
+    pclose(gnuplotPipe);
+
+    logPlotEnd("Grid");
+}
+
+void GnuplotInterface::plotNavGrid(
+    const algorithms::path::common::Grid& grid,
+    const std::vector<std::vector<double>>& binaryMap,
+    const std::string& filename,
+    const std::optional<algorithms::path::common::GridCell> start,
+    const std::optional<algorithms::path::common::GridCell> end)
+{
+    logPlotStart("NavGrid", filename);
+
+    if (binaryMap.empty() || grid.cells.empty()) {
+        logger.warning("[plotNavGrid] empty input");
+        return;
+    }
+
+    const int height = binaryMap.size();
+    const int width  = binaryMap[0].size();
+    const int cs     = grid.cellSize;
+    FILE* pipe = popen("gnuplot -persist", "w");
+    if (!pipe) {
+        logger.error("[plotNavGrid] gnuplot pipe error");
+        return;
+    }
+  
+    applyNiceStyle(pipe, "NavGrid");
+    fprintf(pipe, "set output '%s'\n", filename.c_str());
+    fprintf(pipe, "unset key\n");
+    fprintf(pipe, "set size ratio -1\n");
+    fprintf(pipe, "set xrange [0:%d]\n", width);
+    fprintf(pipe, "set yrange [0:%d]\n", height);
+
+    int id = 1;
+
+    for (const auto& cell : grid.cells)
+    {
+        double x1 = cell.col * cs;
+        double x2 = x1 + cs;
+
+        double y1 = height - (cell.row * cs + cs);
+        double y2 = height - (cell.row * cs);
+
+        std::string color;
+
+        bool isStart = start && cell.row == start->row && cell.col == start->col;
+        bool isEnd   = end   && cell.row == end->row   && cell.col == end->col;
+
+        if (isStart || isEnd)
+            color = "#A020F0"; // фиолетовый
+        else if (!cell.traversable)
+            color = "#FF0000"; // красный
+        else
+            color = "#00FF00"; // зелёный
+
+        fprintf(pipe,
+            "set object %d rect from %f,%f to %f,%f fc rgb '%s' fs solid border lc rgb 'black'\n",
+            id++, x1, y1, x2, y2, color.c_str());
+        
+        if (isStart)
+        {
+            fprintf(pipe,
+                "set label 'START' at %f,%f center tc rgb 'white' font ',10'\n",
+                x1 + cs * 0.5, y1 + cs * 0.5);
+        }
+
+        if (isEnd)
+        {
+            fprintf(pipe,
+                "set label 'END' at %f,%f center tc rgb 'white' font ',10'\n",
+                x1 + cs * 0.5, y1 + cs * 0.5);
+        }
+    }
+
+    fprintf(pipe, "plot NaN notitle\n");
+    pclose(pipe);
+
+    logPlotEnd("NavGrid");
+}
+
+void GnuplotInterface::plotGridPath(
+    const algorithms::path::common::Grid& grid,
+    std::vector<algorithms::path::common::GridCell> gridPath,
+    const algorithms::path::common::GridCell& start,
+    const algorithms::path::common::GridCell& end,
+    const std::vector<std::vector<double>>& binaryMap,
+    const std::string& filename)
+{
+    logPlotStart("GridPath", filename);
+
+    if (grid.cells.empty() || binaryMap.empty()) {
+        logger.warning("[PlotGridPath] empty input");
+        return;
+    }
+
+    const int height = binaryMap.size();
+    const int width  = binaryMap[0].size();
+    const int cs     = grid.cellSize;
+
+    FILE* gnuplotPipe = popen("gnuplot", "w");
+    if (!gnuplotPipe) {
+        logger.error("[PlotGridPath] gnuplot pipe error");
+        return;
+    }
+
+    applyNiceStyle(gnuplotPipe, "GridPath");
+    
+    fprintf(gnuplotPipe, "set output '%s'\n", filename.c_str());
+    fprintf(gnuplotPipe, "set size ratio -1\n");
+    fprintf(gnuplotPipe, "set xrange [0:%d]\n", width - 1);
+    fprintf(gnuplotPipe, "set yrange [0:%d]\n", height - 1);
+    fprintf(gnuplotPipe, "unset key\n");
+
+    // =====================================================
+    // 1. PATH lookup (быстро)
+    // =====================================================
+    auto isInPath = [&](const algorithms::path::common::GridCell& c)
+    {
+        return std::any_of(gridPath.begin(), gridPath.end(),
+            [&](const algorithms::path::common::GridCell& p)
+            {
+                return p.row == c.row && p.col == c.col;
+            });
+    };
+
+    // =====================================================
+    // 2. КЛЕТКИ
+    // =====================================================
+
+    int objectId = 1;
+
+    for (const auto& cell : grid.cells)
+    {
+        double x1 = cell.col * cs;
+        double x2 = x1 + cs;
+
+        double y1 = height - (cell.row * cs + cs);
+        double y2 = height - (cell.row * cs);
+
+        std::string color;
+
+        bool isStart = (cell.row == start.row && cell.col == start.col);
+        bool isEnd   = (cell.row == end.row && cell.col == end.col);
+        bool inPath  = isInPath(cell);
+
+        if (isStart || isEnd || inPath)
+            color = "#A020F0"; // фиолетовый
+        else if (!cell.traversable)
+            color = "#FF0000"; // красный
+        else
+            color = "#00FF00"; // зелёный
+
+        fprintf(gnuplotPipe,
+            "set object %d rect from %f,%f to %f,%f "
+            "fc rgb '%s' fs border lc rgb 'black'\n",
+            objectId++, x1, y1, x2, y2, color.c_str());
+
+        // =====================================================
+        // 3. LABELS
+        // =====================================================
+
+        if (isStart)
+        {
+            fprintf(gnuplotPipe,
+                "set label 'START' at %f,%f center tc rgb 'white' font ',10'\n",
+                x1 + cs * 0.5, y1 + cs * 0.5);
+        }
+
+        if (isEnd)
+        {
+            fprintf(gnuplotPipe,
+                "set label 'END' at %f,%f center tc rgb 'white' font ',10'\n",
+                x1 + cs * 0.5, y1 + cs * 0.5);
+        }
+    }
+
+    // =====================================================
+    // 4. финальный render
+    // =====================================================
+    fprintf(gnuplotPipe, "plot NaN notitle\n");
+    pclose(gnuplotPipe);
+
+    logPlotEnd("GridPath");
+}
+               
     void GnuplotInterface::plotDelaunay(const std::vector<algorithms::geometry::Triangle>& triangles, 
                      const std::vector<std::vector<double>>& binaryMap, 
                      const std::string& filename) {

@@ -11,8 +11,8 @@ namespace algorithms::path::common {
     Conditions::Conditions(core::Logger& lg) : logger(lg) {
         logger.trace("[Conditions] Инициализация проверок проходимости пути");
     }
-    
-    bool Conditions::isVehicleRadiusValid(const algorithms::geometry::Pixel& pixel, 
+// -----------------------------------------------------Граф-----------------------------------------------------    
+bool Conditions::isVehicleRadiusValid(const algorithms::geometry::Pixel& pixel, 
                          const std::vector<std::vector<double>>& binaryMap,
                          int vehicleRadius) const
 {
@@ -25,147 +25,257 @@ namespace algorithms::path::common {
     const int radiusPixels = vehicleRadius;
     const int radiusSquared = vehicleRadius * vehicleRadius;
 
-    size_t checkedPixels = 0;
-    size_t collisionPixels = 0;
-
     for (int dy = -radiusPixels; dy <= radiusPixels; ++dy) {
         for (int dx = -radiusPixels; dx <= radiusPixels; ++dx) {
             if (dx * dx + dy * dy > radiusSquared) continue;
 
             const int nx = x + dx;
             const int ny = y + dy;
-            ++checkedPixels;
-
-            if (nx >= 0 && ny >= 0 &&
-                ny < static_cast<int>(binaryMap.size()) &&
-                nx < static_cast<int>(binaryMap[0].size()) &&
-                std::fabs(binaryMap[ny][nx] - core::WHITE) < core::EPSILON) {
-
-                ++collisionPixels;
-                logger.trace("[PathFinder::isVehicleRadiusValid] Столкновение в (" +
-                             std::to_string(nx) + "," + std::to_string(ny) + ")");
+            
+            if (nx < 0 || ny < 0 ||
+                ny >= static_cast<int>(binaryMap.size()) ||
+                nx >= static_cast<int>(binaryMap[0].size()))
+            {
+                return false;
+            }
+            
+            if (std::fabs(binaryMap[ny][nx] - core::WHITE) < core::EPSILON) {
+                return false;     
             }
         }
     }
 
-    bool result = (collisionPixels == 0);
-    logger.debug("[PathFinder::isVehicleRadiusValid] Результат: " + 
-                 std::string(result ? "проходимо" : "столкновение") +
-                 ", проверено пикселей: " + std::to_string(checkedPixels) + 
-                 ", столкновений: " + std::to_string(collisionPixels));
-
-    return result;
+    return true;
 }
 
-    bool Conditions::isEdgeNavigable(const algorithms::geometry::PixelEdge& edge, 
-                    const std::vector<std::vector<double>>& field,
-                    const std::vector<std::vector<double>>& binaryMap,
-                    int vehicleRadius,
-                    double maxSideAngle,
-                    double maxUpDownAngle) const 
+double Conditions::minObstacleDistance(
+    const algorithms::geometry::Pixel& center,
+    const std::vector<std::vector<double>>& binaryMap) const
 {
-                    
-    const auto line = algorithms::geometry::bresenhamLine(edge.a, edge.b);
-    
-     // Проверка на минимальную длину ребра
-        if (line.size() < 2) {
-            logger.debug("Слишком короткое ребро для проверки");
-            return false;
-        }
-        logger.trace("Длина ребра: " + std::to_string(line.size()) + " точек");
-        
-    // Вектор пути
-    algorithms::geometry::PointD dir = 
-        {static_cast<double>(line.back().x - line.front().x), 
-            static_cast<double>(line.back().y - line.front().y)};
-    double dirLen = std::hypot(dir.x, dir.y);
+    const int height = binaryMap.size();
+    const int width  = binaryMap[0].size();
 
-    // Защита от деления на ноль
-    if (dirLen < core::EPSILON) {
-        logger.debug("Нулевая длина направления");
+    const int maxRadius = std::max(width, height);
+
+    double obstacleDistance = std::numeric_limits<double>::infinity();
+
+    logger.trace("[minObstacleDistance] start center=(" +
+                std::to_string(center.x) + "," +
+                std::to_string(center.y) + ")");
+
+    for (int r = 0; r <= maxRadius; ++r)
+    {
+        for (int dy = -r; dy <= r; ++dy)
+        {
+            for (int dx = -r; dx <= r; ++dx)
+            {
+                if (r > 0 && dx * dx + dy * dy <= (r - 1) * (r - 1))
+                    continue;
+
+                if (dx * dx + dy * dy > r * r)
+                    continue;
+
+                const int x = center.x + dx;
+                const int y = center.y + dy;
+
+                if (x < 0 || x >= width || y < 0 || y >= height)
+                {
+                    double d = std::hypot(dx, dy);
+
+                    logger.trace("[minObstacleDistance] boundary hit at r=" +
+                                std::to_string(r) +
+                                " dist=" + std::to_string(d));
+
+                    obstacleDistance = std::min(d, obstacleDistance);
+                    continue;
+                }
+
+                if (std::fabs(binaryMap[y][x] - core::WHITE) < core::EPSILON)
+                {
+                    double d = std::hypot(dx, dy);
+
+                    logger.trace("[minObstacleDistance] obstacle hit at (" +
+                                std::to_string(x) + "," +
+                                std::to_string(y) +
+                                ") r=" + std::to_string(r) +
+                                " dist=" + std::to_string(d));
+
+                    obstacleDistance = std::min(d, obstacleDistance);
+                }
+            }
+        }
+
+        // если уже нашли ближайшее возможное расстояние — можно выйти
+        if (std::isfinite(obstacleDistance))
+        {
+            logger.trace("[minObstacleDistance] return early r=" +
+                        std::to_string(r) +
+                        " result=" + std::to_string(obstacleDistance));
+
+            return obstacleDistance;
+        }
+    }
+
+    logger.error("[minObstacleDistance] no obstacle found -> inf");
+
+    return std::numeric_limits<double>::infinity();
+}
+
+int Conditions::minObstacleDistancePixel(
+    const algorithms::geometry::Pixel& center,
+    const std::vector<std::vector<double>>& binaryMap) const
+{
+    const int height = binaryMap.size();
+    const int width  = binaryMap[0].size();
+
+    const int maxRadius = std::max(width, height);
+
+    logger.trace("[minObstacleDistancePixel] start center=(" +
+                std::to_string(center.x) + "," +
+                std::to_string(center.y) + ")");
+
+    for (int r = 0; r <= maxRadius; ++r)
+    {
+        for (int dy = -r; dy <= r; ++dy)
+        {
+            for (int dx = -r; dx <= r; ++dx)
+            {
+                if (r > 0 && dx * dx + dy * dy <= (r - 1) * (r - 1))
+                    continue;
+
+                if (dx * dx + dy * dy > r * r)
+                    continue;
+
+                const int x = center.x + dx;
+                const int y = center.y + dy;
+
+                if (x < 0 || x >= width || y < 0 || y >= height)
+                {
+                    logger.trace("[minObstacleDistancePixel] boundary hit -> return r=" +
+                                std::to_string(r));
+
+                    return r;
+                }
+
+                if (std::fabs(binaryMap[y][x] - core::WHITE) < core::EPSILON)
+                {
+                    logger.trace("[minObstacleDistancePixel] obstacle hit at (" +
+                                std::to_string(x) + "," +
+                                std::to_string(y) +
+                                ") -> return r=" +
+                                std::to_string(r));
+
+                    return r;
+                }
+            }
+        }
+    }
+
+    logger.error("[minObstacleDistancePixel] no obstacle found -> INT_MAX");
+
+    return std::numeric_limits<int>::max();
+}
+
+bool Conditions::isEdgeNavigable(
+    const algorithms::geometry::PixelEdge& edge,
+    const std::vector<std::vector<double>>& field,
+    const std::vector<std::vector<double>>& binaryMap,
+    int vehicleRadius,
+    double maxSideAngle,
+    double maxUpDownAngle) const
+{
+    const auto line = algorithms::geometry::bresenhamLine(edge.a, edge.b);
+
+    if (line.size() < 2) {
+        logger.debug("Слишком короткое ребро для проверки");
         return false;
     }
 
-    dir.x /= dirLen;
-    dir.y /= dirLen;
-    algorithms::geometry::PointD perp = {-dir.y, dir.x}; // Единичный перпендикуляр
-    const double L = vehicleRadius / std::sqrt(2.0);
-    const double W = vehicleRadius / std::sqrt(2.0);
+    logger.trace("Длина ребра: " + std::to_string(line.size()) + " точек");
 
-auto isInside = [&](const algorithms::geometry::Pixel& p) {
-    return p.x >= 0 &&
-           p.y >= 0 &&
-           p.x < field[0].size() &&
-           p.y < field.size();
-};
+    algorithms::geometry::PointD dir{
+        static_cast<double>(line.back().x - line.front().x),
+        static_cast<double>(line.back().y - line.front().y)
+    };
 
     logger.debug("--- Начало проверки ребра ---");
-    logger.debug("Параметры тележки: радиус=" + std::to_string(vehicleRadius) + 
-                ", max_уклон=" + std::to_string(maxUpDownAngle) + 
-                "°, max_крен=" + std::to_string(maxSideAngle) + "°");
-    
-    for (size_t i = 0; i < line.size(); ++i) {
-        const algorithms::geometry::Pixel& center = line[i];
-            algorithms::geometry::Pixel frontLeft = {
-    static_cast<int>(std::round(center.x + L * dir.x + W * perp.x)),
-    static_cast<int>(std::round(center.y + L * dir.y + W * perp.y))
-};
+    logger.debug("Параметры тележки: радиус=" +
+                 std::to_string(vehicleRadius) +
+                 ", maxUpDownAngle=" +
+                 std::to_string(maxUpDownAngle) +
+                 "°, maxSideAngle=" +
+                 std::to_string(maxSideAngle) + "°");
 
-algorithms::geometry::Pixel frontRight = {
-    static_cast<int>(std::round(center.x + L * dir.x - W * perp.x)),
-    static_cast<int>(std::round(center.y + L * dir.y - W * perp.y))
-};
+    for (const auto& center : line)
+    {
+        // Сначала проверяем столкновения
+        if (!isVehicleRadiusValid(center, binaryMap, vehicleRadius))
+        {
+            logger.debug("Столкновение в (" +
+                         std::to_string(center.x) + ", " +
+                         std::to_string(center.y) + ")");
+            return false;
+        }
 
-algorithms::geometry::Pixel rearLeft = {
-    static_cast<int>(std::round(center.x - L * dir.x + W * perp.x)),
-    static_cast<int>(std::round(center.y - L * dir.y + W * perp.y))
-};
+        // Затем вычисляем углы
+        const auto angles =
+            algorithms::kinematics::calculateVehicleAngles(
+                field,
+                center,
+                dir,
+                vehicleRadius);
 
-algorithms::geometry::Pixel rearRight = {
-    static_cast<int>(std::round(center.x - L * dir.x - W * perp.x)),
-    static_cast<int>(std::round(center.y - L * dir.y - W * perp.y))
-};
-        // Проверка границ массива
-            if (!isInside(frontLeft) ||
-    !isInside(frontRight) ||
-    !isInside(rearLeft) ||
-    !isInside(rearRight))
-{
-    logger.debug("Колесо вне поля");
-    return false;
-}
+        logger.trace("Углы в (" +
+                     std::to_string(center.x) + ", " +
+                     std::to_string(center.y) +
+                     "): side=" +
+                     std::to_string(angles.sideAngle) +
+                     "°, upDown=" +
+                     std::to_string(angles.upDownAngle) + "°");
 
-double hFL = field[frontLeft.y][frontLeft.x];
-double hFR = field[frontRight.y][frontRight.x];
-double hRL = field[rearLeft.y][rearLeft.x];
-double hRR = field[rearRight.y][rearRight.x];
-double hFront = (hFL + hFR) / 2.0;
-double hRear  = (hRL + hRR) / 2.0;
+        if (std::fabs(angles.upDownAngle) > maxUpDownAngle)
+        {
+            logger.debug("Превышен продольный наклон: " +
+                         std::to_string(angles.upDownAngle) + "°");
+            return false;
+        }
 
-double pitchAngle = algorithms::kinematics::calculateAngle(hFront, hRear, 2.0 * L);
-    if (std::fabs(pitchAngle) > maxUpDownAngle)
-    return false;
-    
-    double hLeft  = (hFL + hRL) / 2.0;
-double hRight = (hFR + hRR) / 2.0;
-
-double rollAngle  = algorithms::kinematics::calculateAngle(hLeft, hRight, 2.0 * W);
-    if (std::fabs(rollAngle) > maxSideAngle)
-    return false;
-            
-
-        // Проверка коллизий
-        bool collisionCheck = isVehicleRadiusValid(center, binaryMap, vehicleRadius);
-        logger.trace("  Коллизия: " + std::string(collisionCheck ? "нет" : "есть"));
-        
-        if (!collisionCheck) {
-            logger.debug("  ! СТОЛКНОВЕНИЕ в точке (" + 
-                       std::to_string(center.x) + "," + std::to_string(center.y) + ")");
+        if (std::fabs(angles.sideAngle) > maxSideAngle)
+        {
+            logger.debug("Превышен боковой наклон: " +
+                         std::to_string(angles.sideAngle) + "°");
             return false;
         }
     }
-    
+
     logger.debug("--- Ребро проходимо ---");
     return true;
 }
+
+// -----------------------------------------------------Сетка-----------------------------------------------------
+    bool Conditions::isCellFree(const algorithms::path::common::GridCell& cell, 
+                    const std::vector<std::vector<double>>& binaryMap,
+                    int cellSize,
+                    int noisy) const
+{
+    int dangerousPixels = 0;
+
+    const int x0 = cell.col * cellSize;
+    const int y0 = cell.row * cellSize;
+
+    for (int y = y0; y < y0 + cellSize; ++y) {
+        for (int x = x0; x < x0 + cellSize; ++x) {
+
+            if (std::fabs(binaryMap[y][x] - core::WHITE) < core::EPSILON) {
+                ++dangerousPixels;
+
+                if (dangerousPixels >= noisy)
+                    return false;
+            }
+        }
+    }
+
+    return true;
+}
+
 }

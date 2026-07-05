@@ -14,9 +14,12 @@
 // algorithms::geometry
 #include "algorithms/geometry/geometry_structures.hpp"
 
-#include "utils/hash.hpp" // Для навигационного графа
-
+// algorithms::path::common
 #include "algorithms/path/common/path_metrics.hpp" // Для метрик
+#include "algorithms/path/common/grid.hpp"
+
+// utils
+#include "utils/hash.hpp" // Для навигационного графа
 
 namespace command {
 
@@ -47,11 +50,19 @@ struct ApplicationState {
     // Навигационный граф
     std::unordered_map<algorithms::geometry::Pixel, std::vector<algorithms::geometry::Pixel>> navigationGraph;
     
+    // Сетка
+    algorithms::path::common::Grid grid;
+    
     // Поиск пути
     std::optional<algorithms::geometry::Pixel> start;
     std::optional<algorithms::geometry::Pixel> end;
+    algorithms::path::PathMetrics PathMetrics;
     std::vector<algorithms::geometry::Pixel> path;
-    algorithms::path::PathMetrics graphPathMetrics;
+    
+    // Поиск пути на сетке
+    std::optional<algorithms::path::common::GridCell> startCell;
+    std::optional<algorithms::path::common::GridCell> endCell;
+    std::vector<algorithms::path::common::GridCell> gridPath;
 };
 
 } // namespace command

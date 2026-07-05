@@ -262,13 +262,13 @@ bool Validator::validateBmpWriteMode(
     return false;
 }
 
-bool Validator::validateNoiseSize(
+bool Validator::validateWaveNoiseSize(
     int noisy,
     core::Logger& logger)
 {
     return validateRange(noisy, 0,
                          std::numeric_limits<int>::max(),
-                         "noisy", logger);
+                         "wave noisy", logger);
 }
 
 bool Validator::validateKMeans(
@@ -298,6 +298,35 @@ bool Validator::validateKernelSize(
     return ok;
 }
 
+bool Validator::validateGrid(
+    int width,
+    int height,
+    int gridWidth,
+    core::Logger& logger)
+{
+    bool ok = true;
+    
+    ok &= validateRange(gridWidth, 1,
+                        std::min(width, height),
+                        "gridWidth", logger);
+                        
+    if (ok && (width % gridWidth != 0 || height % gridWidth != 0)) {
+        logger.error("Grid width must evenly divide both field width and field height.");
+        ok = false;
+    }
+
+    return ok;
+}
+
+bool Validator::validateGridNoiseSize(
+    int noisy,
+    core::Logger& logger)
+{
+    return validateRange(noisy, 0,
+                         std::numeric_limits<int>::max(),
+                         "grid noisy", logger);
+}
+
 bool Validator::validateNavigationParameters(
     int vehicleRadius,
     double maxSideAngle,
@@ -307,7 +336,7 @@ bool Validator::validateNavigationParameters(
     bool ok = true;
 
     ok &= validateRange(vehicleRadius,
-                        0,
+                        1,
                         std::numeric_limits<int>::max(),
                         "vehicleRadius",
                         logger);
@@ -334,29 +363,7 @@ bool Validator::validateConnectParameters(
 {
     bool ok = true;
 
-    ok &= validateRange(params.startPointX,
-                        0,
-                        params.fieldWidth - 1,
-                        "startPointX",
-                        logger);
-
-    ok &= validateRange(params.startPointY,
-                        0,
-                        params.fieldHeight - 1,
-                        "startPointY",
-                        logger);
-
-    ok &= validateRange(params.endPointX,
-                        0,
-                        params.fieldWidth - 1,
-                        "endPointX",
-                        logger);
-
-    ok &= validateRange(params.endPointY,
-                        0,
-                        params.fieldHeight - 1,
-                        "endPointY",
-                        logger);
+    ok &= validateConnectParameters(params, logger);
                         
     if (mode != "Nearest" &&
         mode != "NearestK" &&
@@ -384,4 +391,35 @@ bool Validator::validateConnectParameters(
     return ok;
 }
 
+bool Validator::validateConnectParameters(
+    const DispatcherParams& params,
+    core::Logger& logger)
+{
+    bool ok = true;
+
+    ok &= validateRange(params.startPointX,
+                        0,
+                        params.fieldWidth - 1,
+                        "startPointX",
+                        logger);
+
+    ok &= validateRange(params.startPointY,
+                        0,
+                        params.fieldHeight - 1,
+                        "startPointY",
+                        logger);
+
+    ok &= validateRange(params.endPointX,
+                        0,
+                        params.fieldWidth - 1,
+                        "endPointX",
+                        logger);
+
+    ok &= validateRange(params.endPointY,
+                        0,
+                        params.fieldHeight - 1,
+                        "endPointY",
+                        logger);
+    return ok;
+}
 } // namespace command

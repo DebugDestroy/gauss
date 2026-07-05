@@ -53,22 +53,31 @@ chmod +x run.sh
 | PlotGraph            | filename.png                                                                                       | Визуализирует граф                                                       |
 | PlotVoronoi          | filename.png                                                                                       | Строит диаграмму Вороного по текущей триангуляции                        |
 | PlotDelaunay         | filename.png                                                                                       | Визуализирует триангуляцию Делоне                                        |
+| PlotGrid             | filename.png                                                                                       | Визуализирует сетку                                                      |
+| PlotNavGrid          | filename.png                                                                                       | Визуализирует навигационную сетку                                        |
+| PlotGridPath         | filename.png                                                                                       | Визуализирует путь на сетке                                              |
 | PlotPath             | filename.png                                                                                       | Отображает найденный путь между точками A и B                            |
 | bmp_write            | filename.bmp [Full/Binary]                                                                         | Сохраняет поле в BMP: Full - полное, Binary - бинаризованное             |
 | bmp_read             | filename.bmp                                                                                       | Загружает поле из BMP файла                                              |
 | bin                  | slice [Peaks/Valleys/All]                                                                          | Бинаризация: Peaks - только пики, Valleys - впадины, All - по модулю     |
 | wave                 | noisy                                                                                              | Удаляет компоненты размером ≤ noisy как шум                              |
 | k_means              | k                                                                                                  | Кластеризует данные в k кластеров                                        |
-| k_means_kern         | kk                                                                                                 | Кластеризация с ядрами размера kk                                        |
+| k_means_kern         | k p                                                                                                | Kmeans с параметром k на ядрах размера p                                 |
 | triangulate          | -                                                                                                  | Строит триангуляцию Делоне по центрам компонент                          |
 | voronoi              | -                                                                                                  | Строит диаграмму Вороного                                                |
 | build_nav_graph      | vehicleRadius maxSideAngle maxUpDownAngle                                                          | Строит граф проходимости по диаграмме Вороного, учитывая наклон и радиус |
+| grid                 | width                                                                                              | Строит квадратную сетку на поле (ячейка размера width x width)           |
+| build_nav_grid       | noisy                                                                                              | Удаляет ячейки с числом опасных пикселей >= noisy                        |
+| connect_to_grid      | Ax Ay Bx By                                                                                        | Подключает стартовую и финишную ячейку к сетке                           |
 | connect_to_graph     | Ax Ay Bx By [Nearest/NearestK k/All]                                                               | Подключает старт и финиш к графу с разными режимами                      |
-| find_path_astar      | -                                                                                                  | A* ищет путь между точками A и B                                         |
-| find_path_dekstra    | -                                                                                                  | Dekstra ищет путь между точками A и B                                    |
-| find_path_greedy     | -                                                                                                  | Greedy ищет путь между точками A и B                                     |
+| astar_graph          | -                                                                                                  | A* ищет путь между точками A и B на графе                                |
+| dekstra_graph        | -                                                                                                  | Dekstra ищет путь между точками A и B на графе                           |
+| greedy_graph         | -                                                                                                  | Greedy ищет путь между точками A и B на графе                            |
+| astar_grid           | -                                                                                                  | A* ищет путь между точками A и B на сетке                                |
+| dekstra_grid         | -                                                                                                  | Dekstra ищет путь между точками A и B на сетке                           |
+| greedy_grid          | -                                                                                                  | Greedy ищет путь между точками A и B на сетке                            |
 | save_metrics         | filename.csv                                                                                       | Сохраняет метрики в файле csv                                            |
-| Plot3DPath           | filename.png                                                                                       | Сохраняет 3D-визуализацию путя в PNG файл                                |
+| Plot3DPath           | filename.png                                                                                       | Сохраняет 3D-визуализацию пути в PNG файл                                |
 | plotInteractive3DPath| -                                                                                                  | Интерактвный 3D режим с путем                                            |
 | end                  | -                                                                                                  | Завершает работу программы                                               |
 
@@ -104,15 +113,20 @@ chmod +x run.sh
 | defaultPlotGraph             | `filename_graph.png`                           | Путь к файлу для графа по умолчанию                                              |
 | defaultPlotVoronoi           | `filename_voronoi.png`                         | Путь к файлу для диаграммы Вороного по умолчанию                                 |
 | defaultPlotDelaunay          | `filename_delaunay.png`                        | Путь к файлу для триангуляции Делоне по умолчанию                                |
+| defaultPlotGrid              | `filename_grid.png`                            | Путь к файлу для сетки по умолчанию                                              |
+| defaultPlotNavGrid           | `filename_nav_grid.png`                        | Путь к файлу для навигационной сетки по умолчанию                                |
+| defaultPlotGridPath          | `filename_grid_path.png`                       | Путь к файлу для пути на сетке по умолчанию                                      |
 | defaultPlotPath              | `filename_path.png`                            | Путь к файлу для визуализации маршрута по умолчанию                              |
 | defaultWrite                 | `filename_write.bmp`                           | Путь к файлу для сохранения BMP-изображения по умолчанию                         |
 | defaultWriteModeImage        | `writeMode`                                    | Режим сохранения BMP (Full/Binary) по умолчанию                                  |
 | defaultRead                  | `filename_read.bmp`                            | Путь к файлу для загрузки BMP-изображения по умолчанию                           |
 | defaultThreshold             | `defaultThreshold`                             | Порог бинаризации по умолчанию                                                   |
 | defaultBinMode               | `binMode`                                      | Режим бинаризации (Peaks/Valleys/All) по умолчанию                               |
-| defaultNoisy                 | `defaultNoisy`                                 | Порог для удаления шумовых компонент по умолчанию                                |
+| defaultWaveNoisy             | `defaultWaveNoisy`                             | Порог для удаления шумовых компонент по умолчанию                                |
 | defaultKlaster               | `defaultKlaster`                               | Количество кластеров для k-mean по умолчанию                                     |
 | defaultKlasterKern           | `defaultKlasterKern`                           | Размер ядра для кластеризации по умолчанию                                       |
+| defaultgridWidth             | `defaultgridWidth`                             | Размер ячейки для сетки по умолчанию                                             |
+| defaultgridNoisy             | `defaultgridNoisy`                             | Шум для опасных пикселей в ячейки по умолчанию                                   |
 | defaultpointA_x              | `pointA_x`                                     | X-координата точки A для поиска пути по умолчанию                                |
 | defaultpointA_y              | `pointA_y`                                     | Y-координата точки A для поиска пути по умолчанию                                |
 | defaultpointB_x              | `pointB_x`                                     | X-координата точки B для поиска пути по умолчанию                                |
@@ -164,7 +178,7 @@ PlotVoronoi results/visualizations/Diagramma_Voronova.png
 build_nav_graph
 PlotGraph results/visualizations/Graph.png
 connect_to_graph
-find_path_astar
+astar_graph
 save_metrics
 PlotPath results/visualizations/Path.png
 end
@@ -194,7 +208,7 @@ PlotVoronoi results/visualizations/Diagramma_Voronova.png
 build_nav_graph
 PlotGraph results/visualizations/Graph.png
 connect_to_graph 60 130 150 135
-find_path_astar
+astar_graph
 save_metrics
 PlotPath results/visualizations/Path.png
 Plot3DPath results/visualizations/Plot3DPath.png
@@ -239,6 +253,9 @@ defaultPlotKmeans results/visualizations/kmeans.png
 defaultPlotGraph results/visualizations/Graph.png
 defaultPlotVoronoi results/visualizations/Voronoi.png
 defaultPlotDelaunay results/visualizations/Delaunay.png
+defaultPlotGrid results/visualizations/Grid.png
+defaultPlotNavGrid results/visualizations/NavGrid.png
+defaultPlotGridPath results/visualizations/GridPath.png
 defaultPlotPath results/visualizations/Path.png
 defaultPlot3DPath results/visualizations/Plot3DPath.png
 
@@ -253,11 +270,15 @@ defaultThreshold 130
 defaultBinMode All
 
 
-defaultNoisy 10
+defaultWaveNoisy 10
 
 
 defaultKlaster 5
 defaultKlasterKern 5
+
+
+defaultgridWidth 1
+defaultgridNoisy 0
 
 
 defaultstartPointX 150
@@ -327,8 +348,8 @@ FiltrationLogLevelControl INFO
         
         while (true) {
             const std::string commandshow = R"(Enter the command and its parameters immediately (help, init, g, g_auto, generate, save_g, gnuplot, PlotKmeans, PlotMetedata, PlotVoronoi, PlotDelaunay,
-PlotPath, bmp_write, bmp_read, bin, wave, k_means, k_means_kern, triangulate, voronoi, build_nav_graph, connect_to_graph, find_path_astar, find_path_dekstra, find_path_greedy, save_metrics, 
-Plot3DPath, plotInteractive3DPath, end):)";
+PlotGrid, PlotNavGrid, PlotGridPath, PlotPath, bmp_write, bmp_read, bin, wave, k_means, k_means_kern, triangulate, voronoi, build_nav_graph, grid, build_nav_grid, connect_to_grid, connect_to_graph,
+astar_graph, dekstra_graph, greedy_graph, astar_grid, dekstra_grid, greedy_grid, save_metrics, Plot3DPath, plotInteractive3DPath, end):)";
             std::cout << commandshow;
             std::cin >> params.command;
             std::cout << "\n";
@@ -627,6 +648,69 @@ Plot3DPath, plotInteractive3DPath, end):)";
         control.Dispetcher(params);
         logger.info("Delaunay triangulation plotting completed");
     }
+    else if (params.command == "PlotGrid") {
+        params.filename = config.defaultPlotGrid;
+        
+            std::getline(input, line);
+            std::istringstream iss(line);
+            iss >> params.filename;
+                         
+            if (!Validator::validateFileName(params.filename, logger))
+                return false;
+ 
+        showInfo = std::string("Plotting grid to: ") + params.filename;
+            
+            if (fromKeyboard) {
+            std::cout << "\n";
+            std::cout << showInfo << std::endl;
+         }
+
+        logger.info(showInfo);
+        control.Dispetcher(params);
+        logger.info("Grid plotting completed");
+    }
+    else if (params.command == "PlotNavGrid") {
+        params.filename = config.defaultPlotNavGrid;
+        
+            std::getline(input, line);
+            std::istringstream iss(line);
+            iss >> params.filename;
+                         
+            if (!Validator::validateFileName(params.filename, logger))
+                return false;
+ 
+        showInfo = std::string("Plotting nav grid to: ") + params.filename;
+            
+            if (fromKeyboard) {
+            std::cout << "\n";
+            std::cout << showInfo << std::endl;
+         }
+
+        logger.info(showInfo);
+        control.Dispetcher(params);
+        logger.info("Nav grid plotting completed");
+    }
+    else if (params.command == "PlotGridPath") {
+        params.filename = config.defaultPlotGridPath;
+        
+            std::getline(input, line);
+            std::istringstream iss(line);
+            iss >> params.filename;
+                         
+            if (!Validator::validateFileName(params.filename, logger))
+                return false;
+ 
+        showInfo = std::string("Plotting grid path to: ") + params.filename;
+            
+            if (fromKeyboard) {
+            std::cout << "\n";
+            std::cout << showInfo << std::endl;
+         }
+
+        logger.info(showInfo);
+        control.Dispetcher(params);
+        logger.info("Grid path plotting completed");
+    }
     else if (params.command == "PlotPath") {
         params.filename = config.defaultPlotPath;
         
@@ -729,16 +813,16 @@ Plot3DPath, plotInteractive3DPath, end):)";
         logger.info("Binary filtering completed");
     }
     else if (params.command == "wave") {
-        params.noiseLevel = config.defaultNoisy;
+        params.waveNoisy = config.defaultWaveNoisy;
         
             std::getline(input, line);
             std::istringstream iss(line);
-            iss >> params.noiseLevel;
+            iss >> params.waveNoisy;
                                 
-            if (!Validator::validateNoiseSize(params.noiseLevel, logger))
+            if (!Validator::validateWaveNoiseSize(params.waveNoisy, logger))
                 return false;
            
-        showInfo = std::string("Applying wave filter with noisy level: ") + std::to_string(params.noiseLevel);
+        showInfo = std::string("Applying wave filter with noisy level: ") + std::to_string(params.waveNoisy);
             
             if (fromKeyboard) {
             std::cout << "\n";
@@ -747,8 +831,7 @@ Plot3DPath, plotInteractive3DPath, end):)";
 
         logger.info(showInfo);
         control.Dispetcher(params);
-        logger.info(std::string("Wave filtering completed. Components count: ") + 
-                   std::to_string(state.components.size()));
+        logger.info(std::string("Wave filtering completed"));
     }
     else if (params.command == "k_means") {
         params.clusterCount = config.defaultKlaster;
@@ -794,7 +877,7 @@ Plot3DPath, plotInteractive3DPath, end):)";
         control.Dispetcher(params);
         logger.info("k-means with kernels completed");
     }
-    else if (params.command == "triangulate") {              
+    else if (params.command == "triangulate") {
         showInfo = "Starting Delaunay triangulation";
             
             if (fromKeyboard) {
@@ -806,7 +889,7 @@ Plot3DPath, plotInteractive3DPath, end):)";
         control.Dispetcher(params);
         logger.info("Delaunay triangulation completed");
     }
-    else if (params.command == "voronoi") {              
+    else if (params.command == "voronoi") {
         showInfo = "Building Voronoi diagram";
             
             if (fromKeyboard) {
@@ -843,6 +926,77 @@ Plot3DPath, plotInteractive3DPath, end):)";
         logger.info(showInfo);
         control.Dispetcher(params);
         logger.info("Navigation graph construction completed");
+    }
+    else if (params.command == "grid") {
+        params.gridWidth = config.defaultgridWidth;
+        
+            std::getline(input, line);
+            std::istringstream iss(line);
+            iss >> params.gridWidth;
+                                         
+            if (!Validator::validateGrid(params.fieldWidth, params.fieldHeight, params.gridWidth, logger))
+                return false;
+          
+        showInfo = std::string("Building grid with cell widht = ") + std::to_string(params.gridWidth);
+            
+            if (fromKeyboard) {
+            std::cout << "\n";
+            std::cout << showInfo << std::endl;
+         }
+
+        logger.info(showInfo);
+        control.Dispetcher(params);
+        logger.info("Grid completed");
+    }
+    else if (params.command == "build_nav_grid") {
+        params.gridNoisy = config.defaultgridNoisy;
+        
+            std::getline(input, line);
+            std::istringstream iss(line);
+            iss >> params.gridNoisy;
+                                
+            if (!Validator::validateGridNoiseSize(params.gridNoisy, logger))
+                return false;
+           
+        showInfo = std::string("Applying wave filter with noisy level: ") + std::to_string(params.gridNoisy);
+            
+            if (fromKeyboard) {
+            std::cout << "\n";
+            std::cout << showInfo << std::endl;
+         }
+
+        logger.info(showInfo);
+        control.Dispetcher(params);
+        logger.info("Navigation grid construction completed");
+    }
+    else if (params.command == "connect_to_grid") {
+        params.startPointX = config.defaultstartPointX;
+        params.startPointY = config.defaultstartPointY;
+        params.endPointX = config.defaultendPointX;
+        params.endPointY = config.defaultendPointY;        
+        
+            std::getline(input, line);
+            std::istringstream iss(line);
+            iss >> params.startPointX >> params.startPointY >> params.endPointX >> params.endPointY;
+                
+            if (!Validator::validateConnectParameters(params, logger))
+                return false;
+ 
+            showInfo =
+                std::string("Connecting points (") +
+                std::to_string(params.startPointX) + ", " +
+                std::to_string(params.startPointY) + ") and (" +
+                std::to_string(params.endPointX) + ", " +
+                std::to_string(params.endPointY) + ") to navigation grid";
+
+            if (fromKeyboard) {
+            std::cout << "\n";
+            std::cout << showInfo << std::endl;
+         }
+
+        logger.info(showInfo);
+        control.Dispetcher(params);
+        logger.info("Connection completed");
     }
     else if (params.command == "connect_to_graph") {
         params.startPointX = config.defaultstartPointX;
@@ -892,8 +1046,8 @@ Plot3DPath, plotInteractive3DPath, end):)";
         control.Dispetcher(params);
         logger.info("Connection completed");
     }
-    else if (params.command == "find_path_astar") {
-        showInfo = "Starting A* path search";
+    else if (params.command == "astar_graph") {
+        showInfo = "Starting A* graph path search";
             
             if (fromKeyboard) {
             std::cout << "\n";
@@ -902,10 +1056,10 @@ Plot3DPath, plotInteractive3DPath, end):)";
 
         logger.info(showInfo);
         control.Dispetcher(params);
-        logger.info("A* path search completed");
+        logger.info("A* graph path search completed");
     }
-    else if (params.command == "find_path_dekstra") {
-        showInfo = "Starting dekstra path search";
+    else if (params.command == "dekstra_graph") {
+        showInfo = "Starting dekstra graph path search";
             
             if (fromKeyboard) {
             std::cout << "\n";
@@ -914,10 +1068,10 @@ Plot3DPath, plotInteractive3DPath, end):)";
 
         logger.info(showInfo);
         control.Dispetcher(params);
-        logger.info("Dekstra path search completed");
+        logger.info("Dekstra graph path search completed");
     }
-    else if (params.command == "find_path_greedy") {
-        showInfo = "Starting greedy path search";
+    else if (params.command == "greedy_graph") {
+        showInfo = "Starting greedy graph path search";
             
             if (fromKeyboard) {
             std::cout << "\n";
@@ -926,7 +1080,43 @@ Plot3DPath, plotInteractive3DPath, end):)";
 
         logger.info(showInfo);
         control.Dispetcher(params);
-        logger.info("Greedy path search completed");
+        logger.info("Greedy graph path search completed");
+    }
+    else if (params.command == "astar_grid") {
+        showInfo = "Starting A* grid path search";
+            
+            if (fromKeyboard) {
+            std::cout << "\n";
+            std::cout << showInfo << std::endl;
+         }
+
+        logger.info(showInfo);
+        control.Dispetcher(params);
+        logger.info("A* grid path search completed");
+    }
+    else if (params.command == "dekstra_grid") {
+        showInfo = "Starting dekstra grid path search";
+            
+            if (fromKeyboard) {
+            std::cout << "\n";
+            std::cout << showInfo << std::endl;
+         }
+
+        logger.info(showInfo);
+        control.Dispetcher(params);
+        logger.info("Dekstra grid path search completed");
+    }
+    else if (params.command == "greedy_grid") {
+        showInfo = "Starting greedy grid path search";
+            
+            if (fromKeyboard) {
+            std::cout << "\n";
+            std::cout << showInfo << std::endl;
+         }
+
+        logger.info(showInfo);
+        control.Dispetcher(params);
+        logger.info("Greedy grid path search completed");
     }
     else if (params.command == "save_metrics") {
         params.filename = config.defaultsave_metrics;

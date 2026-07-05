@@ -1,7 +1,7 @@
 add_library(path_common
     conditions.cpp
     graph.cpp
-    heuristics.cpp
+    grid.cpp
 )
 
 target_include_directories(path_common PUBLIC
