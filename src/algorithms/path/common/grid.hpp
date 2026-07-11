@@ -6,7 +6,7 @@
 #include "algorithms/geometry/geometry_structures.hpp" // для Pixel
 
 namespace algorithms::path::common {
-    class Conditions;   // forward declare
+    class PathValidator;   // forward declare
 }
 
 namespace algorithms::path::common {
@@ -43,7 +43,7 @@ inline std::vector<GridCell> getNeighbours(const Grid& grid,
                 col < 0 || col >= grid.cols)
                 continue;
 
-            const auto& neighbour = grid.cells[row * grid.cols + col];
+            const auto& neighbour = grid.cells[static_cast<std::size_t>(row) * static_cast<std::size_t>(grid.cols) + static_cast<std::size_t>(col)];
 
             neighbours.push_back(neighbour);
         }
@@ -65,8 +65,8 @@ public:
                
     void buildNavGrid(Grid& grid,
                       const std::vector<std::vector<double>>& binaryMap,
-                      const Conditions& conditions,
-                      int noisy);
+                      const PathValidator& conditions,
+                      std::size_t noisy);
    
     GridCell connectPointToGrid(const Grid& grid,
                            const algorithms::geometry::Pixel& point);

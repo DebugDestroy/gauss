@@ -1,8 +1,6 @@
 #include "visualization/color.hpp"
 
 #include <cmath>        // fmod, fabs
-#include <ctime>        // time()
-#include <cstdlib>      // rand, srand
 #include <string>       // std::string
 #include <stdexcept>    // std::invalid_argument
 #include <algorithm>    // std::clamp
@@ -11,9 +9,9 @@
 
 namespace visualization {
 
-static constexpr double MIN_COLOR_VALUE = 50.0;
+ColorGenerator::ColorGenerator(core::Logger& lg, std::mt19937& generator) : logger(lg), gen(generator) {}
 
-static void logColorConversion(double hue, const std::array<int, 3>& rgb, core::Logger& logger) {
+void ColorGenerator::logColorConversion(double hue, const std::array<int, 3>& rgb) const {
     logger.debug("[ColorGenerator] Generated color - HSL: " +
                  std::to_string(hue) + "°, RGB: (" +
                  std::to_string(rgb[0]) + ", " +
@@ -21,31 +19,31 @@ static void logColorConversion(double hue, const std::array<int, 3>& rgb, core::
                  std::to_string(rgb[2]) + ")");
 }
 
-static uint8_t clampColorComponent(double value) {
+uint8_t ColorGenerator::clampColorComponent(double value) {
     return static_cast<uint8_t>(std::clamp(
         value,
-        MIN_COLOR_VALUE,
+        0.0,
         static_cast<double>(core::WHITE)
     ));
 }
 
-std::vector<std::array<int, 3>> ColorGenerator::generateColors(int numColors, core::Logger& logger) {
+std::vector<std::array<int, 3>> ColorGenerator::generateColors(std::size_t numColors) {
     logger.trace("[ColorGenerator::generateColors] Starting color generation for " + 
                  std::to_string(numColors) + " colors");
 
     if (numColors <= 0) {
         logger.error("[ColorGenerator::generateColors] Invalid number of colors: " +
                      std::to_string(numColors));
-        throw std::invalid_argument("Number of colors must be greater than 0.");
+        return {};
     }
 
     std::vector<std::array<int, 3>> colors;
-    unsigned int seed = static_cast<unsigned int>(time(0));
-    srand(seed);
-    logger.debug("[ColorGenerator] Seed initialized: " + std::to_string(seed));
-
-    for (int i = 0; i < numColors; ++i) {
-        double hue = static_cast<double>(i) / numColors * 360.0 + rand() % 30;
+    std::uniform_real_distribution<double> hueNoise(0.0, 30.0);
+    
+    for (std::size_t i = 0; i < numColors; ++i) {
+        double hue =
+              static_cast<double>(i) / static_cast<double>(numColors) * 360.0 +
+              hueNoise(gen);
         hue = fmod(hue, 360.0);
 
         // HSL to RGB conversion
@@ -75,7 +73,7 @@ std::vector<std::array<int, 3>> ColorGenerator::generateColors(int numColors, co
         };
 
         colors.push_back(rgb);
-        logColorConversion(hue, rgb, logger);
+        logColorConversion(hue, rgb);
     }
 
     logger.debug("[ColorGenerator::generateColors] Successfully generated " +

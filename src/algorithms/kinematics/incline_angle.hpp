@@ -1,5 +1,6 @@
 #pragma once
 #include "algorithms/geometry/geometry_structures.hpp"
+#include "algorithms/gauss/gauss_builder.hpp"
 
 #include <vector>
 
@@ -21,5 +22,12 @@ VehicleAngles calculateVehicleAngles(
     const algorithms::geometry::Pixel& center,
     const algorithms::geometry::PointD& dir,
     int vehicleRadius);
+    
+// Вычисляет VehicleAngles 
+VehicleAngles calculateVehicleAnglesContinuous(
+    const std::vector<algorithms::gauss::Gaus>& gaussi,
+    const algorithms::geometry::PointD& center,
+    const algorithms::geometry::PointD& direction, // Единичное направление
+    double vehicleRadius);
 
 }

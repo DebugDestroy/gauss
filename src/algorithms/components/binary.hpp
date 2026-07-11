@@ -6,12 +6,6 @@
 
 namespace algorithms::components {
 
-enum class ThresholdMode {
-    All,
-    Peaks,
-    Valleys
-};
-
 class Binarizer {
 private:
     core::Logger& logger;
@@ -21,8 +15,7 @@ public:
 
     void bin(std::vector<std::vector<double>>& binaryMap,
                     int slice,
-                    const std::vector<std::vector<double>>& field,
-                    ThresholdMode mode);
+                    const std::vector<std::vector<double>>& field);
 };
 
 }

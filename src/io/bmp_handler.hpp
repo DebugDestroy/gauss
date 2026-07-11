@@ -14,11 +14,18 @@ enum class BmpWriteMode {
     Full
 };
 
+struct RGB {
+    unsigned char r;
+    unsigned char g;
+    unsigned char b;
+};
+
 class BmpHandler {
 private:
     core::Logger& logger;
     void logBmpHeader(const unsigned char* header) const;
-
+    RGB heightToColor(double value) const;
+    
 public:
     BmpHandler(core::Logger& lg);
 

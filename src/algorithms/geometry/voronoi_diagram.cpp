@@ -83,8 +83,8 @@ namespace algorithms::geometry {
         return;
     }
     
-    const int width = field[0].size();
-    const int height = field.size();
+    const int width = static_cast<int>(field[0].size());
+    const int height = static_cast<int>(field.size());
     edges.clear();
 
     logger.debug(std::string("[VoronoiDiagram::buildFromDelaunay] Размер области: ") + 

@@ -12,11 +12,11 @@
 #include "core/constants.hpp"
 
 namespace algorithms::components {
-    void KMeans::logCenters(const std::vector<std::vector<double>>& centers, const std::string& prefix) const {
+    void KMeans::logCenters(const std::vector<std::vector<double>>& clusterCenters, const std::string& prefix) const {
         std::ostringstream oss;
-        oss << prefix << "Центры кластеров (" << centers.size() << "):";
-        for (size_t i = 0; i < centers.size(); ++i) {
-            oss << "\n  Кластер " << i << ": (" << centers[i][0] << ", " << centers[i][1] << ")";
+        oss << prefix << "Центры кластеров (" << clusterCenters.size() << "):";
+        for (size_t i = 0; i < clusterCenters.size(); ++i) {
+            oss << "\n  Кластер " << i << ": (" << clusterCenters[i][0] << ", " << clusterCenters[i][1] << ")";
         }
         logger.debug(oss.str());
     }
@@ -29,7 +29,7 @@ namespace algorithms::components {
         logger.trace("[KMeans] Инициализация алгоритма K-средних");
     }
 
-    void KMeans::initializeCenters(const std::vector<std::vector<double>>& data, int k) {
+    void KMeans::initializeCenters(const std::vector<std::vector<double>>& data, std::size_t k) {
         logger.debug("[KMeans::initializeCenters] Инициализация центров кластеров");
         logger.debug(std::string("Количество кластеров: ") + std::to_string(k) + 
                    ", количество точек: " + std::to_string(data.size()));
@@ -40,11 +40,11 @@ namespace algorithms::components {
         }
         
         centers.clear();
-        std::vector<size_t> indices(data.size());
+        std::vector<std::size_t> indices(data.size());
         std::iota(indices.begin(), indices.end(), 0);
         std::shuffle(indices.begin(), indices.end(), std::mt19937{std::random_device{}()});
         
-        for (int i = 0; i < k && i < static_cast<int>(data.size()); ++i) {
+        for (std::size_t i = 0; i < k && i < data.size(); ++i) {
             centers.push_back(data[indices[i]]);
             logPoint(data[indices[i]], "Выбран начальный центр: ");
         }
@@ -57,7 +57,7 @@ namespace algorithms::components {
         return dist;
     }
 
-    KMeans::ClusterResult KMeans::cluster(const std::vector<std::vector<double>>& data, int k) {
+    KMeans::ClusterResult KMeans::cluster(const std::vector<std::vector<double>>& data, std::size_t k) {
         logger.trace("[KMeans::cluster] Начало кластеризации");
         logger.debug(std::string("Количество кластеров: ") + std::to_string(k) + 
                    ", точек: " + std::to_string(data.size()));
@@ -74,13 +74,13 @@ namespace algorithms::components {
             labels.assign(data.size(), -1);
 
             // Назначение меток
-            for (size_t i = 0; i < data.size(); ++i) {
+            for (std::size_t i = 0; i < data.size(); ++i) {
                 double minDist = std::numeric_limits<double>::max();
-                for (size_t j = 0; j < centers.size(); ++j) {
+                for (std::size_t j = 0; j < centers.size(); ++j) {
                     double dist = distance(data[i], centers[j]);
                     if (dist < minDist) {
                         minDist = dist;
-                        labels[i] = j;
+                        labels[i] = static_cast<int>(j);
                     }
                 }
                 /*logger.trace(std::string("[KMeans::cluster] Точка ") + std::to_string(i) + 
@@ -89,19 +89,19 @@ namespace algorithms::components {
 
             // Обновление центров
             std::vector<std::vector<double>> newCenters(centers.size(), {0.0, 0.0});
-            std::vector<int> counts(centers.size(), 0);
+            std::vector<int> counts(centers.size(), -1);
 
-            for (size_t i = 0; i < data.size(); ++i) {
+            for (std::size_t i = 0; i < data.size(); ++i) {
                 int label = labels[i];
                 if (label >= 0) {
-                    newCenters[label][0] += data[i][0];
-                    newCenters[label][1] += data[i][1];
-                    counts[label]++;
+                    newCenters[static_cast<std::size_t>(label)][0] += data[i][0];
+                    newCenters[static_cast<std::size_t>(label)][1] += data[i][1];
+                    counts[static_cast<std::size_t>(label)]++;
                 }
             }
 
             // Проверка изменений
-            for (size_t j = 0; j < centers.size(); ++j) {
+            for (std::size_t j = 0; j < centers.size(); ++j) {
                 if (counts[j] > 0) {
                     newCenters[j][0] /= counts[j];
                     newCenters[j][1] /= counts[j];
@@ -134,7 +134,7 @@ namespace algorithms::components {
         return result;
     }
 
-    KMeans::ClusterResult KMeans::kmeansWithKernels(const std::vector<std::vector<double>>& data, int k, int kernelSize) {
+    KMeans::ClusterResult KMeans::kmeansWithKernels(const std::vector<std::vector<double>>& data, std::size_t k, std::size_t kernelSize) {
         logger.trace("[KMeans::kmeansWithKernels] Начало кластеризации с ядрами");
         logger.debug(std::string("Параметры: k=") + std::to_string(k) + 
                    ", kernelSize=" + std::to_string(kernelSize) + 
@@ -151,7 +151,7 @@ namespace algorithms::components {
         std::vector<size_t> indices(data.size());
         std::iota(indices.begin(), indices.end(), 0);
         
-        size_t samplesToTake = std::min(k * kernelSize, static_cast<int>(data.size()));
+        size_t samplesToTake = std::min(k * kernelSize, data.size());
         if (samplesToTake == 0) {
             logger.error("[KMeans::kmeansWithKernels] Ошибка: недостаточно точек для выборки");
             return result;
@@ -172,7 +172,7 @@ namespace algorithms::components {
         // Финальная кластеризация
         centers = kernelResult.centers;
         result = cluster(data, k);
-        if (static_cast<int>(result.centers.size()) != k) {
+        if (result.centers.size() != k) {
             logger.error("[KMeans::kmeansWithKernels] Несоответствие количества кластеров!");
         }
 

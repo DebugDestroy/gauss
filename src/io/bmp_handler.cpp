@@ -18,6 +18,19 @@ BmpHandler::BmpHandler(core::Logger& lg) : logger(lg) {}
             << "  Bits Per Pixel: " << *reinterpret_cast<const uint16_t*>(&header[28]);
         logger.debug(oss.str());
     }
+    
+    RGB BmpHandler::heightToColor(double value) const
+    {
+        value = std::clamp(value, static_cast<double>(core::BLACK), static_cast<double>(core::WHITE));
+
+        double t = value / core::WHITE;
+
+        return {
+            static_cast<unsigned char>(core::WHITE * t),          // R
+            0,                                            // G
+            static_cast<unsigned char>(core::WHITE * (1.0 - t))   // B
+        };
+    }
 
     void BmpHandler::bmp_write(const std::vector<std::vector<double>>& pixelMatrix, const std::string& filename) {
         logger.trace("[BmpHandler::bmp_write] Starting BMP write operation");
@@ -27,9 +40,9 @@ BmpHandler::BmpHandler(core::Logger& lg) : logger(lg) {}
             return;
         }
 
-        int width = pixelMatrix[0].size();
-        int height = pixelMatrix.size();
-        int padding = (4 - (width * 3) % 4) % 4;
+        std::size_t width = pixelMatrix[0].size();
+        std::size_t height = pixelMatrix.size();
+        std::size_t padding = (4 - (width * 3) % 4) % 4;
 
         logger.debug(std::string("[BmpHandler::bmp_write] Creating BMP file: ") + filename + 
                    " with dimensions " + std::to_string(width) + "x" + std::to_string(height) +
@@ -77,8 +90,8 @@ BmpHandler::BmpHandler(core::Logger& lg) : logger(lg) {}
         size_t clamped_pixels = 0;
         logger.trace("[BmpHandler::bmp_write] Writing pixel data (bottom-to-top)");
         
-        for (int y = height - 1; y >= 0; --y) {
-            for (int x = 0; x < width; ++x) {
+        for (std::size_t y = 0; y < height; ++y) {
+            for (std::size_t x = 0; x < width; ++x) {
                 double pixelValue = pixelMatrix[y][x];
                 if (pixelValue < core::BLACK || pixelValue > core::WHITE) {
                     clamped_pixels++;
@@ -86,12 +99,14 @@ BmpHandler::BmpHandler(core::Logger& lg) : logger(lg) {}
                        static_cast<double>(core::BLACK),
                        static_cast<double>(core::WHITE));
                 }
-                unsigned char color = static_cast<unsigned char>(pixelValue);
-                bmpFile.put(color).put(color).put(color);
+                RGB color = heightToColor(pixelValue);
+                bmpFile.put(static_cast<char>(color.b));
+                bmpFile.put(static_cast<char>(color.g));
+                bmpFile.put(static_cast<char>(color.r));
                 pixels_written++;
             }
             // Write padding
-            for (int p = 0; p < padding; ++p) {
+            for (std::size_t p = 0; p < padding; ++p) {
                 bmpFile.put(0);
             }
         }
@@ -134,17 +149,24 @@ BmpHandler::BmpHandler(core::Logger& lg) : logger(lg) {}
         double min_val = core::WHITE, max_val = core::BLACK;
         logger.trace("[BmpHandler::bmp_read] Reading pixel data (bottom-to-top)");
         
-        for (int y = height - 1; y >= 0; --y) {
+        for (int y = 0; y < height; ++y) {
             for (int x = 0; x < width; ++x) {
-                unsigned char color = bmpFile.get();
-                bmpFile.get(); // G
-                bmpFile.get(); // R
+                bmpFile.get();
+                bmpFile.get();
+
+                int value = bmpFile.get();
+
+                if (value == EOF) {
+                    logger.error("[BmpHandler::bmp_read] Unexpected end of file");
+                    return;
+                }
+
+unsigned char r = static_cast<unsigned char>(value);
+
+                field[static_cast<std::size_t>(y)][static_cast<std::size_t>(x)] = static_cast<double>(r);
                 
-                double value = static_cast<double>(color);
-                field[y][x] = value;
-                
-                min_val = std::min(min_val, value);
-                max_val = std::max(max_val, value);
+                min_val = std::min(min_val, field[static_cast<std::size_t>(y)][static_cast<std::size_t>(x)]);
+                max_val = std::max(max_val, field[static_cast<std::size_t>(y)][static_cast<std::size_t>(x)]);
                 pixels_read++;
             }
             bmpFile.ignore(padding);

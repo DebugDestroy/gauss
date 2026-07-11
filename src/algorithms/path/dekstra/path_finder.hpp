@@ -21,7 +21,7 @@ struct NodeGraph {
 };
 
 struct NodeGrid {
-    int idx;
+    std::size_t idx;
     double gScore;
 
     bool operator>(const NodeGrid& other) const {

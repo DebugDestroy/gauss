@@ -1,6 +1,6 @@
 #!/bin/bash
 
-N=1000
+N=100
 filename="grid.cmd"
 
 for ((i=1; i<=N; i++))

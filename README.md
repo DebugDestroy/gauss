@@ -5,28 +5,31 @@
 
 ## 🧭 Pipeline обработки данных
 - Генерация/загрузка карты высот (формат BMP и GNUPLOT)
-![field](results/visualizations/gnuplot.png)
+![field](results/showcase/gnuplot.png)
 
 - Бинаризация и компоненты
-![binary](results/visualizations/Metadata.png)
+![binary](results/showcase/Metadata.png)
 
 - Кластеризация объектов методом k-means
-![kmeans](results/visualizations/kmeans.png)
+![kmeans](results/showcase/kmeans.png)
 
 - Триангуляция Делоне с учетом высот
-![delaunay](results/visualizations/Triangulation_Delone.png)
+![delaunay](results/showcase/Triangulation_Delone.png)
 
 - Построение диаграммы Вороного
-![voronoi](results/visualizations/Diagramma_Voronova.png)
+![voronoi](results/showcase/Diagramma_Voronova.png)
 
 - Навигационный граф, построенный по диаграмме Вороного с ограничениями по углу наклона тележки и ее радиуса
-![graph](results/visualizations/Graph.png)
+![graph](results/showcase/Graph.png)
 
 - Поиск пути на графе
-![pathGraph](results/visualizations/AstarPlot3DPathGraph.png)
+![pathGraph](results/showcase/AstarPlot3DPathGraph.png)
 
 - Поиск пути на сетке
-![pathGrid](results/visualizations/AstarPathGrid.png)
+![pathGrid](results/showcase/AstarPathGrid.png)
+
+- RRT
+![RRT](results/showcase/RRT.gif)
 
 
 ## 📚 Документация
@@ -37,6 +40,7 @@
 ## 📊 Исследования
 - [Graph — Graph-based Path Planning](notebooks/graph.ipynb) — сравнение алгоритмов A*, Dijkstra и Greedy на навигационном графе, построеным на основе диаграммы Вороного
 - [Grid — Grid-based Path Planning](notebooks/grid.ipynb) — сравнение алгоритмов A*, Dijkstra и Greedy на сетке
+- [RRT — RRT-based Path Planning](notebooks/rrt.ipynb) — обзор метрик RRT
 
 
 ## 📄 Лицензия

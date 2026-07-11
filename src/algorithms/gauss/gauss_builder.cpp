@@ -2,12 +2,11 @@
 #include <cmath>
 #include <algorithm>
 #include <string>
-#include <random>
 #include <fstream>
 
 namespace algorithms::gauss {
 
-    Gaus::Gaus(double h, double x0, double y0, double sigma_x, double sigma_y) : h(h), x0(x0), y0(y0), sigma_x(sigma_x), sigma_y(sigma_y) {}
+    Gaus::Gaus(double h_, double x0_, double y0_, double sigma_x_, double sigma_y_) : h(h_), x0(x0_), y0(y0_), sigma_x(sigma_x_), sigma_y(sigma_y_) {}
     
     void GaussBuilder::logGaussParameters(const Gaus& g) const {
         logger.debug(std::string("[GaussBuilder] Added Gaussian - ") +
@@ -18,7 +17,7 @@ namespace algorithms::gauss {
                    ", σy: " + std::to_string(g.sigma_y));
     }
 
-    GaussBuilder::GaussBuilder(core::Logger& lg) : logger(lg) {}
+    GaussBuilder::GaussBuilder(core::Logger& lg, std::mt19937& generator) : logger(lg), gen(generator) {}
 
     void GaussBuilder::addgauss(double h, double x0, double y0, double sigma_x, double sigma_y, std::vector<Gaus>& gaussi) {
         logger.trace("[GaussBuilder::addgauss] Adding new Gaussian distribution");
@@ -33,33 +32,21 @@ void GaussBuilder::addgaussRandom(
     double sx_min, double sx_max,
     double sy_min, double sy_max,
     double h_min, double h_max,
-    int count_min, int count_max,
-    GAutoMode gAutoMode, std::uint32_t seedGAuto,
+    std::size_t count_min, std::size_t count_max,
     std::vector<Gaus>& gaussi)
 {
     logger.info("[GaussBuilder] Автогенерация гауссов");
-
-    std::mt19937 gen;
-
-if (gAutoMode == GAutoMode::Fixed) {
-    gen.seed(seedGAuto);
-    logger.info("Fixed mode seed = " + std::to_string(seedGAuto));
-} else {
-    std::random_device rd;
-    gen.seed(rd());
-    logger.info("Random mode");
-}
 
     std::uniform_real_distribution<> dx(xmin, xmax);
     std::uniform_real_distribution<> dy(ymin, ymax);
     std::uniform_real_distribution<> dsx(sx_min, sx_max);
     std::uniform_real_distribution<> dsy(sy_min, sy_max);
     std::uniform_real_distribution<> dh(h_min, h_max);
-    std::uniform_int_distribution<> dcount(count_min, count_max);
+    std::uniform_int_distribution<std::size_t> dcount(count_min, count_max);
 
-    int count = dcount(gen);
+    std::size_t count = dcount(gen);
 
-    for (int i = 0; i < count; ++i) {
+    for (std::size_t i = 0; i < count; ++i) {
         double x0 = dx(gen);
         double y0 = dy(gen);
         double sigma_x = dsx(gen);
@@ -72,10 +59,11 @@ if (gAutoMode == GAutoMode::Fixed) {
     logger.info("[GaussBuilder] Сгенерировано " + std::to_string(count) + " гауссов");
 }
     
-    void GaussBuilder::init(int A, int B, std::vector<std::vector<double>>& field) {
+    void GaussBuilder::init(int fieldWidth, int fieldHeight, std::vector<std::vector<double>>& field) {
          logger.trace("[GaussBuilder::init] Initializing field");
-         field.assign(A, std::vector<double>(B, 0));
-         logger.info("[GaussBuilder::init] Field initialized");
+         field.assign(static_cast<std::size_t>(fieldHeight), std::vector<double>(static_cast<std::size_t>(fieldWidth), 0));
+         logger.info("Ширина = " + std::to_string(fieldWidth) + ", Длина = " +  std::to_string(fieldHeight));
+         logger.info("Столбцов = " + std::to_string(field[0].size()) + ", Строк = " +  std::to_string(field.size()));
     }
     
     void GaussBuilder::generate(std::vector<std::vector<double>>& field, std::vector<Gaus>& gaussi) {
@@ -115,31 +103,23 @@ for (const auto& g : gaussi) {
 
     // Ограничиваем область 3 сигмами
 
-    int minX = std::max(
-        0,
-        static_cast<int>(std::floor(g.x0 - 3.0 * g.sigma_x))
-    );
+    int leftX = static_cast<int>(std::floor(g.x0 - 3.0 * g.sigma_x));
+    size_t minX = static_cast<size_t>(std::max(0, leftX));
 
-    int maxX = std::min(
-        static_cast<int>(width - 1),
-        static_cast<int>(std::ceil(g.x0 + 3.0 * g.sigma_x))
-    );
+    int rightX = static_cast<int>(std::ceil(g.x0 + 3.0 * g.sigma_x));
+    size_t maxX = static_cast<size_t>(std::min(static_cast<int>(width - 1), rightX));
 
-    int minY = std::max(
-        0,
-        static_cast<int>(std::floor(g.y0 - 3.0 * g.sigma_y))
-    );
+    int leftY = static_cast<int>(std::floor(g.y0 - 3.0 * g.sigma_y));
+    size_t minY = static_cast<size_t>(std::max(0, leftY));
 
-    int maxY = std::min(
-        static_cast<int>(height - 1),
-        static_cast<int>(std::ceil(g.y0 + 3.0 * g.sigma_y))
-    );
+    int rightY = static_cast<int>(std::ceil(g.y0 + 3.0 * g.sigma_y));
+    size_t maxY = static_cast<size_t>(std::min(static_cast<int>(height - 1), rightY));
+    
+    for (size_t y = minY; y <= maxY; ++y) {
+        for (size_t x = minX; x <= maxX; ++x) {
 
-    for (int y = minY; y <= maxY; ++y) {
-        for (int x = minX; x <= maxX; ++x) {
-
-            double dx = (x - g.x0) / g.sigma_x;
-            double dy = (y - g.y0) / g.sigma_y;
+            double dx = (static_cast<double>(x) - g.x0) / g.sigma_x;
+            double dy = (static_cast<double>(y) - g.y0) / g.sigma_y;
 
             double value =
                 g.h * std::exp(-(dx * dx + dy * dy) / 2.0);
@@ -169,7 +149,7 @@ for (const auto& g : gaussi) {
                   "  Total pixels processed: " + std::to_string(total_pixels) + "\n" +
                   "  Clamped pixels: " + std::to_string(clamped_pixels) + "\n" +
                   "  Clamping ratio: " + 
-                  std::to_string((double)clamped_pixels/total_pixels*100) + "%");
+                  std::to_string(static_cast<double>(clamped_pixels)/static_cast<double>(total_pixels)*100) + "%");
     }
   }
   
@@ -197,4 +177,41 @@ void GaussBuilder::saveGaussiansToFile(
 
     logger.info("[GaussBuilder] Гауссы сохранены в файл: " + filename);
 }
+
+double GaussBuilder::heightAt(
+    double x,
+    double y,
+    const std::vector<Gaus>& gaussi)
+{
+    double value = core::MID_GRAY;
+
+    for (const auto& g : gaussi)
+    {
+        if (std::abs(x - g.x0) > 3.0 * g.sigma_x ||
+            std::abs(y - g.y0) > 3.0 * g.sigma_y ||
+            g.sigma_x <= 0.0 || g.sigma_y <= 0.0)
+        {
+            continue;
+        }
+
+        const double dx = (x - g.x0) / g.sigma_x;
+        const double dy = (y - g.y0) / g.sigma_y;
+
+        value += g.h * std::exp(-(dx * dx + dy * dy) / 2.0);
+    }
+
+    return std::clamp(
+        value,
+        static_cast<double>(core::BLACK),
+        static_cast<double>(core::WHITE)
+    );
+}
+
+double GaussBuilder::heightAt(
+    const algorithms::geometry::PointD& point,
+    const std::vector<Gaus>& gaussi)
+{
+    return heightAt(point.x, point.y, gaussi);
+}
+    
 }

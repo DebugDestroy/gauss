@@ -1,10 +1,10 @@
 init 1000 1000
 
-g_auto 10 990 10 990 3 6 3 6 -20 20 900 901 Random
+g_auto 900 901 10 990 10 990 3 6 3 6 -20 20
 
 generate
 
-bin 132 All
+bin 5
 
 wave 10
 

@@ -14,7 +14,12 @@ Pixel toPixel(const PointD& p)
 
 Pixel toPixel(const algorithms::path::common::GridCell& c, int cellSize)
 {
-    return toPixel(PointD{c.col * cellSize + cellSize * 0.5, c.row * cellSize + cellSize * 0.5});
+    double cs = cellSize;
+
+    return toPixel(PointD{
+        static_cast<double>(c.col) * cs + cs * 0.5,
+        static_cast<double>(c.row) * cs + cs * 0.5
+    });
 }
 
 std::vector<algorithms::geometry::Pixel>
@@ -42,6 +47,11 @@ PointD toPointD(const Pixel& p)
 }
      double length(const Edge& e) {
     return distance(e.a, e.b);
+}
+
+Pixel toPixel(const Pixel& p) // Перегрузка (выдать пиксель)
+{
+    return p;
 }
 
  PointD midPoint(const Edge& e) {
@@ -74,7 +84,12 @@ PointD makeCodirected(const PointD& direction,
         bool inside = p.x > -core::EPSILON && p.y > -core::EPSILON && p.x < width + core::EPSILON && p.y < height + core::EPSILON;
         return inside;
     }
-
+    
+    bool isPointInsideField(const Pixel& p, int width, int height) {
+        bool inside = p.x >= 0 && p.y > 0 && p.x < width  && p.y < height;
+        return inside;
+    }
+    
      bool shareEdge(const Triangle& a, const Triangle& b) {
     
     const std::array<Edge, 3> edgesA = { Edge(a.a, a.b), Edge(a.b, a.c), Edge(a.c, a.a) };

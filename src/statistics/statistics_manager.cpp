@@ -1,5 +1,4 @@
 #include "statistics/statistics_manager.hpp"
-#include "algorithms/geometry/bresenham_line.hpp" 
 #include "algorithms/kinematics/incline_angle.hpp"
 
 #include <vector>
@@ -12,24 +11,6 @@ namespace statistics {
     // Начало измерения времени
     void StatisticsManager::startTimer() {
         startTime = std::chrono::high_resolution_clock::now();
-    }
-
-    // Вычислить длину пути
-    void StatisticsManager::computePathLength(
-        algorithms::path::PathMetrics& metrics,
-        const std::vector<algorithms::geometry::Pixel>& path)
-    {
-        metrics.pathNodes = path.size();
-        metrics.euclideanLength = 0.0;
-        metrics.pixelLength = 0;
-
-        for (size_t i = 1; i < path.size(); ++i) {
-            const auto& p0 = path[i - 1];
-            const auto& p1 = path[i];
-
-            metrics.euclideanLength += std::hypot(p1.x - p0.x, p1.y - p0.y);
-            metrics.pixelLength += algorithms::geometry::bresenhamLine(p0, p1).size();
-        }
     }
     
 // Вычислить максимальные углы вбок и вперед/назад
@@ -51,42 +32,54 @@ void StatisticsManager::computeMaxTerrainAngles(
             static_cast<double>(path[i + 1].x - path[i].x),
             static_cast<double>(path[i + 1].y - path[i].y)
         };
+        
+        const auto segmentPixels = algorithms::geometry::bresenhamLine(path[i], path[i + 1]);
+        
+        if (segmentPixels.size() < 2)
+            continue;
+            
+        for (const auto& center : segmentPixels)
+        {     
+            auto angles = algorithms::kinematics::calculateVehicleAngles(
+                field,
+                center,
+                dir,
+                vehicleRadius);
 
-        auto angles = algorithms::kinematics::calculateVehicleAngles(
-            field,
-            path[i],
-            dir,
-            vehicleRadius);
+            metrics.maxSideAngle =
+                std::max(metrics.maxSideAngle,
+                         std::fabs(angles.sideAngle));
 
-        metrics.maxSideAngle =
-            std::max(metrics.maxSideAngle,
-                     std::fabs(angles.sideAngle));
-
-        metrics.maxUpDownAngle =
-            std::max(metrics.maxUpDownAngle,
-                     std::fabs(angles.upDownAngle));
+            metrics.maxUpDownAngle =
+                std::max(metrics.maxUpDownAngle,
+                         std::fabs(angles.upDownAngle));
+        }
     }
 }
-        
+
+// Вычислить минимальное расстояние до препятствия в пикселях и евклидово для пиксельного пути        
 void StatisticsManager::computeMinObstacleDistance(
     algorithms::path::PathMetrics& metrics,
     const std::vector<algorithms::geometry::Pixel>& path,
-    const std::vector<std::vector<double>>& binaryMap,
-    const algorithms::path::common::Conditions& conds)
+    const std::vector<std::vector<double>>& binaryMap)
 {
-    if (path.empty())
+    if (path.size() < 2)
         return;
 
     double minEuclid = std::numeric_limits<double>::infinity();
     int minPixel = std::numeric_limits<int>::max();
 
-    for (const auto& p : path)
+    for (size_t i = 0; i + 1 < path.size(); ++i)
     {
-        double d = conds.minObstacleDistance(p, binaryMap);
-        int dp   = conds.minObstacleDistancePixel(p, binaryMap);
+        const auto segmentPixels = algorithms::geometry::bresenhamLine(path[i], path[i + 1]);
+            
+        for (const auto& center : segmentPixels)
+        {     
+            auto result = algorithms::path::common::minObstacleDistance(center, binaryMap);
 
-        minEuclid = std::min(minEuclid, d);
-        minPixel  = std::min(minPixel, dp);
+            minEuclid = std::min(minEuclid, result.euclidean);
+            minPixel  = std::min(minPixel, result.pixel);
+        }
     }
 
     metrics.minObstacleDistance = minEuclid;
@@ -99,6 +92,143 @@ void StatisticsManager::computeMinObstacleDistance(
         metrics.executionTimeMs = std::chrono::duration<double, std::milli>(endTime - startTime).count();
     }
     
+    // Вычислить максимальные углы вбок и вперед/назад для непрерывного пути
+    void StatisticsManager::computeMaxTerrainAngles(
+        algorithms::path::PathMetrics& metrics,
+        const std::vector<algorithms::geometry::PointD>& path,
+        const std::vector<algorithms::gauss::Gaus>& gaussi,
+        double vehicleRadius,
+        double interpEdge)
+    {
+        if (path.size() < 2)
+            return;
+
+        metrics.maxSideAngle = 0.0;
+        metrics.maxUpDownAngle = 0.0;
+        double length;
+        algorithms::geometry::PointD dir;
+        algorithms::geometry::PointD direction; // Нормализованное направление движения
+        algorithms::geometry::PointD center; 
+        int steps;
+        double t;
+        
+        for (size_t segment = 0; segment + 1 < path.size(); ++segment)
+        {
+            dir = {
+                path[segment + 1].x - path[segment].x,
+                path[segment + 1].y - path[segment].y
+            };
+            
+            length = std::hypot(dir.x, dir.y);
+
+            // Ребро нулевой длины
+            if (length < core::EPSILON)
+                continue;
+
+            // Нормализованное направление движения
+            direction = {
+                dir.x / length,
+                dir.y / length
+            };
+    
+            steps = std::max(
+                1,
+                static_cast<int>(std::ceil(length / interpEdge))
+            );
+    
+            for (int step = 0; step <= steps; ++step)
+            {
+                t = static_cast<double>(step) / steps;
+
+                center = {
+                    path[segment].x + t * dir.x,
+                    path[segment].y + t * dir.y
+                }; 
+
+                auto angles =
+                    algorithms::kinematics::calculateVehicleAnglesContinuous(
+                        gaussi,
+                        center,
+                        direction,
+                        vehicleRadius);
+
+                metrics.maxSideAngle =
+                    std::max(metrics.maxSideAngle,
+                        std::fabs(angles.sideAngle));
+
+                metrics.maxUpDownAngle =
+                    std::max(metrics.maxUpDownAngle,
+                        std::fabs(angles.upDownAngle));
+            }
+        }
+    }
+    
+    // Вычислить минимальное расстояние до препятствия в пикселях и евклидово для непрерывного пути
+    void StatisticsManager::computeMinObstacleDistance(
+        algorithms::path::PathMetrics& metrics,
+        const std::vector<algorithms::geometry::PointD>& path,
+        const std::vector<algorithms::gauss::Gaus>& gaussi,
+        int fieldWidth,
+        int fieldHeight,
+        double heightThreshold,
+        double interpEdge,
+        double interpolationCollision,
+        double interpAngle)
+    {
+        if (path.size() < 2)
+            return;
+
+        double minEuclid = std::numeric_limits<double>::infinity();
+        int minPixel = std::numeric_limits<int>::max();
+        
+        double length;
+        algorithms::geometry::PointD dir;
+        algorithms::geometry::PointD center; 
+        int steps;
+        double t;
+        
+        for (size_t segment = 0; segment + 1 < path.size(); ++segment)
+        {
+            length = algorithms::geometry::distance(path[segment], path[segment + 1]);
+            
+            dir = {
+                path[segment + 1].x - path[segment].x,
+                path[segment + 1].y - path[segment].y
+            };
+            
+            // Ребро нулевой длины
+            if (length < core::EPSILON)
+            {
+                auto result = algorithms::path::common::minObstacleDistance(path[segment], gaussi, fieldWidth, fieldHeight, heightThreshold, interpolationCollision, interpAngle);
+                minEuclid = std::min(minEuclid, result.euclidean);
+                minPixel  = std::min(minPixel, result.pixel);
+                continue;
+            }
+            
+            steps = std::max(
+                1,
+                static_cast<int>(std::ceil(length / interpEdge))
+            );
+    
+            for (int step = 0; step <= steps; ++step)
+            {
+                t = static_cast<double>(step) / steps;
+
+                center = {
+                    path[segment].x + t * dir.x,  
+                    path[segment].y + t * dir.y
+                };
+                
+                auto result = algorithms::path::common::minObstacleDistance(center, gaussi, fieldWidth, fieldHeight, heightThreshold, interpolationCollision, interpAngle);
+
+                minEuclid = std::min(minEuclid, result.euclidean);
+                minPixel  = std::min(minPixel, result.pixel);
+            }
+        }
+        metrics.minObstacleDistance = minEuclid;
+        metrics.minObstacleDistancePixel = minPixel;
+    }
+        
     // Сбросить метрики
     void StatisticsManager::reset(algorithms::path::PathMetrics& metrics) {
         metrics.algorithmName.clear();

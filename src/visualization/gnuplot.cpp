@@ -11,7 +11,15 @@ namespace visualization {
     if (terminal == "qt") {
         fprintf(pipe,
             "set terminal qt enhanced font 'Arial,20'\n");
-    } else {
+    }
+    
+    else if (terminal == "gif")
+    {
+        fprintf(pipe,
+            "set terminal gif animate delay 5 optimize size 1600,1200\n");
+    }
+    
+    else {
         fprintf(pipe,
             "set terminal pngcairo enhanced size 1600,1200 font 'Arial,20'\n");
     }
@@ -38,11 +46,6 @@ namespace visualization {
 
    fprintf(pipe, "set grid\n"); // бонус
 }
-    
-    double GnuplotInterface::transformY(double y, int height) const {
-        double transformed = height - y - 1;
-        return transformed;
-    }
 
     void GnuplotInterface::logPlotStart(const std::string& plotType, const std::string& filename) const {
         logger.info(std::string("[GnuplotInterface] Начало визуализации: ") + plotType);
@@ -64,8 +67,8 @@ namespace visualization {
             return;
         }
 
-        const int height = binaryMap.size();
-        const int width = binaryMap[0].size();
+        const int height = static_cast<int>(binaryMap.size());
+        const int width = static_cast<int>(binaryMap[0].size());
         logger.debug("Число компонент: " + std::to_string(components.size()));
 
         // Настройки графика
@@ -83,9 +86,9 @@ namespace visualization {
         fprintf(gnuplotPipe, "'-' with vectors head filled  lw 3 lc 'green'\n");
 
         // 1. Данные бинарного изображения (с инверсией Y)
-for (int y = height - 1; y >= 0; --y) {
+for (int y = 0; y < height; ++y) {
     for (int x = 0; x < width; ++x) {
-        fprintf(gnuplotPipe, "%f ", binaryMap[y][x]);
+        fprintf(gnuplotPipe, "%f ", binaryMap[static_cast<std::size_t>(y)][static_cast<std::size_t>(x)]);
     }
             fprintf(gnuplotPipe, "\n");
         }
@@ -93,8 +96,8 @@ for (int y = height - 1; y >= 0; --y) {
 
          // 2. Границы компонент (красные прямоугольники)
         for (const auto& comp : components) {
-            double y_min = transformY(comp.min_y, height);
-            double y_max = transformY(comp.max_y, height);
+            double y_min = comp.min_y;
+            double y_max = comp.max_y;
             
             fprintf(gnuplotPipe, "%f %f\n", comp.min_x - 0.5, y_min - 0.5);
             fprintf(gnuplotPipe, "%f %f\n", comp.max_x + 0.5, y_min - 0.5);
@@ -108,13 +111,13 @@ for (int y = height - 1; y >= 0; --y) {
         for (const auto& comp : components) {
             fprintf(gnuplotPipe, "%f %f\n", 
                     comp.center_x, 
-                    transformY(comp.center_y, height));
+                    comp.center_y);
         }
         fprintf(gnuplotPipe, "e\n");
 
          // 4. Собственные векторы (зеленые стрелки)
 for (const auto& comp : components) {
-    double cy = transformY(comp.center_y, height);
+    double cy = comp.center_y;
     
     // Масштабируем собственные вектора по собственным значениям
     double scale_factor = 1; // Общий масштаб для визуализации
@@ -148,9 +151,9 @@ fprintf(gnuplotPipe, "e\n");
             return;
         }
 
-        int rows = field.size();
-        int cols = field[0].size();
-        logger.debug(std::string("Размер сетки: ") + std::to_string(cols) + "x" + std::to_string(rows));
+        int height = static_cast<int>(static_cast<int>(field.size()));
+        int width = static_cast<int>(static_cast<int>(field[0].size()));
+        logger.debug(std::string("Размер сетки: ") + std::to_string(width) + "x" + std::to_string(height));
         
         FILE* gnuplotPipe = popen("gnuplot -persist", "w");
         if (!gnuplotPipe) {
@@ -161,8 +164,8 @@ fprintf(gnuplotPipe, "e\n");
     // Настройки 3D графика
     applyNiceStyle(gnuplotPipe, "Height Map", true);
     fprintf(gnuplotPipe, "set output '%s'\n", filename.c_str());
-    fprintf(gnuplotPipe, "set xrange [0:%d]\n", cols - 1);
-    fprintf(gnuplotPipe, "set yrange [0:%d]\n", rows - 1);
+    fprintf(gnuplotPipe, "set xrange [0:%d]\n", width - 1);
+    fprintf(gnuplotPipe, "set yrange [0:%d]\n", height - 1);
     fprintf(gnuplotPipe, "set zrange [*:*]\n"); // Автомасштабирование по Z
     fprintf(gnuplotPipe, "set hidden3d\n");
     fprintf(gnuplotPipe, "set pm3d\n");
@@ -172,10 +175,9 @@ fprintf(gnuplotPipe, "e\n");
     fprintf(gnuplotPipe, "splot '-' with pm3d title 'Height Map'\n");
     
     // Записываем данные в правильном порядке
-    for (int y = 0; y < rows; ++y) {
-        for (int x = 0; x < cols; ++x) {
-            // Преобразуем координаты для правильной ориентации
-            fprintf(gnuplotPipe, "%d %d %f\n", x, rows-1-y, field[y][x]);
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            fprintf(gnuplotPipe, "%d %d %f\n", x, y, field[static_cast<std::size_t>(y)][static_cast<std::size_t>(x)]);
         }
         fprintf(gnuplotPipe, "\n"); // Пустая строка между слоями Y
     }
@@ -193,8 +195,8 @@ void GnuplotInterface::plotKmeans(const std::vector<std::vector<double>>& binary
             return;
         }
 
-        const int height = binaryMap.size();
-        const int width = binaryMap[0].size();
+        const int height = static_cast<int>(binaryMap.size());
+        const int width = static_cast<int>(binaryMap[0].size());
         logger.debug(std::string("Kmeans: ") + std::to_string(centers.size()) + " центров");
 
         FILE* gnuplotPipe = popen("gnuplot -persist", "w");
@@ -219,9 +221,9 @@ void GnuplotInterface::plotKmeans(const std::vector<std::vector<double>>& binary
     fprintf(gnuplotPipe, "'-' with points ls 1\n");     // Центры
 
     // 1. Данные поля
-    for (int y = height - 1; y >= 0; --y) {
+    for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
-            fprintf(gnuplotPipe, "%f ", binaryMap[y][x]);
+            fprintf(gnuplotPipe, "%f ", binaryMap[static_cast<std::size_t>(y)][static_cast<std::size_t>(x)]);
         }
         fprintf(gnuplotPipe, "\n");
     }
@@ -231,7 +233,7 @@ void GnuplotInterface::plotKmeans(const std::vector<std::vector<double>>& binary
     for (const auto& center : centers) {
         fprintf(gnuplotPipe, "%f %f\n", 
                 center.x, 
-                transformY(center.y, height));
+                center.y);
     }
     fprintf(gnuplotPipe, "e\n");
 
@@ -250,8 +252,8 @@ void GnuplotInterface::plotVoronoi(const std::vector<std::vector<double>>& binar
             return;
         }
 
-        const int height = binaryMap.size();
-        const int width = binaryMap[0].size();
+        const int height = static_cast<int>(binaryMap.size());
+        const int width = static_cast<int>(binaryMap[0].size());
         logger.debug(std::string("Диаграмма Вороного: ") + std::to_string(edges.size()) + " ребер, " + 
                    std::to_string(sites.size()) + " центров");
 
@@ -279,9 +281,9 @@ void GnuplotInterface::plotVoronoi(const std::vector<std::vector<double>>& binar
     fprintf(gnuplotPipe, "'-' with points ls 2\n");     // Центры
 
     // 1. Данные поля (красный фон)
-    for (int y = height - 1; y >= 0; --y) {
+    for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
-            fprintf(gnuplotPipe, "%f ", binaryMap[y][x]);
+            fprintf(gnuplotPipe, "%f ", binaryMap[static_cast<std::size_t>(y)][static_cast<std::size_t>(x)]);
         }
         fprintf(gnuplotPipe, "\n");
     }
@@ -290,8 +292,8 @@ void GnuplotInterface::plotVoronoi(const std::vector<std::vector<double>>& binar
     // 2. Ребра Вороного (ярко-зеленые)
     for (const auto& edge : edges) {
         fprintf(gnuplotPipe, "%f %f\n%f %f\n\n", 
-                edge.a.x, transformY(edge.a.y, height),
-                edge.b.x, transformY(edge.b.y, height));
+                edge.a.x, edge.a.y,
+                edge.b.x, edge.b.y);
     }
     fprintf(gnuplotPipe, "e\n");
 
@@ -299,7 +301,7 @@ void GnuplotInterface::plotVoronoi(const std::vector<std::vector<double>>& binar
     for (const auto& site : sites) {
         fprintf(gnuplotPipe, "%f %f\n", 
                 site.x, 
-                transformY(site.y, height));
+                site.y);
     }
     fprintf(gnuplotPipe, "e\n");
 
@@ -324,8 +326,8 @@ void GnuplotInterface::plotGraph(
         return;
     }
 
-    const int height = binaryMap.size();
-    const int width = binaryMap[0].size();
+    const int height = static_cast<int>(binaryMap.size());
+    const int width = static_cast<int>(binaryMap[0].size());
 
     FILE* gnuplotPipe = popen("gnuplot -persist", "w");
     if (!gnuplotPipe) {
@@ -344,11 +346,11 @@ void GnuplotInterface::plotGraph(
     
      // Подписи START/END
      if (start)
-        fprintf(gnuplotPipe, "set label '{/:Bold START}' at %d,%d tc rgb 'white' front font 'Arial,18'\n", 
-                static_cast<int>(start->x), static_cast<int>(transformY(start->y, height)));
+        fprintf(gnuplotPipe, "set label '{/:Bold START}' at %d,%d tc rgb 'blue' front font 'Arial,18'\n", 
+                static_cast<int>(start->x), static_cast<int>(start->y));
     if (goal)
-        fprintf(gnuplotPipe, "set label '{/:Bold END}' at %d,%d tc rgb 'white' front font 'Arial,18'\n",
-                static_cast<int>(goal->x), static_cast<int>(transformY(goal->y, height)));
+        fprintf(gnuplotPipe, "set label '{/:Bold END}' at %d,%d tc rgb 'purple' front font 'Arial,18'\n",
+                static_cast<int>(goal->x), static_cast<int>(goal->y));
             
     fprintf(gnuplotPipe,
             "set style line 1 lc rgb '#00FFFF' lw 2\n"); // ребра
@@ -371,10 +373,10 @@ fprintf(gnuplotPipe, "\n");
     // Поле
     // ==================================================
 
-    for (int y = height - 1; y >= 0; --y) {
-        for (int x = 0; x < width; ++x)
-            fprintf(gnuplotPipe, "%f ", binaryMap[y][x]);
-
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            fprintf(gnuplotPipe, "%f ", binaryMap[static_cast<std::size_t>(y)][static_cast<std::size_t>(x)]);
+        }
         fprintf(gnuplotPipe, "\n");
     }
 
@@ -391,12 +393,12 @@ fprintf(gnuplotPipe, "\n");
             algorithms::geometry::PixelEdge e(node, neighbor);
 
             fprintf(gnuplotPipe,
-                    "%d %f\n"
-                    "%d %f\n\n",
+                    "%d %d\n"
+                    "%d %d\n\n",
                     e.a.x,
-                    transformY(e.a.y, height),
+                    e.a.y,
                     e.b.x,
-                    transformY(e.b.y, height));
+                    e.b.y);
         }
     }
 
@@ -409,9 +411,9 @@ fprintf(gnuplotPipe, "\n");
     for (const auto& [node, _] : graph)
     {
         fprintf(gnuplotPipe,
-                "%d %f\n",
+                "%d %d\n",
                 node.x,
-                transformY(node.y, height));
+                node.y);
     }
 
     fprintf(gnuplotPipe, "e\n");
@@ -419,18 +421,18 @@ fprintf(gnuplotPipe, "\n");
 if (start)
 {
     fprintf(gnuplotPipe,
-            "%d %f\n",
+            "%d %d\n",
             start->x,
-            transformY(start->y, height));
+            start->y);
     fprintf(gnuplotPipe, "e\n");
 }
 
 if (goal)
 {
     fprintf(gnuplotPipe,
-            "%d %f\n",
+            "%d %d\n",
             goal->x,
-            transformY(goal->y, height));
+            goal->y);
     fprintf(gnuplotPipe, "e\n");
 }
     
@@ -451,8 +453,8 @@ void GnuplotInterface::plotGrid(
         return;
     }
 
-    const int height = binaryMap.size();
-    const int width  = binaryMap[0].size();
+    const int height = static_cast<int>(binaryMap.size());
+    const int width  = static_cast<int>(binaryMap[0].size());
 
     FILE* gnuplotPipe = popen("gnuplot -persist", "w");
     if (!gnuplotPipe) {
@@ -477,9 +479,9 @@ void GnuplotInterface::plotGrid(
     // 1. Карта
     // =====================================================
 
-    for (int y = height - 1; y >= 0; --y) {
+    for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
-            fprintf(gnuplotPipe, "%f ", binaryMap[y][x]);
+            fprintf(gnuplotPipe, "%f ", binaryMap[static_cast<std::size_t>(y)][static_cast<std::size_t>(x)]);
         }
         fprintf(gnuplotPipe, "\n");
     }
@@ -493,13 +495,13 @@ void GnuplotInterface::plotGrid(
 
     for (int col = 0; col <= grid.cols; ++col)
     {
-        const double x = col * cs;
+        const int x = col * cs;
 
         fprintf(gnuplotPipe,
-                "%f %f\n"
-                "%f %f\n\n",
-                x, 0.0,
-                x, static_cast<double>(height - 1));
+                "%d %d\n"
+                "%d %d\n\n",
+                x, 0,
+                x, static_cast<int>(height - 1));
     }
 
     fprintf(gnuplotPipe, "e\n");
@@ -510,14 +512,13 @@ void GnuplotInterface::plotGrid(
 
     for (int row = 0; row <= grid.rows; ++row)
     {
-        double y = row * cs;
-        y = transformY(y, height);
+        int y = row * cs;
 
         fprintf(gnuplotPipe,
-                "%f %f\n"
-                "%f %f\n\n",
-                0.0, y,
-                static_cast<double>(width - 1), y);
+                "%d %d\n"
+                "%d %d\n\n",
+                0, y,
+                static_cast<int>(width - 1), y);
     }
 
     fprintf(gnuplotPipe, "e\n");
@@ -541,8 +542,8 @@ void GnuplotInterface::plotNavGrid(
         return;
     }
 
-    const int height = binaryMap.size();
-    const int width  = binaryMap[0].size();
+    const int height = static_cast<int>(binaryMap.size());
+    const int width  = static_cast<int>(binaryMap[0].size());
     const int cs     = grid.cellSize;
     FILE* pipe = popen("gnuplot -persist", "w");
     if (!pipe) {
@@ -554,8 +555,8 @@ void GnuplotInterface::plotNavGrid(
     fprintf(pipe, "set output '%s'\n", filename.c_str());
     fprintf(pipe, "unset key\n");
     fprintf(pipe, "set size ratio -1\n");
-    fprintf(pipe, "set xrange [0:%d]\n", width);
-    fprintf(pipe, "set yrange [0:%d]\n", height);
+    fprintf(pipe, "set xrange [0:%d]\n", width - 1);
+    fprintf(pipe, "set yrange [0:%d]\n", height - 1);
 
     int id = 1;
 
@@ -564,8 +565,8 @@ void GnuplotInterface::plotNavGrid(
         double x1 = cell.col * cs;
         double x2 = x1 + cs;
 
-        double y1 = height - (cell.row * cs + cs);
-        double y2 = height - (cell.row * cs);
+        double y1 = cell.row * cs + cs;
+        double y2 = cell.row * cs;
 
         std::string color;
 
@@ -586,14 +587,14 @@ void GnuplotInterface::plotNavGrid(
         if (isStart)
         {
             fprintf(pipe,
-                "set label 'START' at %f,%f center tc rgb 'white' font ',10'\n",
+                "set label 'START' at %f,%f center tc rgb 'black' font ',10'\n",
                 x1 + cs * 0.5, y1 + cs * 0.5);
         }
 
         if (isEnd)
         {
             fprintf(pipe,
-                "set label 'END' at %f,%f center tc rgb 'white' font ',10'\n",
+                "set label 'END' at %f,%f center tc rgb 'black' font ',10'\n",
                 x1 + cs * 0.5, y1 + cs * 0.5);
         }
     }
@@ -606,7 +607,7 @@ void GnuplotInterface::plotNavGrid(
 
 void GnuplotInterface::plotGridPath(
     const algorithms::path::common::Grid& grid,
-    std::vector<algorithms::path::common::GridCell> gridPath,
+    std::vector<algorithms::path::common::GridCell>& gridPath,
     const algorithms::path::common::GridCell& start,
     const algorithms::path::common::GridCell& end,
     const std::vector<std::vector<double>>& binaryMap,
@@ -619,8 +620,8 @@ void GnuplotInterface::plotGridPath(
         return;
     }
 
-    const int height = binaryMap.size();
-    const int width  = binaryMap[0].size();
+    const int height = static_cast<int>(binaryMap.size());
+    const int width  = static_cast<int>(binaryMap[0].size());
     const int cs     = grid.cellSize;
 
     FILE* gnuplotPipe = popen("gnuplot", "w");
@@ -660,8 +661,8 @@ void GnuplotInterface::plotGridPath(
         double x1 = cell.col * cs;
         double x2 = x1 + cs;
 
-        double y1 = height - (cell.row * cs + cs);
-        double y2 = height - (cell.row * cs);
+        double y1 = cell.row * cs + cs;
+        double y2 = cell.row * cs;
 
         std::string color;
 
@@ -688,14 +689,14 @@ void GnuplotInterface::plotGridPath(
         if (isStart)
         {
             fprintf(gnuplotPipe,
-                "set label 'START' at %f,%f center tc rgb 'white' font ',10'\n",
+                "set label 'START' at %f,%f center tc rgb 'black' font ',10'\n",
                 x1 + cs * 0.5, y1 + cs * 0.5);
         }
 
         if (isEnd)
         {
             fprintf(gnuplotPipe,
-                "set label 'END' at %f,%f center tc rgb 'white' font ',10'\n",
+                "set label 'END' at %f,%f center tc rgb 'black' font ',10'\n",
                 x1 + cs * 0.5, y1 + cs * 0.5);
         }
     }
@@ -724,9 +725,14 @@ void GnuplotInterface::plotGridPath(
             logger.error("[GnuplotInterface::plotDelaunay] Нет данных высот");
             return;
         }
+        
+         if (triangles.empty()) {
+            logger.error("[GnuplotInterface::plotDelaunay] Нет треугольников");
+            return;
+        }
 
-        const int height = binaryMap.size();
-        const int width = binaryMap[0].size();
+        const int height = static_cast<int>(binaryMap.size());
+        const int width = static_cast<int>(binaryMap[0].size());
         logger.debug(std::string("Триангуляция Делоне: ") + std::to_string(triangles.size()) + " треугольников");
 
     // Улучшенные настройки графика
@@ -744,9 +750,9 @@ void GnuplotInterface::plotGridPath(
     fprintf(gnuplotPipe, "plot '-' matrix with image, '-' with lines ls 1\n");
 
     // 1. Данные фона (с инверсией Y)
-    for (int y = height-1; y >= 0; --y) {
+    for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
-            fprintf(gnuplotPipe, "%f ", binaryMap[y][x]);
+            fprintf(gnuplotPipe, "%f ", binaryMap[static_cast<std::size_t>(y)][static_cast<std::size_t>(x)]);
         }
         fprintf(gnuplotPipe, "\n");
     }
@@ -754,10 +760,10 @@ void GnuplotInterface::plotGridPath(
 
     // 2. Данные треугольников (с инверсией Y)
     for (const auto& tri : triangles) {
-        fprintf(gnuplotPipe, "%f %f\n", tri.a.x, transformY(tri.a.y, height));
-        fprintf(gnuplotPipe, "%f %f\n", tri.b.x, transformY(tri.b.y, height));
-        fprintf(gnuplotPipe, "%f %f\n", tri.c.x, transformY(tri.c.y, height));
-        fprintf(gnuplotPipe, "%f %f\n\n", tri.a.x, transformY(tri.a.y, height));
+        fprintf(gnuplotPipe, "%f %f\n", tri.a.x, tri.a.y);
+        fprintf(gnuplotPipe, "%f %f\n", tri.b.x, tri.b.y);
+        fprintf(gnuplotPipe, "%f %f\n", tri.c.x, tri.c.y);
+        fprintf(gnuplotPipe, "%f %f\n\n", tri.a.x, tri.a.y);
     }
     fprintf(gnuplotPipe, "e\n");
 
@@ -778,8 +784,8 @@ void GnuplotInterface::plotPath(const std::vector<algorithms::geometry::Pixel>& 
             return;
         }
 
-        const int height = field.size();
-        const int width = field[0].size();
+        const int height = static_cast<int>(field.size());
+        const int width = static_cast<int>(field[0].size());
         logger.debug(std::string("Визуализация пути: ") + std::to_string(path.size()) + " точек");
 
         FILE* gnuplotPipe = popen("gnuplot -persist", "w");
@@ -807,8 +813,8 @@ void GnuplotInterface::plotPath(const std::vector<algorithms::geometry::Pixel>& 
     for (const auto& pixel : pathPixels) {
         const int x = static_cast<int>(pixel.x);
         const int y = static_cast<int>(pixel.y);
-        const double currentHeight = field[y][x];
-        const double heightDiff = std::abs(currentHeight - params.threshold);
+        const double currentHeight = field[static_cast<std::size_t>(y)][static_cast<std::size_t>(x)];
+        const double heightDiff = std::abs(currentHeight - core::MID_GRAY - params.heightThresholdPixel);
         
         if (heightDiff < Radius) {
             const double radius = std::sqrt(
@@ -817,15 +823,15 @@ void GnuplotInterface::plotPath(const std::vector<algorithms::geometry::Pixel>& 
             );
             
             fprintf(gnuplotPipe, "set object circle at %d,%d size %f fc rgb '#004400' fs transparent solid 0.5 front\n",
-                   static_cast<int>(pixel.x), static_cast<int>(transformY(pixel.y, height)), radius);
+                   static_cast<int>(pixel.x), static_cast<int>(pixel.y), radius);
         }
     }
     
     // 3. Подписи START/END
-    fprintf(gnuplotPipe, "set label '{/:Bold START}' at %d,%d tc rgb 'white' front font 'Arial,18'\n", 
-            static_cast<int>(params.startPointX), static_cast<int>(transformY(params.startPointY, height)));
-    fprintf(gnuplotPipe, "set label '{/:Bold END}' at %d,%d tc rgb 'white' front font 'Arial,18'\n",
-            static_cast<int>(params.endPointX), static_cast<int>(transformY(params.endPointY, height)));
+    fprintf(gnuplotPipe, "set label '{/:Bold START}' at %d,%d tc rgb 'blue' front font 'Arial,18'\n", 
+            static_cast<int>(params.startPixelX), static_cast<int>(params.startPixelY));
+    fprintf(gnuplotPipe, "set label '{/:Bold END}' at %d,%d tc rgb 'purple' front font 'Arial,18'\n",
+            static_cast<int>(params.goalPixelX), static_cast<int>(params.goalPixelY));
     
     // Многослойный график: фон + путь + точки
     fprintf(gnuplotPipe, "plot '-' matrix with image, \\\n");
@@ -834,9 +840,9 @@ void GnuplotInterface::plotPath(const std::vector<algorithms::geometry::Pixel>& 
     fprintf(gnuplotPipe, "'-' with points pt 9 ps 2 lc 'purple'\n");
 
     // 4. Данные фона (инверсия Y)
-    for (int y = height-1; y >= 0; --y) {
+    for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
-            fprintf(gnuplotPipe, "%f ", binaryMap[y][x]);
+            fprintf(gnuplotPipe, "%f ", binaryMap[static_cast<std::size_t>(y)][static_cast<std::size_t>(x)]);
         }
         fprintf(gnuplotPipe, "\n");
     }
@@ -844,26 +850,230 @@ void GnuplotInterface::plotPath(const std::vector<algorithms::geometry::Pixel>& 
 
     // 5. Путь (инверсия Y)
     for (const auto& point : path) {
-        fprintf(gnuplotPipe, "%d %f\n", 
+        fprintf(gnuplotPipe, "%d %d\n", 
                 point.x, 
-                transformY(point.y, height));
+                point.y);
     }
     fprintf(gnuplotPipe, "e\n");
 
     // 6. Точка A (синяя)
-    fprintf(gnuplotPipe, "%d %f\n", 
-            params.startPointX, 
-            transformY(params.startPointY, height));
+    fprintf(gnuplotPipe, "%d %d\n", 
+            params.startPixelX, 
+            params.startPixelY);
     fprintf(gnuplotPipe, "e\n");
 
     // 7. Точка B (фиолетовая)
-    fprintf(gnuplotPipe, "%d %f\n", 
-            params.endPointX, 
-            transformY(params.endPointY, height));
+    fprintf(gnuplotPipe, "%d %d\n", 
+            params.goalPixelX, 
+            params.goalPixelY);
     fprintf(gnuplotPipe, "e\n");
 
     pclose(gnuplotPipe);
     logPlotEnd("PathVisualization");
+}
+
+void GnuplotInterface::plotRRT(
+        const std::vector<algorithms::geometry::PointD>& path,
+        const std::vector<algorithms::path::rrt::RRTNode>& treeRRT,
+        const algorithms::geometry::PointD& start,
+        const algorithms::geometry::PointD& end,
+        const std::vector<std::vector<double>>& binaryMap,
+        const std::string& filename)
+{
+    logPlotStart("RRT Animation", filename);
+
+    if (binaryMap.empty() || treeRRT.empty())
+    {
+        logger.warning("[plotRRT] Empty data");
+        return;
+    }
+
+    FILE* pipe = popen("gnuplot", "w");
+
+    if (!pipe)
+    {
+        logger.error("[plotRRT] Cannot start gnuplot");
+        return;
+    }
+
+    const int height = static_cast<int>(binaryMap.size());
+    const int width  = static_cast<int>(binaryMap[0].size());
+
+    applyNiceStyle(pipe,
+                   "Rapidly Exploring Random Tree",
+                   false,
+                   "gif");
+
+    fprintf(pipe,
+        "set output '%s'\n",
+        filename.c_str());
+
+    fprintf(pipe, "unset key\n");
+    fprintf(pipe, "set size ratio -1\n");
+
+    fprintf(pipe,
+        "set xrange [0:%d]\n"
+        "set yrange [0:%d]\n",
+        width - 1,
+        height - 1);
+
+    fprintf(pipe,
+        "set label 1 'Start' at %f,%f tc rgb 'blue' front\n",
+        start.x,
+        start.y);
+
+    fprintf(pipe,
+        "set label 2 'Goal' at %f,%f tc rgb 'purple' front\n",
+        end.x,
+        end.y);
+
+    // ============================
+    // Постепенное построение дерева
+    // ============================
+    
+    std::size_t step = std::max<std::size_t>(1, treeRRT.size() / 50);
+        
+    for (std::size_t frame = 1; frame <= treeRRT.size(); frame += step)
+    {
+        fprintf(pipe,
+            "plot '-' matrix with image,\\\n"
+            "'-' with lines lw 2 lc rgb '#00AA00',\\\n"
+            "'-' with points pt 7 ps 2 lc rgb 'blue',\\\n"
+            "'-' with points pt 9 ps 2 lc rgb 'purple'\n");
+
+        //-------------------------
+        // Карта
+        //-------------------------
+
+        for (int y = 0; y < height; ++y)
+        {
+            for (int x = 0; x < width; ++x)
+            {
+                fprintf(pipe,
+                        "%f ",
+                        binaryMap[static_cast<std::size_t>(y)]
+                                 [static_cast<std::size_t>(x)]);
+            }
+            fprintf(pipe, "\n");
+        }
+        fprintf(pipe, "e\n");
+
+        //-------------------------
+        // Дерево
+        //-------------------------
+
+        for (std::size_t i = 1; i < frame; ++i)
+        {
+            const auto& node = treeRRT[i];
+
+            if (node.parent < 0)
+                continue;
+
+            const auto& parent =
+                treeRRT[static_cast<std::size_t>(node.parent)];
+
+            fprintf(pipe,
+                "%f %f\n",
+                parent.point.x,
+                parent.point.y);
+
+            fprintf(pipe,
+                "%f %f\n\n",
+                node.point.x,
+                node.point.y);
+        }
+        
+        fprintf(pipe, "e\n");
+
+        //-------------------------
+        // Старт
+        //-------------------------
+
+        fprintf(pipe,
+            "%f %f\n"
+            "e\n",
+            start.x,
+            start.y);
+
+        //-------------------------
+        // Финиш
+        //-------------------------
+
+        fprintf(pipe,
+            "%f %f\n"
+            "e\n",
+            end.x,
+            end.y);
+    }
+
+    // =====================================
+    // Последний кадр — рисуем путь поверх
+    // =====================================
+    for (int pause = 0; pause < 50; ++pause) 
+    {
+        fprintf(pipe,
+            "plot '-' matrix with image,\\\n"
+            "'-' with lines lw 2 lc rgb '#00AA00',\\\n"
+            "'-' with lines lw 4 lc rgb 'red',\\\n"
+            "'-' with points pt 7 ps 2 lc rgb 'blue',\\\n"
+            "'-' with points pt 9 ps 2 lc rgb 'purple'\n");
+
+        // карта
+        for (int y = 0; y < height; ++y)
+        {
+            for (int x = 0; x < width; ++x)
+                fprintf(pipe,
+                        "%f ",
+                        binaryMap[static_cast<std::size_t>(y)]
+                                 [static_cast<std::size_t>(x)]);
+            fprintf(pipe, "\n");
+        }
+        fprintf(pipe, "e\n");
+
+        // дерево
+        for (std::size_t i = 1; i < treeRRT.size(); ++i)
+        {
+            if (treeRRT[i].parent < 0)
+                continue;
+
+            const auto& p =
+                treeRRT[static_cast<std::size_t>(treeRRT[i].parent)];
+
+            fprintf(pipe,
+                "%f %f\n"
+                "%f %f\n\n",
+                p.point.x,
+                p.point.y,
+                treeRRT[i].point.x,
+                treeRRT[i].point.y);
+        }
+        fprintf(pipe, "e\n");
+
+        // путь
+        for (const auto& p : path)
+            fprintf(pipe,
+                    "%f %f\n",
+                    p.x,
+                    p.y);
+        fprintf(pipe, "e\n");
+
+        // старт
+        fprintf(pipe,
+            "%f %f\n"
+            "e\n",
+            start.x,
+            start.y);
+
+        // финиш
+        fprintf(pipe,
+            "%f %f\n"
+            "e\n",
+            end.x,
+            end.y);
+    }
+    pclose(pipe);
+
+    logPlotEnd("RRT Animation");
 }
 
 void GnuplotInterface::plotInteractive3DPath(const std::vector<algorithms::geometry::Pixel>& path, 
@@ -878,8 +1088,8 @@ void GnuplotInterface::plotInteractive3DPath(const std::vector<algorithms::geome
             return;
         }
 
-        const int height = field.size();
-        const int width = field[0].size();
+        const int height = static_cast<int>(field.size());
+        const int width = static_cast<int>(field[0].size());
         logger.debug(std::string("Интерактивный 3D путь: ") + std::to_string(path.size()) + " точек");
 
         FILE* gnuplotPipe = popen("gnuplot -persist", "w");
@@ -908,7 +1118,7 @@ void GnuplotInterface::plotInteractive3DPath(const std::vector<algorithms::geome
     // 3. Проекция пути на поле (зеленые точки)
     for (const auto& [x, y] : pathProjection) {
         fprintf(gnuplotPipe, "set object circle at %d,%d,%f size %d fc rgb '#00FF00' fs solid front\n",
-                x, static_cast<int>(transformY(y, height)), field[y][x], sphereRadius);
+                x, static_cast<int>(y), field[static_cast<std::size_t>(y)][static_cast<std::size_t>(x)], sphereRadius);
     }
 
     // 4. Точки A и B
@@ -919,27 +1129,27 @@ void GnuplotInterface::plotInteractive3DPath(const std::vector<algorithms::geome
     
     if (startX >= 0 && startY >= 0 && startX < width && startY < height) {
         fprintf(gnuplotPipe, "set object circle at %d,%d,%f size %d fc rgb '#FF0000' fs solid front\n",
-                startX, static_cast<int>(transformY(startY, height)), 
-                field[startY][startX], sphereRadius);
-    }
+                startX, static_cast<int>(startY), 
+                field[static_cast<std::size_t>(startY)][static_cast<std::size_t>(startX)], sphereRadius);
     
-    fprintf(gnuplotPipe, "set label '{/:Bold START}' at %d,%d,%f front font 'Arial,18'\n",
-                startX, static_cast<int>(transformY(startY, height)), field[startY][startX] + 1);
+    fprintf(gnuplotPipe, "set label '{/:Bold START}' at %d,%d,%f tc rgb '#FF0000' front font 'Arial,18'\n",
+                startX, static_cast<int>(startY), field[static_cast<std::size_t>(startY)][static_cast<std::size_t>(startX)] + 1);
+    }
     
     if (endX >= 0 && endY >= 0 && endX < width && endY < height) {
          fprintf(gnuplotPipe, "set object circle at %d,%d,%f size %d fc rgb '#0000FF' fs solid front\n",
-                endX, static_cast<int>(transformY(endY, height)), 
-                field[endY][endX], sphereRadius);
+                endX, static_cast<int>(endY), 
+                field[static_cast<std::size_t>(endY)][static_cast<std::size_t>(endX)], sphereRadius);
+    
+     fprintf(gnuplotPipe, "set label '{/:Bold END}' at %d,%d,%f tc rgb '#0000FF' front font 'Arial,18'\n",
+                endX, static_cast<int>(endY), field[static_cast<std::size_t>(endY)][static_cast<std::size_t>(endX)] + 1);
     }
     
-     fprintf(gnuplotPipe, "set label '{/:Bold END}' at %d,%d,%f front font 'Arial,18'\n",
-                endX, static_cast<int>(transformY(endY, height)), field[endY][endX] + 1);
-
     // 5. Рисуем поверхность
     fprintf(gnuplotPipe, "splot '-' with pm3d title 'Terrain'\n");
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
-            fprintf(gnuplotPipe, "%d %d %f\n", x, height-1-y, field[y][x]);
+            fprintf(gnuplotPipe, "%d %d %f\n", x, height-1-y, field[static_cast<std::size_t>(y)][static_cast<std::size_t>(x)]);
         }
         fprintf(gnuplotPipe, "\n");
     }
@@ -962,8 +1172,8 @@ void GnuplotInterface::plot3DPath(const std::vector<algorithms::geometry::Pixel>
             return;
         }
 
-        const int height = field.size();
-        const int width = field[0].size();
+        const int height = static_cast<int>(field.size());
+        const int width = static_cast<int>(field[0].size());
         logger.debug(std::string("3D проекция пути: ") + std::to_string(path.size()) + " точек");
 
         FILE* gnuplotPipe = popen("gnuplot -persist", "w");
@@ -991,7 +1201,7 @@ void GnuplotInterface::plot3DPath(const std::vector<algorithms::geometry::Pixel>
     // 3. Проекция пути на поле (зеленые точки)
     for (const auto& [x, y] : pathProjection) {
         fprintf(gnuplotPipe, "set object circle at %d,%d,%f size %d fc rgb '#00FF00' fs solid front\n",
-                x, static_cast<int>(transformY(y, height)), field[y][x], sphereRadius);
+                x, static_cast<int>(y), field[static_cast<std::size_t>(y)][static_cast<std::size_t>(x)], sphereRadius);
     }
 
     // 4. Точки A и B
@@ -1002,27 +1212,27 @@ void GnuplotInterface::plot3DPath(const std::vector<algorithms::geometry::Pixel>
     
     if (startX >= 0 && startY >= 0 && startX < width && startY < height) {
         fprintf(gnuplotPipe, "set object circle at %d,%d,%f size %d fc rgb '#FF0000' fs solid front\n",
-                startX, static_cast<int>(transformY(startY, height)), 
-                field[startY][startX] , sphereRadius);
-    }
+                startX, static_cast<int>(startY), 
+                field[static_cast<std::size_t>(startY)][static_cast<std::size_t>(startX)] , sphereRadius);
     
-    fprintf(gnuplotPipe, "set label '{/:Bold START}' at %d,%d,%f front font 'Arial,18'\n",
-                startX, static_cast<int>(transformY(startY, height)), field[startY][startX] + 1);
+    fprintf(gnuplotPipe, "set label '{/:Bold START}' at %d,%d,%f tc rgb '#FF0000' front font 'Arial,18'\n",
+                startX, static_cast<int>(startY), field[static_cast<std::size_t>(startY)][static_cast<std::size_t>(startX)] + 1);
+    }
     
     if (endX >= 0 && endY >= 0 && endX < width && endY < height) {
          fprintf(gnuplotPipe, "set object circle at %d,%d,%f size %d fc rgb '#0000FF' fs solid front\n",
-                endX, static_cast<int>(transformY(endY, height)), 
-                field[endY][endX], sphereRadius);
+                endX, static_cast<int>(endY), 
+                field[static_cast<std::size_t>(endY)][static_cast<std::size_t>(endX)], sphereRadius);
+    
+     fprintf(gnuplotPipe, "set label '{/:Bold END}' at %d,%d,%f tc rgb '#0000FF' front font 'Arial,18'\n",
+                endX, static_cast<int>(endY), field[static_cast<std::size_t>(endY)][static_cast<std::size_t>(endX)] + 1);
     }
     
-     fprintf(gnuplotPipe, "set label '{/:Bold END}' at %d,%d,%f front font 'Arial,18'\n",
-                endX, static_cast<int>(transformY(endY, height)), field[endY][endX] + 1);
-
     // 5. Рисуем поверхность
     fprintf(gnuplotPipe, "splot '-' with pm3d title 'Terrain'\n");
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
-            fprintf(gnuplotPipe, "%d %d %f\n", x, height-1-y, field[y][x]);
+            fprintf(gnuplotPipe, "%d %d %f\n", x, height-1-y, field[static_cast<std::size_t>(y)][static_cast<std::size_t>(x)]);
         }
         fprintf(gnuplotPipe, "\n");
     }
