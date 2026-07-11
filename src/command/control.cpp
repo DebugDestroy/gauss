@@ -3,7 +3,7 @@
 namespace command {
 
     // Конструктор
-    Control::Control(core::Logger& log)
+    Control::Control(core::Logger& log, const std::string seedMode, uint32_t seed)
       :
       // core
       logger(log),
@@ -13,14 +13,14 @@ namespace command {
 
       // visualization
       gnuplotInterface(log),
-      colorGenerator(),
+      colorGenerator(log, randomGenerator),
       
       // statistics
       statisticsManager(),
       csvWriter(log),
       
       // algorithms::gauss
-      gaussBuilder(log),
+      gaussBuilder(log, randomGenerator),
 
       // algorithms::components
       copier(log),
@@ -45,9 +45,28 @@ namespace command {
       dekstraFinder(log),
       
       // algorithms::path::greedy
-      greedyFinder(log)    
+      greedyFinder(log),
+      
+      // algorithms::path::rrt
+      rrt(log, randomGenerator)       
 {
     logger.info("Control system initialized");
+    
+    if (seedMode == "Random")
+    {
+        std::random_device rd;
+        uint32_t generatedSeed = rd();
+
+        randomGenerator.seed(generatedSeed);
+
+        logger.info("Random generator seed = " + std::to_string(generatedSeed));
+    }
+    else
+    {
+        randomGenerator.seed(seed);
+
+        logger.info("Random generator seed = " + std::to_string(seed));
+    }
 }
     void Control::logOperation(core::LogLevel level, const std::string& operation, const std::string& details) {
         std::string message = std::string("Operation: ") + operation;
@@ -55,33 +74,6 @@ namespace command {
             message += std::string(", ") + details;
         }
         logger.logMessage(level, message);
-    }
-    
-    std::string Control::formatPathMetricsLog(
-        const algorithms::path::PathMetrics& m,
-        const algorithms::geometry::Pixel& start,
-        const algorithms::geometry::Pixel& end)
-    {
-        return std::string("from (") + std::to_string(start.x) + "," + std::to_string(start.y) + ")" +
-               " to (" + std::to_string(end.x) + "," + std::to_string(end.y) + ")" +
-
-               " | env=" + m.environment +
-               " | algo=" + m.algorithmName +
-    
-               " | path_found=" + (m.pathFound ? "true" : "false") +
-               " | time=" + std::to_string(m.executionTimeMs) + " ms" +
-    
-               " | nodes=" + std::to_string(m.pathNodes) +
-               " | expanded=" + std::to_string(m.expandedNodes) +
-    
-               " | euclid_len=" + std::to_string(m.euclideanLength) +
-               " | pixel_len=" + std::to_string(m.pixelLength) +
-
-               " | min_obs_euc=" + std::to_string(m.minObstacleDistance) +
-               " | min_obs_px=" + std::to_string(m.minObstacleDistancePixel) +
-
-               " | max_side_angle=" + std::to_string(m.maxSideAngle) +
-               " | max_updown_angle=" + std::to_string(m.maxUpDownAngle);
     }
     
     void Control::Dispetcher(command::DispatcherParams& params) {
@@ -108,7 +100,6 @@ namespace command {
             params.sy_min, params.sy_max,
             params.h_min, params.h_max,
             params.count_min, params.count_max,
-            params.gAutoMode, params.seedGAuto,
             state.gaussi);
                 
             logOperation(core::LogLevel::Info, std::string("g_auto"), std::string(
@@ -149,8 +140,8 @@ namespace command {
             gnuplotInterface.plotGraph(state.binaryMap, 
                                        state.navigationGraph, 
                                        params.filename, 
-                                       state.start,
-                                       state.end);
+                                       state.startPixel,
+                                       state.goalPixel);
             logOperation(core::LogLevel::Info, std::string("PlotGraph"), std::string("file: ") + params.filename);
         }        
         
@@ -170,18 +161,23 @@ namespace command {
         }
         
         if (params.command == "PlotNavGrid") {
-            gnuplotInterface.plotNavGrid(state.grid, state.binaryMap, params.filename, state.startCell, state.endCell);
+            gnuplotInterface.plotNavGrid(state.grid, state.binaryMap, params.filename, state.startCell, state.goalCell);
             logOperation(core::LogLevel::Info, std::string("PlotNavGrid"), std::string("file: ") + params.filename);
         }
         
         if (params.command == "PlotGridPath") {
-            gnuplotInterface.plotGridPath(state.grid, state.gridPath, *state.startCell, *state.endCell, state.binaryMap, params.filename);
+            gnuplotInterface.plotGridPath(state.grid, state.gridPath, *state.startCell, *state.goalCell, state.binaryMap, params.filename);
             logOperation(core::LogLevel::Info, std::string("PlotGridPath"), std::string("file: ") + params.filename);
         }
         
         if (params.command == "PlotPath") {
-            gnuplotInterface.plotPath(state.path, state.field, state.binaryMap, params.filename, params, params.vehicleRadius);
+            gnuplotInterface.plotPath(state.pathPixel, state.field, state.binaryMap, params.filename, params, params.vehicleRadiusPixel);
             logOperation(core::LogLevel::Info, std::string("PlotPath"), std::string("file: ") + params.filename);
+        }
+        
+        if (params.command == "PlotRRT") {
+            gnuplotInterface.plotRRT(state.pathWorld, state.treeRRT, state.startWorld, state.goalWorld, state.binaryMap, params.filename);
+            logOperation(core::LogLevel::Info, std::string("PlotRRT"), std::string("file: ") + params.filename);
         }
 
         if (params.command == "bmp_write") {
@@ -201,11 +197,9 @@ namespace command {
         }
 
         if (params.command == "bin") {
-            binarizer.bin(state.binaryMap, params.threshold, state.field, params.thresholdMode);
+            binarizer.bin(state.binaryMap, params.heightThresholdPixel, state.field);
             logOperation(core::LogLevel::Info, std::string("bin"), 
-                std::string("threshold=") + std::to_string(params.threshold) + 
-                ", mode=" + (params.thresholdMode == algorithms::components::ThresholdMode::Peaks ? "peaks" : 
-                            params.thresholdMode == algorithms::components::ThresholdMode::Valleys ? "valleys" : "all"));
+                std::string("heightThresholdPixel=") + std::to_string(params.heightThresholdPixel));
         }
         
         if (params.command == "wave") {
@@ -286,7 +280,7 @@ namespace command {
                     state.binaryMap, 
                     state.field, 
                     conditions, 
-                    params.vehicleRadius,
+                    params.vehicleRadiusPixel,
                     params.maxSideAngle,
                     params.maxUpDownAngle);                                                                    
             logOperation(core::LogLevel::Info, std::string("build_nav_graph"));
@@ -307,26 +301,26 @@ namespace command {
         }
         
         if (params.command == "connect_to_grid") {
-            state.start = algorithms::geometry::Pixel(params.startPointX, params.startPointY);
-            state.end = algorithms::geometry::Pixel(params.endPointX, params.endPointY);
+            state.startPixel = algorithms::geometry::Pixel(params.startPixelX, params.startPixelY);
+            state.goalPixel = algorithms::geometry::Pixel(params.goalPixelX, params.goalPixelY);
                 
-                 state.startCell = grid.connectPointToGrid(state.grid, *state.start);
-                 state.endCell = grid.connectPointToGrid(state.grid, *state.end);
+                 state.startCell = grid.connectPointToGrid(state.grid, *state.startPixel);
+                 state.goalCell = grid.connectPointToGrid(state.grid, *state.goalPixel);
 
            logOperation(core::LogLevel::Info, "connect_to_grid");
         }
         
         if (params.command == "connect_to_graph") {
-            state.start = algorithms::geometry::Pixel(params.startPointX, params.startPointY);
-            state.end = algorithms::geometry::Pixel(params.endPointX, params.endPointY);
+            state.startPixel = algorithms::geometry::Pixel(params.startPixelX, params.startPixelY);
+            state.goalPixel = algorithms::geometry::Pixel(params.goalPixelX, params.goalPixelY);
                 
                  graph.connectPointToGraph(
                      state.navigationGraph,
-                     *state.start,
+                     *state.startPixel,
                      state.binaryMap,
                      state.field,
                      conditions,
-                     params.vehicleRadius,
+                     params.vehicleRadiusPixel,
                      params.maxSideAngle,
                      params.maxUpDownAngle,
                      params.connectMode,
@@ -334,11 +328,11 @@ namespace command {
 
                graph.connectPointToGraph(
                      state.navigationGraph,
-                     *state.end,
+                     *state.goalPixel,
                      state.binaryMap,
                      state.field,
                      conditions,
-                     params.vehicleRadius,
+                     params.vehicleRadiusPixel,
                      params.maxSideAngle,
                      params.maxUpDownAngle,
                      params.connectMode,
@@ -358,19 +352,19 @@ namespace command {
             state.PathMetrics.algorithmName = "A*";
             statisticsManager.startTimer();       
             
-            state.path = astarFinder.findPathAStarGraph(*state.start, *state.end, state.navigationGraph, state.PathMetrics);
+            state.pathPixel = astarFinder.findPathAStarGraph(*state.startPixel, *state.goalPixel, state.navigationGraph, state.PathMetrics);
             
             statisticsManager.finishTimer(state.PathMetrics);
             
             if (state.PathMetrics.pathFound) {
-                statisticsManager.computePathLength(state.PathMetrics, state.path);
-                statisticsManager.computeMaxTerrainAngles(state.PathMetrics, state.path, state.field, params.vehicleRadius);
-                statisticsManager.computeMinObstacleDistance(state.PathMetrics, state.path, state.binaryMap, conditions);
+                statisticsManager.computePathLength(state.PathMetrics, state.pathPixel);
+                statisticsManager.computeMaxTerrainAngles(state.PathMetrics, state.pathPixel, state.field, params.vehicleRadiusPixel);
+                statisticsManager.computeMinObstacleDistance(state.PathMetrics, state.pathPixel, state.binaryMap);
             
                 logOperation(
                     core::LogLevel::Info,
                     "astar_graph",
-                    Control::formatPathMetricsLog(state.PathMetrics, *state.start, *state.end)
+                    Control::formatPathMetricsLog(state.PathMetrics, *state.startPixel, *state.goalPixel)
                 );
             } else {
                 logger.logMessage(core::LogLevel::Warning,
@@ -389,19 +383,19 @@ namespace command {
             state.PathMetrics.algorithmName = "Dijkstra";
             statisticsManager.startTimer();       
             
-            state.path = dekstraFinder.findPathDijkstraGraph(*state.start, *state.end, state.navigationGraph, state.PathMetrics);
+            state.pathPixel = dekstraFinder.findPathDijkstraGraph(*state.startPixel, *state.goalPixel, state.navigationGraph, state.PathMetrics);
              
             statisticsManager.finishTimer(state.PathMetrics);
             
             if (state.PathMetrics.pathFound) {
-                statisticsManager.computePathLength(state.PathMetrics, state.path);
-                statisticsManager.computeMaxTerrainAngles(state.PathMetrics, state.path, state.field, params.vehicleRadius);
-                statisticsManager.computeMinObstacleDistance(state.PathMetrics, state.path, state.binaryMap, conditions);
+                statisticsManager.computePathLength(state.PathMetrics, state.pathPixel);
+                statisticsManager.computeMaxTerrainAngles(state.PathMetrics, state.pathPixel, state.field, params.vehicleRadiusPixel);
+                statisticsManager.computeMinObstacleDistance(state.PathMetrics, state.pathPixel, state.binaryMap);
             
                 logOperation(
                     core::LogLevel::Info,
                     "dekstra_graph",
-                    Control::formatPathMetricsLog(state.PathMetrics, *state.start, *state.end)
+                    Control::formatPathMetricsLog(state.PathMetrics, *state.startPixel, *state.goalPixel)
                 );
             } else {
                 logger.logMessage(core::LogLevel::Warning,
@@ -420,19 +414,19 @@ namespace command {
             state.PathMetrics.algorithmName = "Greedy";
             statisticsManager.startTimer();       
             
-            state.path = greedyFinder.findPathGreedyGraph(*state.start, *state.end, state.navigationGraph, state.PathMetrics);
+            state.pathPixel = greedyFinder.findPathGreedyGraph(*state.startPixel, *state.goalPixel, state.navigationGraph, state.PathMetrics);
                          
             statisticsManager.finishTimer(state.PathMetrics);
             
             if (state.PathMetrics.pathFound) {
-                statisticsManager.computePathLength(state.PathMetrics, state.path);
-                statisticsManager.computeMaxTerrainAngles(state.PathMetrics, state.path, state.field, params.vehicleRadius);
-                statisticsManager.computeMinObstacleDistance(state.PathMetrics, state.path, state.binaryMap, conditions);
+                statisticsManager.computePathLength(state.PathMetrics, state.pathPixel);
+                statisticsManager.computeMaxTerrainAngles(state.PathMetrics, state.pathPixel, state.field, params.vehicleRadiusPixel);
+                statisticsManager.computeMinObstacleDistance(state.PathMetrics, state.pathPixel, state.binaryMap);
             
                 logOperation(
                     core::LogLevel::Info,
                     "greedy_graph",
-                    Control::formatPathMetricsLog(state.PathMetrics, *state.start, *state.end)
+                    Control::formatPathMetricsLog(state.PathMetrics, *state.startPixel, *state.goalPixel)
                 );
             } else {
                 logger.logMessage(core::LogLevel::Warning,
@@ -451,21 +445,21 @@ namespace command {
             state.PathMetrics.algorithmName = "A*";
             statisticsManager.startTimer();       
             
-            state.gridPath = astarFinder.findPathAStarGrid(*state.startCell, *state.endCell, state.grid, state.PathMetrics);
+            state.gridPath = astarFinder.findPathAStarGrid(*state.startCell, *state.goalCell, state.grid, state.PathMetrics);
             
             statisticsManager.finishTimer(state.PathMetrics);
             
-            state.path = algorithms::geometry::toPixelPath(state.gridPath, params.gridWidth);
+            state.pathPixel = algorithms::geometry::toPixelPath(state.gridPath, params.gridWidth);
              
             if (state.PathMetrics.pathFound) {
-                statisticsManager.computePathLength(state.PathMetrics, state.path);
-                statisticsManager.computeMaxTerrainAngles(state.PathMetrics, state.path, state.field, params.vehicleRadius);
-                statisticsManager.computeMinObstacleDistance(state.PathMetrics, state.path, state.binaryMap, conditions);
+                statisticsManager.computePathLength(state.PathMetrics, state.pathPixel);
+                statisticsManager.computeMaxTerrainAngles(state.PathMetrics, state.pathPixel, state.field, params.vehicleRadiusPixel);
+                statisticsManager.computeMinObstacleDistance(state.PathMetrics, state.pathPixel, state.binaryMap);
             
                 logOperation(
                     core::LogLevel::Info,
                     "astar_grid",
-                    Control::formatPathMetricsLog(state.PathMetrics, *state.start, *state.end)
+                    Control::formatPathMetricsLog(state.PathMetrics, *state.startPixel, *state.goalPixel)
                 );
             } else {
                 logger.logMessage(core::LogLevel::Warning,
@@ -484,21 +478,21 @@ namespace command {
             state.PathMetrics.algorithmName = "Dijkstra";
             statisticsManager.startTimer();       
             
-            state.gridPath = dekstraFinder.findPathDijkstraGrid(*state.startCell, *state.endCell, state.grid, state.PathMetrics);
+            state.gridPath = dekstraFinder.findPathDijkstraGrid(*state.startCell, *state.goalCell, state.grid, state.PathMetrics);
             
             statisticsManager.finishTimer(state.PathMetrics);
             
-            state.path = algorithms::geometry::toPixelPath(state.gridPath, params.gridWidth);
+            state.pathPixel = algorithms::geometry::toPixelPath(state.gridPath, params.gridWidth);
              
             if (state.PathMetrics.pathFound) {
-                statisticsManager.computePathLength(state.PathMetrics, state.path);
-                statisticsManager.computeMaxTerrainAngles(state.PathMetrics, state.path, state.field, params.vehicleRadius);
-                statisticsManager.computeMinObstacleDistance(state.PathMetrics, state.path, state.binaryMap, conditions);
+                statisticsManager.computePathLength(state.PathMetrics, state.pathPixel);
+                statisticsManager.computeMaxTerrainAngles(state.PathMetrics, state.pathPixel, state.field, params.vehicleRadiusPixel);
+                statisticsManager.computeMinObstacleDistance(state.PathMetrics, state.pathPixel, state.binaryMap);
             
                 logOperation(
                     core::LogLevel::Info,
                     "dekstra_grid",
-                    Control::formatPathMetricsLog(state.PathMetrics, *state.start, *state.end)
+                    Control::formatPathMetricsLog(state.PathMetrics, *state.startPixel, *state.goalPixel)
                 );
             } else {
                 logger.logMessage(core::LogLevel::Warning,
@@ -517,25 +511,88 @@ namespace command {
             state.PathMetrics.algorithmName = "Greedy";
             statisticsManager.startTimer();       
             
-            state.gridPath = greedyFinder.findPathGreedyGrid(*state.startCell, *state.endCell, state.grid, state.PathMetrics);
+            state.gridPath = greedyFinder.findPathGreedyGrid(*state.startCell, *state.goalCell, state.grid, state.PathMetrics);
             
             statisticsManager.finishTimer(state.PathMetrics);
             
-            state.path = algorithms::geometry::toPixelPath(state.gridPath, params.gridWidth);
+            state.pathPixel = algorithms::geometry::toPixelPath(state.gridPath, params.gridWidth);
              
             if (state.PathMetrics.pathFound) {
-                statisticsManager.computePathLength(state.PathMetrics, state.path);
-                statisticsManager.computeMaxTerrainAngles(state.PathMetrics, state.path, state.field, params.vehicleRadius);
-                statisticsManager.computeMinObstacleDistance(state.PathMetrics, state.path, state.binaryMap, conditions);
+                statisticsManager.computePathLength(state.PathMetrics, state.pathPixel);
+                statisticsManager.computeMaxTerrainAngles(state.PathMetrics, state.pathPixel, state.field, params.vehicleRadiusPixel);
+                statisticsManager.computeMinObstacleDistance(state.PathMetrics, state.pathPixel, state.binaryMap);
             
                 logOperation(
                     core::LogLevel::Info,
                     "greedy_grid",
-                    Control::formatPathMetricsLog(state.PathMetrics, *state.start, *state.end)
+                    Control::formatPathMetricsLog(state.PathMetrics, *state.startPixel, *state.goalPixel)
                 );
             } else {
                 logger.logMessage(core::LogLevel::Warning,
                                   "[greedy_grid] Path not found");
+           }
+        }
+        
+        if (params.command == "rrt") {
+            if (state.field.empty()) {
+                logger.logMessage(core::LogLevel::Error, "Pole not initialized for rrt");
+                return;
+            }
+            state.startWorld = algorithms::geometry::PointD(params.startWorldX, params.startWorldY);
+            state.goalWorld = algorithms::geometry::PointD(params.goalWorldX, params.goalWorldY);
+            
+            state.PathMetrics.environment = "continuous";
+            statisticsManager.reset(state.PathMetrics);
+            state.PathMetrics.algorithmName = "RRT";
+            statisticsManager.startTimer();       
+            
+            auto result = rrt.findPathRRT(state.startWorld, state.goalWorld, 
+                                          state.gaussi,
+                                          params.fieldWidth, params.fieldHeight,
+                                          params.heightThresholdWorld,
+                                          params.vehicleRadiusWorld,
+                                          params.maxSideAngle, params.maxUpDownAngle,
+                                          params.interpEdge, params.interpCollision, params.interpAngle,
+                                          params.maxIterations,
+                                          params.step,
+                                          params.goalRadius,
+                                          params.goalBias,
+                                          conditions,
+                                          state.PathMetrics);
+            
+            statisticsManager.finishTimer(state.PathMetrics);
+            
+            state.pathWorld = std::move(result.path);
+            state.treeRRT   = std::move(result.tree);
+             
+            if (state.PathMetrics.pathFound) {
+                statisticsManager.computePathLength(state.PathMetrics, 
+                                                    state.pathWorld);
+                                                    
+                statisticsManager.computeMaxTerrainAngles(state.PathMetrics, 
+                                                          state.pathWorld, 
+                                                          state.gaussi, 
+                                                          params.vehicleRadiusWorld, 
+                                                          params.interpEdge);
+                                                          
+                statisticsManager.computeMinObstacleDistance(state.PathMetrics, 
+                                                             state.pathWorld, 
+                                                             state.gaussi, 
+                                                             params.fieldWidth, 
+                                                             params.fieldHeight, 
+                                                             params.heightThresholdWorld,
+                                                             params.interpEdge,
+                                                             params.interpCollision,
+                                                             params.interpAngle);
+            
+                logOperation(
+                    core::LogLevel::Info,
+                    "rrt",
+                    Control::formatPathMetricsLog(state.PathMetrics, state.startWorld, state.goalWorld)
+                );
+            } else {
+                logger.logMessage(core::LogLevel::Warning,
+                                  "[rrt] Path not found");
            }
         }
         
@@ -545,12 +602,12 @@ namespace command {
         }
         
         if (params.command == "Plot3DPath") {
-            gnuplotInterface.plot3DPath(state.path, state.field, params.filename, *state.start, *state.end, params.vehicleRadius);
+            gnuplotInterface.plot3DPath(state.pathPixel, state.field, params.filename, *state.startPixel, *state.goalPixel, params.vehicleRadiusPixel);
             logOperation(core::LogLevel::Info, std::string("Plot3DPath"), std::string("file: ") + params.filename);
         }
         
         if (params.command == "plotInteractive3DPath") {
-            gnuplotInterface.plotInteractive3DPath(state.path, state.field, *state.start, *state.end, params.vehicleRadius);
+            gnuplotInterface.plotInteractive3DPath(state.pathPixel, state.field, *state.startPixel, *state.goalPixel, params.vehicleRadiusPixel);
             logOperation(core::LogLevel::Info, std::string("plotInteractive3DPath"));
         }
     }

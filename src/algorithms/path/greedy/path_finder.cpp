@@ -105,11 +105,11 @@ PathFinder::findPathGreedyGrid(
     }
 
     auto index = [&](int row, int col) {
-        return row * grid.cols + col;
+        return static_cast<std::size_t>(row) * static_cast<std::size_t>(grid.cols) + static_cast<std::size_t>(col);
     };
 
-    int startIdx = index(startCell.row, startCell.col);
-    int goalIdx  = index(endCell.row, endCell.col);
+    std::size_t startIdx = index(startCell.row, startCell.col);
+    std::size_t goalIdx  = index(endCell.row, endCell.col);
 
     if (!grid.cells[startIdx].traversable ||
         !grid.cells[goalIdx].traversable)
@@ -128,7 +128,7 @@ PathFinder::findPathGreedyGrid(
 
     while (true)
     {
-        int curIdx = index(current.row, current.col);
+        std::size_t curIdx = index(current.row, current.col);
 
         if (curIdx == goalIdx)
             break;
@@ -144,7 +144,7 @@ PathFinder::findPathGreedyGrid(
             if (!n.traversable)
                 continue;
                 
-            int nIdx = index(n.row, n.col);
+            std::size_t nIdx = index(n.row, n.col);
 
             if (visited[nIdx])
                 continue;

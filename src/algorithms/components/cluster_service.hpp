@@ -17,8 +17,8 @@ private:
 public:
     ClusterService(core::Logger& log, KMeans& kmeans, visualization::ColorGenerator& colorGen);
     
-    std::vector<std::array<int, 3>> getClusterColors(int clusterCount);
-    std::vector<algorithms::geometry::PointD> getClusterCenters(const std::vector<Component>& components, double fieldWidth, double fieldHeight);
+    std::vector<std::array<int, 3>> getClusterColors(std::size_t clusterCount);
+    std::vector<algorithms::geometry::PointD> getClusterCenters(const std::vector<Component>& components, int fieldWidth, int fieldHeight);
     void prepareKMeansData(const std::vector<std::vector<double>>& copyPole);
     void applyClusterResults(const KMeans::ClusterResult& result, std::vector<std::vector<double>>& pixelMatrix);
     const std::vector<std::vector<double>>& getKMeansData() const;

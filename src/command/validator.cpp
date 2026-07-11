@@ -3,423 +3,390 @@
 
 namespace command {
 
-bool Validator::validateFileName(
-    const std::string& filename,
-    core::Logger& logger)
+void Validator::validateFileName(
+    const std::string& filename)
 {
     if (filename.empty()) {
-        logger.error("Filename cannot be empty");
-        return false;
+        throw std::runtime_error("Empty filename");
     }
-
-    return true;
 }
 
-bool Validator::validateFieldSize(
+void Validator::validateFieldSize(
     int width,
-    int height,
-    core::Logger& logger)
+    int height)
 {
-    bool ok = true;
-
-    ok &= validateRange(width,
+    validateRange(width,
                         1,
                         std::numeric_limits<int>::max(),
-                        "fieldWidth",
-                        logger);
+                        "fieldWidth");
 
-    ok &= validateRange(height,
+    validateRange(height,
                         1,
                         std::numeric_limits<int>::max(),
-                        "fieldHeight",
-                        logger);
-
-    return ok;
+                        "fieldHeight");
 }
 
-bool Validator::validateGaussian(
-    const DispatcherParams& params,
-    core::Logger& logger)
+void Validator::validateGaussian(
+    const DispatcherParams& params)
 {
-    bool ok = true;
-
-    ok &= validateRange(params.centerX,
+    validateRange(params.centerX,
                         0.0,
                         static_cast<double>(params.fieldWidth),
-                        "centerX",
-                        logger);
+                        "centerX");
 
-    ok &= validateRange(params.centerY,
+    validateRange(params.centerY,
                         0.0,
                         static_cast<double>(params.fieldHeight),
-                        "centerY",
-                        logger);
+                        "centerY");
 
-    ok &= validateRange(params.sigmaX,
+    validateRange(params.sigmaX,
                         static_cast<double>(core::EPSILON),
                         params.fieldWidth / 2.0,
-                        "sigmaX",
-                        logger);
+                        "sigmaX");
 
-    ok &= validateRange(params.sigmaY,
+    validateRange(params.sigmaY,
                         static_cast<double>(core::EPSILON),
                         params.fieldHeight / 2.0,
-                        "sigmaY",
-                        logger);
+                        "sigmaY");
 
-    ok &= validateRange(params.height,
+    validateRange(params.height,
                         static_cast<double>((-1)*core::MID_GRAY),
                         static_cast<double>(core::MID_GRAY),
-                        "height",
-                        logger);
+                        "height");
 
-    return ok;
+   
 }
 
-bool Validator::validateAutoGaussian(
-    const DispatcherParams& params,
-    const std::string& mode,
-    core::Logger& logger)
+void Validator::validateAutoGaussian(
+    const DispatcherParams& params)
 {
-    bool ok = true;
-
-    ok &= validateRange(params.xmin,
+    validateRange(params.xmin,
                         0.0,
                         static_cast<double>(params.fieldWidth),
-                        "xmin",
-                        logger);
+                        "xmin");
 
-    ok &= validateRange(params.xmax,
+    validateRange(params.xmax,
                         0.0,
                         static_cast<double>(params.fieldWidth),
-                        "xmax",
-                        logger);
+                        "xmax");
                         
    if (params.xmin > params.xmax)
        {
-           logger.error("xmin must not exceed xmax");
-           ok = false;
+          throw std::runtime_error("xmin must not exceed xmax");
+           
        }     
                       
-    ok &= validateRange(params.ymin,
+    validateRange(params.ymin,
                         0.0,
                         static_cast<double>(params.fieldHeight),
-                        "ymin",
-                        logger);                     
+                        "ymin");                     
 
-    ok &= validateRange(params.ymax,
+    validateRange(params.ymax,
                         0.0,
                         static_cast<double>(params.fieldHeight),
-                        "ymax",
-                        logger);
+                        "ymax");
     
    if (params.ymin > params.ymax)
        {
-           logger.error("ymin must not exceed ymax");
-           ok = false;
+           throw std::runtime_error("ymin must not exceed ymax");
+           
        } 
                            
-    ok &= validateRange(params.sx_min,
+    validateRange(params.sx_min,
                         static_cast<double>(core::EPSILON),
                         params.fieldWidth / 2.0,
-                        "sx_min",
-                        logger);
+                        "sx_min");
                         
-    ok &= validateRange(params.sx_max,
+    validateRange(params.sx_max,
                         static_cast<double>(core::EPSILON),
                         params.fieldWidth / 2.0,
-                        "sx_max",
-                        logger);
+                        "sx_max");
          
    if (params.sx_min > params.sx_max)
        {
-           logger.error("sx_min must not exceed sx_max");
-           ok = false;
+           throw std::runtime_error("sx_min must not exceed sx_max");
+           
        } 
                     
-    ok &= validateRange(params.sy_min,
+    validateRange(params.sy_min,
                         static_cast<double>(core::EPSILON),
                         params.fieldHeight / 2.0,
-                        "sy_min",
-                        logger);
+                        "sy_min");
 
-    ok &= validateRange(params.sy_max,
+    validateRange(params.sy_max,
                         static_cast<double>(core::EPSILON),
                         params.fieldHeight / 2.0,
-                        "sy_max",
-                        logger);
+                        "sy_max");
     
    if (params.sy_min > params.sy_max)
        {
-           logger.error("sy_min must not exceed sy_max");
-           ok = false;
+           throw std::runtime_error("sy_min must not exceed sy_max");
+           
        } 
                          
-    ok &= validateRange(params.h_min,
+    validateRange(params.h_min,
                         static_cast<double>((-1)*core::MID_GRAY),
                         static_cast<double>(core::MID_GRAY),
-                        "h_min",
-                        logger);
+                        "h_min");
 
-    ok &= validateRange(params.h_max,
+    validateRange(params.h_max,
                         static_cast<double>((-1)*core::MID_GRAY),
                         static_cast<double>(core::MID_GRAY),
-                        "h_max",
-                        logger);
+                        "h_max");
      
    if (params.h_min > params.h_max)
        {
-           logger.error("h_min must not exceed h_max");
-           ok = false;
+           throw std::runtime_error("h_min must not exceed h_max");
+           
        } 
                         
-    ok &= validateRange(params.count_min,
-                        1,
-                        std::numeric_limits<int>::max(),
-                        "count_min",
-                        logger);
+    validateRange(params.count_min,
+                        static_cast<std::size_t>(1),
+                        std::numeric_limits<std::size_t>::max(),
+                        "count_min");
     
-    ok &= validateRange(params.count_max,
-                        1,
-                        std::numeric_limits<int>::max(),
-                        "count_max",
-                        logger);                    
+    validateRange(params.count_max,
+                        static_cast<std::size_t>(1),
+                        std::numeric_limits<std::size_t>::max(),
+                        "count_max");                    
     
    if (params.count_min > params.count_max)
        {
-           logger.error("count_min must not exceed count_max");
-           ok = false;
-       } 
+           throw std::runtime_error("count_min must not exceed count_max");
+           
+       }
+    
    
-   if (mode != "Random" &&
-       mode != "Fixed")
-    {
-        logger.error("GAuto mode must be Random, Fixed");
-
-        ok = false;
-    }
-
-    if (mode == "Fixed")
-    {
-        if (!validateRange(
-                params.seedGAuto,
-                0u,
-                std::numeric_limits<uint32_t>::max(),
-                "seedGAuto",
-                logger))
-        {
-            ok = false;
-        }
-    }
-    
-    return ok;
 }
 
-bool Validator::validateBinaryParameters(
-    int threshold,
-    const std::string& mode,
-    core::Logger& logger)
+void Validator::validateBinaryParameters(
+    int threshold)
 {
-    if (!validateRange(threshold,
-                         static_cast<int>(core::BLACK),
-                         static_cast<int>(core::WHITE),
-                         "threshold",
-                         logger))
-    {
-        return false;
-    }
-
-    if (mode != "Peaks" &&
-        mode != "Valleys" &&
-        mode != "All")
-    {
-        logger.error(
-            "Binary mode must be Peaks, Valleys or All");
-
-        return false;
-    }
-
-    return true;
+    validateRange(threshold,
+                         0,
+                         static_cast<int>(core::MID_GRAY),
+                         "threshold");
 }
 
-bool Validator::validateBmpWriteMode(
+void Validator::validateBmpWriteMode(
     const std::string& filename,
-    const std::string& mode,
-    core::Logger& logger)
+    const std::string& mode)
 {
-    if (!validateFileName(filename, logger))
-        return false;
+    validateFileName(filename);
+        
     
-    if (mode == "Full" ||
-        mode == "Binary")
-        return true;
+    if (mode != "Full" &&
+        mode != "Binary")
+    {    
 
-    logger.error(
-        "Unknown BMP mode: '" +
-        mode +
-        "'. Allowed values: Full, Binary");
-
-    return false;
+        throw std::runtime_error("Unknown BMP mode: '" +
+            mode +
+            "'. Allowed values: Full, Binary");
+    }
 }
 
-bool Validator::validateWaveNoiseSize(
-    int noisy,
-    core::Logger& logger)
+void Validator::validateWaveNoiseSize(
+    std::size_t noisy)
 {
-    return validateRange(noisy, 0,
-                         std::numeric_limits<int>::max(),
-                         "wave noisy", logger);
+     validateRange(noisy, static_cast<std::size_t>(0),
+                         std::numeric_limits<std::size_t>::max(),
+                         "wave noisy");
 }
 
-bool Validator::validateKMeans(
-    int k,
-    core::Logger& logger)
+void Validator::validateKMeans(
+    std::size_t k)
 {
-    return validateRange(k, 1,
-                         std::numeric_limits<int>::max(),
-                         "k", logger);
+     validateRange(k, static_cast<std::size_t>(1),
+                         std::numeric_limits<std::size_t>::max(),
+                         "k");
 }
 
-bool Validator::validateKernelSize(
-    int k,
-    int kernelSize,
-    core::Logger& logger)
+void Validator::validateKernelSize(
+    std::size_t k,
+    std::size_t kernelSize)
 {
-    bool ok = true;
+    validateRange(kernelSize,
+                        static_cast<std::size_t>(1),
+                        std::numeric_limits<std::size_t>::max(),
+                        "kernelSize");
 
-    ok &= validateRange(kernelSize,
-                        1,
-                        std::numeric_limits<int>::max(),
-                        "kernelSize",
-                        logger);
+    validateKMeans(k);
 
-    ok &= validateKMeans(k, logger);
-
-    return ok;
+   
 }
 
-bool Validator::validateGrid(
+void Validator::validateGrid(
     int width,
     int height,
-    int gridWidth,
-    core::Logger& logger)
+    int gridWidth)
 {
-    bool ok = true;
-    
-    ok &= validateRange(gridWidth, 1,
+    validateRange(gridWidth, 1,
                         std::min(width, height),
-                        "gridWidth", logger);
+                        "gridWidth");
                         
-    if (ok && (width % gridWidth != 0 || height % gridWidth != 0)) {
-        logger.error("Grid width must evenly divide both field width and field height.");
-        ok = false;
+    if (width % gridWidth != 0 || height % gridWidth != 0) {
+        throw std::runtime_error("Grid width must evenly divide both field width and field height.");
     }
-
-    return ok;
 }
 
-bool Validator::validateGridNoiseSize(
-    int noisy,
-    core::Logger& logger)
+void Validator::validateGridNoiseSize(
+    std::size_t noisy)
 {
-    return validateRange(noisy, 0,
-                         std::numeric_limits<int>::max(),
-                         "grid noisy", logger);
+     validateRange(noisy, static_cast<std::size_t>(0),
+                         std::numeric_limits<std::size_t>::max(),
+                         "grid noisy");
 }
 
-bool Validator::validateNavigationParameters(
+void Validator::validateNavigationParameters(
     int vehicleRadius,
     double maxSideAngle,
-    double maxUpDownAngle,
-    core::Logger& logger)
+    double maxUpDownAngle)
 {
-    bool ok = true;
-
-    ok &= validateRange(vehicleRadius,
+    validateRange(vehicleRadius,
                         1,
                         std::numeric_limits<int>::max(),
-                        "vehicleRadius",
-                        logger);
+                        "vehicleRadius");
 
-    ok &= validateRange(maxSideAngle,
+    validateRange(maxSideAngle,
                         0.0,
                         90.0,
-                        "maxSideAngle",
-                        logger);
+                        "maxSideAngle");
 
-    ok &= validateRange(maxUpDownAngle,
+    validateRange(maxUpDownAngle,
                         0.0,
                         90.0,
-                        "maxUpDownAngle",
-                        logger);
+                        "maxUpDownAngle");
 
-    return ok;
+   
 }
 
-bool Validator::validateConnectParameters(
+void Validator::validateConnectParameters(
     const DispatcherParams& params,
-    const std::string& mode,
-    core::Logger& logger)
+    const std::string& mode)
 {
-    bool ok = true;
-
-    ok &= validateConnectParameters(params, logger);
+    validateConnectParameters(params);
                         
     if (mode != "Nearest" &&
         mode != "NearestK" &&
         mode != "All")
     {
-        logger.error(
-            "Connect mode must be Nearest, NearestK or All");
-
-        ok = false;
+        throw std::runtime_error("Connect mode must be Nearest, NearestK or All");        
     }
 
     if (mode == "NearestK")
     {
-        if (!validateRange(
+        validateRange(
                 params.nearestVerticesCount,
-                1,
-                std::numeric_limits<int>::max(),
-                "nearestVerticesCount",
-                logger))
-        {
-            ok = false;
-        }
-    }
-    
-    return ok;
+                static_cast<std::size_t>(1),
+                std::numeric_limits<std::size_t>::max(),
+                "nearestVerticesCount");
+    }  
 }
 
-bool Validator::validateConnectParameters(
-    const DispatcherParams& params,
-    core::Logger& logger)
+void Validator::validateConnectParameters(
+    const DispatcherParams& params)
 {
-    bool ok = true;
-
-    ok &= validateRange(params.startPointX,
+    validateRange(params.startPixelX,
                         0,
                         params.fieldWidth - 1,
-                        "startPointX",
-                        logger);
+                        "startPixelX");
 
-    ok &= validateRange(params.startPointY,
+    validateRange(params.startPixelY,
                         0,
                         params.fieldHeight - 1,
-                        "startPointY",
-                        logger);
+                        "startPixelY");
 
-    ok &= validateRange(params.endPointX,
+    validateRange(params.goalPixelX,
                         0,
                         params.fieldWidth - 1,
-                        "endPointX",
-                        logger);
+                        "goalPixelX");
 
-    ok &= validateRange(params.endPointY,
+    validateRange(params.goalPixelY,
                         0,
                         params.fieldHeight - 1,
-                        "endPointY",
-                        logger);
-    return ok;
+                        "goalPixelY");
+   
 }
+
+void Validator::validateRRT(
+    const DispatcherParams& params)
+{
+    validateRange(params.maxIterations,
+                        static_cast<std::size_t>(1),
+                        std::numeric_limits<std::size_t>::max(),
+                        "maxIterations");
+
+    validateRange(params.startWorldX,
+                        0.0,
+                        static_cast<double>(params.fieldWidth),
+                        "startWorldX");   
+                      
+    validateRange(params.startWorldY,
+                        0.0,
+                        static_cast<double>(params.fieldHeight),
+                        "startWorldY");                     
+
+    validateRange(params.goalWorldX,
+                        0.0,
+                        static_cast<double>(params.fieldWidth),
+                        "goalWorldX");
+                           
+    validateRange(params.goalWorldY,
+                        0.0,
+                        static_cast<double>(params.fieldHeight),
+                        "goalWorldY");
+                        
+    validateRange(params.vehicleRadiusWorld,
+                        static_cast<double>(core::EPSILON),
+                        static_cast<double>(std::min(params.fieldWidth / 2.0, params.fieldHeight / 2.0)),
+                        "vehicleRadiusWorld");
+                    
+    validateRange(params.heightThresholdWorld,
+                        0.0,
+                        static_cast<double>(core::MID_GRAY),
+                        "heightThresholdWorld");
+
+    validateRange(params.maxSideAngle,
+                        0.0,
+                        90.0,
+                        "maxSideAngle");
+
+    validateRange(params.maxUpDownAngle,
+                        0.0,
+                        90.0,
+                        "maxUpDownAngle");
+
+    validateRange(params.interpEdge,
+                        static_cast<double>(core::EPSILON),
+                        static_cast<double>(std::max(params.fieldWidth, params.fieldHeight)),
+                        "interpEdge");
+                        
+    validateRange(params.interpCollision,
+                        static_cast<double>(core::EPSILON),
+                        static_cast<double>(std::max(params.fieldWidth, params.fieldHeight)),
+                        "interpCollision");
+
+    validateRange(params.interpAngle,
+                        static_cast<double>(core::EPSILON),
+                        static_cast<double>(std::max(params.fieldWidth, params.fieldHeight)),
+                        "interpAngle");
+    
+    validateRange(params.step,
+                        static_cast<double>(core::EPSILON),
+                        static_cast<double>(std::max(params.fieldWidth, params.fieldHeight)),
+                        "step");
+
+    validateRange(params.goalRadius,
+                        static_cast<double>(core::EPSILON),
+                        static_cast<double>(std::max(params.fieldWidth, params.fieldHeight)),
+                        "goalRadius");
+    
+    validateRange(params.goalBias,
+                        0.0,
+                        1.0,
+                        "goalBias");
+
+   
+}
+
 } // namespace command

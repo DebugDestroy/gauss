@@ -1,6 +1,7 @@
 #include "graph.hpp"
 #include "utils/hash.hpp"
 #include "algorithms/geometry/math.hpp"
+#include "algorithms/path/common/collision.hpp"
 
 #include <cmath>
 #include <limits>
@@ -16,7 +17,7 @@ std::unordered_map<algorithms::geometry::Pixel, std::vector<algorithms::geometry
     const std::vector<algorithms::geometry::Edge>& edges,
     const std::vector<std::vector<double>>& binaryMap,
     const std::vector<std::vector<double>>& field,
-    const Conditions& conds,
+    const PathValidator& conds,
     int vehicleRadius,
     double maxSideAngle,
     double maxUpDownAngle)
@@ -62,14 +63,14 @@ void Graph::connectPointToGraph(
     const algorithms::geometry::Pixel& p,
     const std::vector<std::vector<double>>& binaryMap,
     const std::vector<std::vector<double>>& field,
-    const Conditions& conds,
+    const PathValidator& conds,
     int vehicleRadius,
     double maxSideAngle,
     double maxUpDownAngle,
     ConnectMode mode,
-    int nearestVerticesCount)
+    std::size_t nearestVerticesCount)
 {
-    if (!conds.isVehicleRadiusValid(p, binaryMap, vehicleRadius)) {
+    if (!algorithms::path::common::isVehicleRadiusValid(p, binaryMap, vehicleRadius)) {
         logger.warning("[Graph::connectPointToGraph] Точка непригодна");
         return;
     }
@@ -149,10 +150,10 @@ void Graph::connectPointToGraph(
     else
     {
         connectionsCount =
-            std::min(static_cast<size_t>(nearestVerticesCount),
+            std::min(nearestVerticesCount,
                      candidates.size());
 
-        if (connectionsCount < static_cast<size_t>(nearestVerticesCount))
+        if (connectionsCount < nearestVerticesCount)
         {
             logger.warning(
                 "[Graph::connectPointToGraph] Запрошено " +

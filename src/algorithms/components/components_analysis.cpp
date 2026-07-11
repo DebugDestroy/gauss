@@ -70,10 +70,11 @@ void Component::calculate_metadata() {
     logger.trace("[Component::calculate_metadata] Starting");
 
     // Инициализация
-    min_x = componenta[0].x;
-    max_x = componenta[0].x;
-    min_y = componenta[0].y;
-    max_y = componenta[0].y;
+   min_x = componenta[0].x;
+   max_x = componenta[0].x;
+
+   min_y = componenta[0].y;
+   max_y = componenta[0].y;
 
     sum_x = 0.0;
     sum_y = 0.0;

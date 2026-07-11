@@ -15,21 +15,21 @@ namespace algorithms::components {
 void ComponentCalculator::collectComponent(
         const std::vector<std::vector<double>>& binaryMap,
         std::vector<std::vector<bool>>& visited,
-        int startX,
-        int startY,
+        std::size_t startX,
+        std::size_t startY,
         std::vector<algorithms::geometry::Pixel>& pixels)
 {
     std::stack<algorithms::geometry::Pixel> stack;
 
-    stack.push({startX, startY});
+    stack.push({static_cast<int>(startX), static_cast<int>(startY)});
 
     while (!stack.empty()) {
 
         algorithms::geometry::Pixel current = stack.top();
         stack.pop();
 
-        int x = current.x;
-        int y = current.y;
+        const auto x = current.x;
+        const auto y = current.y;
 
         if (x < 0 || x >= static_cast<int>(binaryMap[0].size()) ||
             y < 0 || y >= static_cast<int>(binaryMap.size()))
@@ -37,15 +37,15 @@ void ComponentCalculator::collectComponent(
             continue;
         }
 
-        if (visited[y][x]) {
+        if (visited[static_cast<std::size_t>(y)][static_cast<std::size_t>(x)]) {
             continue;
         }
 
-        if (std::fabs(binaryMap[y][x] - core::WHITE) > core::EPSILON) {
+        if (std::fabs(binaryMap[static_cast<std::size_t>(y)][static_cast<std::size_t>(x)] - core::WHITE) > core::EPSILON) {
             continue;
         }
 
-        visited[y][x] = true;
+        visited[static_cast<std::size_t>(y)][static_cast<std::size_t>(x)] = true;
 
         pixels.push_back({x, y});
 
@@ -61,7 +61,7 @@ void ComponentCalculator::collectComponent(
     }
     
 void ComponentCalculator::wave(
-        int noisy,
+        std::size_t noisy,
         std::vector<Component>& componenti,
         std::vector<std::vector<double>>& binaryMap,
         std::vector<std::vector<double>>& field)
@@ -76,15 +76,14 @@ void ComponentCalculator::wave(
 
     componenti.clear();
 
-    const int rows = field.size();
-    const int cols = field[0].size();
+    const std::size_t width = field[0].size();
+    const std::size_t height = field.size();
 
     std::vector<std::vector<bool>> visited(
-        rows,
-        std::vector<bool>(cols, false));
-
-    for (int y = 0; y < rows; ++y) {
-        for (int x = 0; x < cols; ++x) {
+        height,
+        std::vector<bool>(width, false));
+    for (std::size_t y = 0; y < height; ++y) {
+        for (std::size_t x = 0; x < width; ++x) {
 
             if (visited[y][x]) {
                 continue;
@@ -102,8 +101,8 @@ void ComponentCalculator::wave(
                              y,
                              componentPixels);
 
-            const int pixelCount =
-                static_cast<int>(componentPixels.size());
+            const std::size_t pixelCount =
+                componentPixels.size();
 
             if (pixelCount >= noisy) {
 
@@ -115,8 +114,8 @@ void ComponentCalculator::wave(
                 // удаляем шум из поля
                 for (const auto& p : componentPixels) {
 
-                    int px = p.x;
-                    int py = p.y;
+                    std::size_t px = static_cast<std::size_t>(p.x);
+                    std::size_t py = static_cast<std::size_t>(p.y);
 
                     field[py][px] = core::MID_GRAY;
                     binaryMap[py][px] = core::BLACK;

@@ -18,15 +18,15 @@ void Copier::removeNoise(
     logger.trace("[Copier::removeNoise] Starting noise removal");
 
     logger.debug(
-        std::string("[Copier::removeNoise] Input parameters: ") +
-        std::to_string(field.size()) + "x" +
-        std::to_string(field.empty() ? 0 : field[0].size()) +
+        std::string("[Copier::removeNoise] Ширина = ") +
+        std::to_string(field[0].size()) + "Длина = " +
+        std::to_string(field.size()) +
         " field, " +
         std::to_string(components.size()) +
         " components");
 
     // Очищаем поле
-    size_t totalZeroed = 0;
+    std::size_t totalZeroed = 0;
 
     for (auto& row : field) {
         totalZeroed += row.size();
@@ -38,26 +38,26 @@ void Copier::removeNoise(
         std::to_string(totalZeroed) +
         " pixels");
 
-    size_t totalCopied = 0;
-    size_t componentsProcessed = 0;
+    std::size_t totalCopied = 0;
+    std::size_t componentsProcessed = 0;
 
     for (const auto& comp : components) {
 
         const auto& compData = comp.componenta;
-        size_t componentPixels = 0;
+        std::size_t componentPixels = 0;
 
         for (const auto& pixel : compData) {
 
             int x = pixel.x;
             int y = pixel.y;
 
-            if (y < 0 || y >= static_cast<int>(field.size()) ||
-                x < 0 || x >= static_cast<int>(field[0].size()))
+            if (x < 0 || x >= static_cast<int>(field[0].size()) ||
+                y < 0 || y >= static_cast<int>(field.size()))
             {
                 continue;
             }
 
-            field[y][x] = core::WHITE;
+            field[static_cast<std::size_t>(y)][static_cast<std::size_t>(x)] = core::WHITE;
 
             componentPixels++;
             totalCopied++;

@@ -1,7 +1,6 @@
 #pragma once
 #include <string>
 #include "io/bmp_handler.hpp"  // Для BmpWriteMode
-#include "algorithms/components/binary.hpp"  // Для ThresholdMode
 #include "algorithms/path/common/graph.hpp" // Для СonnectMode
 #include "algorithms/gauss/gauss_builder.hpp" // Для GAutoMode
 
@@ -9,7 +8,7 @@ namespace command {
 struct DispatcherParams {
     std::string command;                                      // Команда для выполнения (help, init, g, generate и т.д.)
     
-    int fieldWidth, fieldHeight;                              // Размеры поля (ширина × высота в пикселях)
+    int fieldWidth, fieldHeight;                      // Размеры поля (ширина × высота в пикселях)
     
     // ----- addgauss -----
     double height;                                            // Высота гауссова распределения (в условных единицах)
@@ -17,41 +16,53 @@ struct DispatcherParams {
     double sigmaX, sigmaY;                                    // Разброс по осям (σx, σy)
     
     // ----- Параметры для g_auto -----
+    std::size_t count_min, count_max;                         // Диапазон количества генерируемых гауссов
     double xmin, xmax;                                        // Диапазон X координаты центра
     double ymin, ymax;                                        // Диапазон Y координаты центра
     double sx_min, sx_max;                                    // Диапазон σx
     double sy_min, sy_max;                                    // Диапазон σy
     double h_min, h_max;                                      // Диапазон высоты
-    int count_min, count_max;                                 // Диапазон количества генерируемых гауссов
-    algorithms::gauss::GAutoMode gAutoMode;                   // Режим генерации
-    std::uint32_t seedGAuto;                                  // Зерно генерации для режима Fixed 
     
     // ----- Ввод / вывод -----
     std::string filename;                                     // Имя файла для операций ввода/вывода
     io::BmpWriteMode bmpWriteMode;                            // Режим записи BMP (Full/Binary)
     
     // ----- binary -----
-    int threshold;                                            // Порог бинаризации (0-255)    
-    algorithms::components::ThresholdMode thresholdMode;      // Режим бинаризации (Peaks/Valleys/All)
+    int heightThresholdPixel;                              // Бинаризиция на уровне отклонения от равнины  
     
     // ----- wave -----
-    int waveNoisy;                                            // Максимальный размер шумовых компонент (в пикселях)
+    std::size_t waveNoisy;                                    // Максимальный размер шумовых компонент (в пикселях)
     
     // ----- kmeans -----
-    int clusterCount;                                         // Количество кластеров для k-means
-    int kernelSize;                                           // Размер ядра для кластеризации
+    std::size_t clusterCount;                                 // Количество кластеров для k-means
+    std::size_t kernelSize;                                   // Размер ядра для кластеризации
     
     // ----- grid -----
-    int gridWidth;  
-    int gridNoisy;                                            // Размер ячейки gridWidht x gridWidht
+    int gridWidth;                                            // Размер ячейки gridWidht x gridWidht
+    std::size_t gridNoisy;                                    // Число допустимого шума в ячейке
     
-    // ----- Путь -----
-    int startPointX, startPointY;                             // Координаты начальной точки маршрута (Ax, Ay)
-    int endPointX, endPointY;                                 // Координаты конечной точки маршрута (Bx, By)
+    // ----- Путь дискретный-----
+    int startPixelX, startPixelY;                             // Координаты начальной точки маршрута (Ax, Ay)
+    int goalPixelX, goalPixelY;                               // Координаты конечной точки маршрута (Bx, By)
     algorithms::path::common::ConnectMode connectMode;        // Режим присоединению старта и финиша к графу
-    int nearestVerticesCount;                                 // используется только для режима NearestK
+    std::size_t nearestVerticesCount;                         // используется только для режима NearestK
     
-    int vehicleRadius;                                        // Радиус тележки
+    int vehicleRadiusPixel;                                   // Радиус тележки
     double maxSideAngle, maxUpDownAngle;                      // Углы максимального наклона
+    
+    // ----- Путь непрерывный -----
+    double startWorldX, startWorldY;                          // Координаты начальной точки маршрута (Ax, Ay)
+    double goalWorldX, goalWorldY;                            // Координаты конечной точки маршрута (Bx, By)
+    double vehicleRadiusWorld;                                // Радиус тележки
+    
+     // ----- rrt -----
+    std::size_t maxIterations;                                     // Предел числа итераций
+    double heightThresholdWorld;                              // Допустимый уровень отклонения высоты от core::MID_GRAY = 127
+    double interpEdge;                                        // С каким шагом проверять углы колес на ребре
+    double interpCollision;                                   // С каким шагом проверять радиус в круге
+    double interpAngle;                                       // С каким шагом проверять дугу окружности (не угол, а расстояние)
+    double step;                                              // Шаг
+    double goalRadius;                                        // Как близко нужно подойти к цели чтобы попробовать к ней присоединиться
+    double goalBias;                                          // Вероятность генерации точки у цели
 };
 }

@@ -5,7 +5,7 @@
 #include <memory>
 
 #include "algorithms/geometry/geometry_structures.hpp" // для PointD, Triangle, Edge...
-#include "algorithms/path/common/conditions.hpp"              // Conditions
+#include "algorithms/path/common/path_validator.hpp"
 #include "core/logger.hpp"
 
 namespace algorithms::path::common {
@@ -28,7 +28,7 @@ std::unordered_map<algorithms::geometry::Pixel, std::vector<algorithms::geometry
     const std::vector<algorithms::geometry::Edge>& edges,
     const std::vector<std::vector<double>>& binaryMap,
     const std::vector<std::vector<double>>& field,
-    const Conditions& conds,
+    const PathValidator& conds,
     int vehicleRadius,
     double maxSideAngle,
     double maxUpDownAngle);
@@ -40,11 +40,11 @@ void connectPointToGraph(
     const algorithms::geometry::Pixel& point,
     const std::vector<std::vector<double>>& binaryMap,
     const std::vector<std::vector<double>>& field,
-    const Conditions& conds,
+    const PathValidator& conds,
     int vehicleRadius,
     double maxSideAngle,
     double maxUpDownAngle,
     ConnectMode mode,
-    int nearestVerticesCount = 1);
+    std::size_t nearestVerticesCount = 1);
 };
 }

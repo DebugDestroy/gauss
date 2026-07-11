@@ -214,15 +214,15 @@ generate
 gnuplot results/visualizations/gnuplot.png
 bmp_write results/visualizations/Pole.bmp Full
 
-bin 132 All
+bin 5
 bmp_write results/visualizations/Slice.bmp Binary
 
 wave 10
 PlotMetedata results/visualizations/Metadata.png
 
-grid
+grid 5
 PlotGrid results/visualizations/Grid.png
-build_nav_grid
+build_nav_grid 1
 PlotNavGrid results/visualizations/NavigationGrid.png
 connect_to_grid 3 260 290 3
 PlotNavGrid results/visualizations/ConnectedGrid.png

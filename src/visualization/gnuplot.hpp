@@ -12,6 +12,7 @@
 #include "algorithms/geometry/geometry_structures.hpp"   // Для PointD, Edge
 #include "algorithms/geometry/bresenham_line.hpp"        // Для bresenhamLine
 #include "algorithms/path/common/grid.hpp"               // Для сетки
+#include "algorithms/path/rrt/rrt.hpp"                   // Для rrt
 
 namespace visualization {
 
@@ -20,7 +21,6 @@ private:
     core::Logger& logger;
 
     void applyNiceStyle(FILE* pipe, const std::string& title, bool is3D = false, const std::string& terminal = "pngcairo");
-    double transformY(double y, int height) const;
     void logPlotStart(const std::string& plotType, const std::string& filename) const;
     void logPlotEnd(const std::string& plotType) const;
 
@@ -60,7 +60,7 @@ public:
     
     void plotGridPath(
     const algorithms::path::common::Grid& grid,
-    std::vector<algorithms::path::common::GridCell> gridPath,
+    std::vector<algorithms::path::common::GridCell>& gridPath,
     const algorithms::path::common::GridCell& start,
     const algorithms::path::common::GridCell& end,
     const std::vector<std::vector<double>>& binaryMap,
@@ -76,7 +76,14 @@ public:
                  const std::string& filename, 
                  const command::DispatcherParams& params,
                  const int Radius);
-
+    
+    void plotRRT(const std::vector<algorithms::geometry::PointD>& path, 
+                 const std::vector<algorithms::path::rrt::RRTNode>& treeRRT,
+                 const algorithms::geometry::PointD& start, 
+                 const algorithms::geometry::PointD& end,
+                 const std::vector<std::vector<double>>& binaryMap,
+                 const std::string& filename);
+                 
     void plotInteractive3DPath(const std::vector<algorithms::geometry::Pixel>& path, 
                               const std::vector<std::vector<double>>& field, 
                               const algorithms::geometry::Pixel& start, 

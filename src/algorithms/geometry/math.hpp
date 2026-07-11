@@ -8,9 +8,11 @@ Pixel toPixel(const PointD& p); // Из точки в пиксель
 
 Pixel toPixel(const algorithms::path::common::GridCell& c, int cellSize); // Из ячейки в пиксель
 
-std::vector<algorithms::geometry::Pixel> toPixelPath(const std::vector<algorithms::path::common::GridCell>& gridPath, int cellSize);
+std::vector<algorithms::geometry::Pixel> toPixelPath(const std::vector<algorithms::path::common::GridCell>& gridPath, int cellSize); // Путь из ячеек в путь из пикселей
 
 PointD toPointD(const Pixel& p); // Из пикселя в точку
+
+Pixel toPixel(const Pixel& p); // Перегрузка (выдать пиксель)
 
 double distance(const PointD& p1, const PointD& p2); // Возвращает расстояние между двумя точками
 
@@ -25,6 +27,8 @@ PointD makeCodirected(const PointD& direction, const PointD& reference); // Де
 bool areCollinear(const PointD& a, const PointD& b, const PointD& c); // Проверяет, лежат ли 3 точки на одной прямой
 
 bool isPointInsideField(const PointD& p, int width, int height); // Проверяет, внутри ли поле p (размеры задаются)
+
+bool isPointInsideField(const Pixel& p, int width, int height); // Внутри ли поля
 
 bool shareEdge(const Triangle& a, const Triangle& b); // Проверяет, есть ли общее ребро у двух треугольников
 

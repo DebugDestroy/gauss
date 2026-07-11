@@ -1,7 +1,8 @@
 add_library(path_common
-    conditions.cpp
+    collision.cpp
     graph.cpp
     grid.cpp
+    path_validator.cpp
 )
 
 target_include_directories(path_common PUBLIC

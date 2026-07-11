@@ -6,11 +6,11 @@ namespace algorithms::components {
     ClusterService::ClusterService(core::Logger& log, KMeans& kmeans, visualization::ColorGenerator& colorGen) 
         : logger(log), kMeans(kmeans), colorGenerator(colorGen) {}
     
-    std::vector<std::array<int, 3>> ClusterService::getClusterColors(int clusterCount) {
-        return colorGenerator.generateColors(clusterCount, logger);
+    std::vector<std::array<int, 3>> ClusterService::getClusterColors(std::size_t clusterCount) {
+        return colorGenerator.generateColors(clusterCount);
     }
 
-    std::vector<algorithms::geometry::PointD> ClusterService::getClusterCenters(const std::vector<Component>& components, double fieldWidth, double fieldHeight) {
+    std::vector<algorithms::geometry::PointD> ClusterService::getClusterCenters(const std::vector<Component>& components, int fieldWidth, int fieldHeight) {
         std::vector<algorithms::geometry::PointD> centers;
         for (const auto& component : components) {
             if (std::isnan(component.center_x) || std::isnan(component.center_y)) {
@@ -48,9 +48,9 @@ namespace algorithms::components {
         for (size_t i = 0; i < result.labels.size(); ++i) {
             int label = result.labels[i];
             if (label >= 0 && label < static_cast<int>(colors.size())) {
-                int x = static_cast<int>(kMeansData[i][0]);
-                int y = static_cast<int>(kMeansData[i][1]);
-                const auto& color = colors[label];
+                const auto x = static_cast<std::size_t>(kMeansData[i][0]);
+                const auto y = static_cast<std::size_t>(kMeansData[i][1]);
+                const auto& color = colors[static_cast<std::size_t>(label)];
                 pixelMatrix[y][x] = (color[0] + color[1] + color[2]) / 3.0;
             }
         }

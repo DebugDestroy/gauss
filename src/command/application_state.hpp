@@ -18,6 +18,9 @@
 #include "algorithms/path/common/path_metrics.hpp" // Для метрик
 #include "algorithms/path/common/grid.hpp"
 
+// algorithms::path::rrt
+#include "algorithms/path/rrt/rrt.hpp"
+
 // utils
 #include "utils/hash.hpp" // Для навигационного графа
 
@@ -27,7 +30,7 @@ struct ApplicationState {
 
     // Визуализация
     std::vector<std::array<int, 3>> colors;
-
+    
     // Бинарное представление поля
     std::vector<std::vector<double>> binaryMap;
 
@@ -54,15 +57,23 @@ struct ApplicationState {
     algorithms::path::common::Grid grid;
     
     // Поиск пути
-    std::optional<algorithms::geometry::Pixel> start;
-    std::optional<algorithms::geometry::Pixel> end;
+    std::optional<algorithms::geometry::Pixel> startPixel;
+    std::optional<algorithms::geometry::Pixel> goalPixel;
     algorithms::path::PathMetrics PathMetrics;
-    std::vector<algorithms::geometry::Pixel> path;
+    std::vector<algorithms::geometry::Pixel> pathPixel;
     
     // Поиск пути на сетке
     std::optional<algorithms::path::common::GridCell> startCell;
-    std::optional<algorithms::path::common::GridCell> endCell;
+    std::optional<algorithms::path::common::GridCell> goalCell;
     std::vector<algorithms::path::common::GridCell> gridPath;
+    
+    // Поиск пути непрерывный
+    algorithms::geometry::PointD startWorld;
+    algorithms::geometry::PointD goalWorld;
+    std::vector<algorithms::geometry::PointD> pathWorld;
+    
+    // rrt
+    std::vector<algorithms::path::rrt::RRTNode> treeRRT;
 };
 
 } // namespace command

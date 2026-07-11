@@ -6,6 +6,7 @@ add_subdirectory(common)
 add_subdirectory(a_star)
 add_subdirectory(dekstra)
 add_subdirectory(greedy)
+add_subdirectory(rrt)
 
 # Прокидываем зависимости
 target_link_libraries(path
@@ -14,4 +15,5 @@ target_link_libraries(path
         a_star
         dekstra
         greedy
+        rrt
 )

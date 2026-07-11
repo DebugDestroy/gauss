@@ -16,7 +16,7 @@ int main() {
             "Control",
             config.FiltrationLogLevelControl);
 
-        command::Control c(loggercontrol);
+        command::Control c(loggercontrol, config.seedMode, config.seed);
         command::Interface i(config, loggerinterface, c);
 
         i.print();

@@ -133,11 +133,11 @@ PathFinder::findPathDijkstraGrid(
     }
     
      auto index = [&](int row, int col) {
-        return row * grid.cols + col;
+        return static_cast<std::size_t>(row) * static_cast<std::size_t>(grid.cols) + static_cast<std::size_t>(col);
     };
     
-    int startIdx = index(startCell.row, startCell.col);
-    int goalIdx  = index(endCell.row, endCell.col);
+    std::size_t startIdx = index(startCell.row, startCell.col);
+    std::size_t goalIdx  = index(endCell.row, endCell.col);
     
     if (!grid.cells[startIdx].traversable ||
     !grid.cells[goalIdx].traversable)
@@ -152,7 +152,7 @@ PathFinder::findPathDijkstraGrid(
         std::greater<NodeGrid>
     > openSet;
     
-    const int nodeCount = grid.cells.size();
+    const std::size_t nodeCount = grid.cells.size();
     std::vector<bool> closedSet(nodeCount, false);
     std::vector<int> cameFrom(nodeCount, -1);
     std::vector<double> gScore(nodeCount, std::numeric_limits<double>::infinity());
@@ -166,7 +166,7 @@ PathFinder::findPathDijkstraGrid(
         NodeGrid current = openSet.top();
         openSet.pop();
 
-        int curIdx = current.idx;
+        std::size_t curIdx = current.idx;
         const algorithms::path::common::GridCell& curCell = grid.cells[curIdx];
 
         if (closedSet[curIdx])
@@ -180,11 +180,11 @@ PathFinder::findPathDijkstraGrid(
 
             std::vector<algorithms::path::common::GridCell> path;
 
-            for (int at = curIdx;
-                 at != -1;
-                 at = cameFrom[at])
+            for (int at = static_cast<int>(curIdx);
+                    at != -1;
+                    at = cameFrom[static_cast<std::size_t>(at)])
             {
-                  path.push_back(grid.cells[at]);
+                path.push_back(grid.cells[static_cast<std::size_t>(at)]);
             }
 
             std::reverse(path.begin(), path.end());
@@ -202,7 +202,7 @@ PathFinder::findPathDijkstraGrid(
             if (!neighbor.traversable)
                 continue;
         
-            int nIdx = index(neighbor.row, neighbor.col);
+            std::size_t nIdx = index(neighbor.row, neighbor.col);
 
             if (closedSet[nIdx])
                 continue;
@@ -216,7 +216,7 @@ PathFinder::findPathDijkstraGrid(
 
             if (tentativeG < gScore[nIdx]) {
 
-                cameFrom[nIdx] = curIdx;
+                cameFrom[nIdx] = static_cast<int>(curIdx);
                 gScore[nIdx] = tentativeG;
 
                 openSet.push({

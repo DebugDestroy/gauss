@@ -48,7 +48,7 @@ generate
 gnuplot results/visualizations/gnuplot.png
 bmp_write results/visualizations/Pole.bmp Full
 
-bin 132 All
+bin 5
 bmp_write results/visualizations/Slice.bmp Binary
 
 wave 10

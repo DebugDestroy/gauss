@@ -13,12 +13,24 @@ struct PointD {
     double x, y;
     PointD(double x_ = 0, double y_ = 0) : x(x_), y(y_) {}
     
-    bool operator==(const PointD& other) const {
-         return x == other.x && y == other.y;
-    }
+    bool operator==(const PointD& other) const
+{
+    return std::abs(x - other.x) < core::EPSILON &&
+           std::abs(y - other.y) < core::EPSILON;
+}
     
     bool operator!=(const PointD& other) const {
         return !(*this == other);
+    }
+    
+    PointD operator-(const PointD& other) const {
+        return {x - other.x, y - other.y};
+    }
+    
+    PointD& operator/=(double k) {
+        x /= k;
+        y /= k;
+        return *this;
     }
 };
 
@@ -58,6 +70,10 @@ struct Pixel {
 
     bool operator!=(const Pixel& other) const {
         return !(*this == other);
+    }
+    
+    Pixel operator-(const Pixel& other) const {
+        return {x - other.x, y - other.y};
     }
 };
 

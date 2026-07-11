@@ -3,7 +3,7 @@ help
 bmp_read results/visualizations/Read.bmp
 gnuplot results/visualizations/gnuplot.png
 bmp_write results/visualizations/Polew.bmp Full
-bin 132 All
+bin 5
 bmp_write results/visualizations/Slice.bmp Binary
 wave 10
 PlotMetedata results/visualizations/Metadata.png

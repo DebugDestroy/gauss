@@ -10,93 +10,78 @@ namespace command {
 class Validator {
 private:
     template<typename T>
-    static bool validateRange(const T& value,
+    static void validateRange(const T& value,
                               const T& minValue,
                               const T& maxValue,
-                              const std::string& parameterName,
-                              core::Logger& logger)
+                              const std::string& parameterName)
     {
         if (value < minValue || value > maxValue)
         {
-            logger.error(
+            throw std::runtime_error(
                 "Parameter '" + parameterName +
                 "' must be in range [" +
                 std::to_string(minValue) + ", " +
-                std::to_string(maxValue) + "]");
-
-            return false;
+                std::to_string(maxValue) +
+                "], got " +
+                std::to_string(value)
+            );
         }
-
-        return true;
     }
     
 public:
-    static bool validateFileName(
-        const std::string& filename,
-        core::Logger& logger);
+    static void validateFileName(
+        const std::string& filename);
         
-    static bool validateFieldSize(
+    static void validateFieldSize(
         int width,
-        int height,
-        core::Logger& logger);
+        int height);
         
-    static bool validateGaussian(
-        const DispatcherParams& params,
-        core::Logger& logger);
+    static void validateGaussian(
+        const DispatcherParams& params);
         
-    static bool validateAutoGaussian(
-        const DispatcherParams& params,
-        const std::string& mode,
-        core::Logger& logger);
+    static void validateAutoGaussian(
+        const DispatcherParams& params);
     
-    static bool validateBinaryParameters(
-        int threshold,
-        const std::string& mode,
-        core::Logger& logger);
+    static void validateBinaryParameters(
+        int threshold);
     
-    static bool validateBmpWriteMode(
+    static void validateBmpWriteMode(
         const std::string& filename,
-        const std::string& mode,
-        core::Logger& logger);
+        const std::string& mode);
         
-    static bool validateWaveNoiseSize(
-        int noisy,
-        core::Logger& logger);
+    static void validateWaveNoiseSize(
+        std::size_t noisy);
 
     
-    static bool validateKMeans(
-        int k,
-        core::Logger& logger);
+    static void validateKMeans(
+        std::size_t k);
     
-    static bool validateKernelSize(
-        int k,
-        int kernelSize,
-        core::Logger& logger);
+    static void validateKernelSize(
+        std::size_t k,
+        std::size_t kernelSize);
         
-    static bool validateGrid(
+    static void validateGrid(
         int width,
         int height,
-        int gridWidth,
-        core::Logger& logger);
+        int gridWidth);
         
-    static bool validateGridNoiseSize(
-        int noisy,
-        core::Logger& logger);
+    static void validateGridNoiseSize(
+        std::size_t noisy);
         
-    static bool validateNavigationParameters(
+    static void validateNavigationParameters(
         int vehicleRadius,
         double maxSideAngle,
-        double maxUpDownAngle,
-        core::Logger& logger);   
+        double maxUpDownAngle);   
 
-    static bool validateConnectParameters(
+    static void validateConnectParameters(
         const DispatcherParams& params,
-        const std::string& mode,
-        core::Logger& logger);
+        const std::string& mode);
         
-    static bool validateConnectParameters(
-        const DispatcherParams& params,
-        core::Logger& logger);
+    static void validateConnectParameters(
+        const DispatcherParams& params);
+        
+    static void validateRRT(
+        const DispatcherParams& params);
 };
 
 }
