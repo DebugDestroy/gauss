@@ -48,7 +48,10 @@ namespace command {
       greedyFinder(log),
       
       // algorithms::path::rrt
-      rrt(log, randomGenerator)       
+      rrt(log, randomGenerator),
+      
+      // algorithms::path::rrt_star
+      rrtStar(log, randomGenerator)
 {
     logger.info("Control system initialized");
     
@@ -178,6 +181,11 @@ namespace command {
         if (params.command == "PlotRRT") {
             gnuplotInterface.plotRRT(state.pathWorld, state.treeRRT, state.startWorld, state.goalWorld, state.binaryMap, params.filename);
             logOperation(core::LogLevel::Info, std::string("PlotRRT"), std::string("file: ") + params.filename);
+        }
+        
+        if (params.command == "PlotRRTStar") {
+            gnuplotInterface.plotRRT(state.pathWorld, state.treeRRTStar, state.startWorld, state.goalWorld, state.binaryMap, params.filename);
+            logOperation(core::LogLevel::Info, std::string("PlotRRTStar"), std::string("file: ") + params.filename);
         }
 
         if (params.command == "bmp_write") {
@@ -534,10 +542,11 @@ namespace command {
         }
         
         if (params.command == "rrt") {
-            if (state.field.empty()) {
-                logger.logMessage(core::LogLevel::Error, "Pole not initialized for rrt");
+            if (state.gaussi.empty()) {
+                logger.logMessage(core::LogLevel::Error, "Gaussi not initialized for rrt_star");
                 return;
             }
+            
             state.startWorld = algorithms::geometry::PointD(params.startWorldX, params.startWorldY);
             state.goalWorld = algorithms::geometry::PointD(params.goalWorldX, params.goalWorldY);
             
@@ -593,6 +602,72 @@ namespace command {
             } else {
                 logger.logMessage(core::LogLevel::Warning,
                                   "[rrt] Path not found");
+           }
+        }
+        
+        if (params.command == "rrt_star") {
+            if (state.gaussi.empty()) {
+                logger.logMessage(core::LogLevel::Error, "Gaussi not initialized for rrt_star");
+                return;
+            }
+            
+            state.startWorld = algorithms::geometry::PointD(params.startWorldX, params.startWorldY);
+            state.goalWorld = algorithms::geometry::PointD(params.goalWorldX, params.goalWorldY);
+            
+            state.PathMetrics.environment = "continuous";
+            statisticsManager.reset(state.PathMetrics);
+            state.PathMetrics.algorithmName = "RRT*";
+            statisticsManager.startTimer();
+            
+            auto result = rrtStar.findPathRRTStar(state.startWorld, state.goalWorld, 
+                                                  state.gaussi,
+                                                  params.fieldWidth, params.fieldHeight,
+                                                  params.heightThresholdWorld,
+                                                  params.vehicleRadiusWorld,
+                                                  params.maxSideAngle, params.maxUpDownAngle,
+                                                  params.interpEdge, params.interpCollision, params.interpAngle,
+                                                  params.maxIterations,
+                                                  params.step,
+                                                  params.maxFindRadius,
+                                                  params.gammaConstant,
+                                                  params.goalRadius,
+                                                  params.goalBias,
+                                                  conditions,
+                                                  state.PathMetrics);
+            
+            statisticsManager.finishTimer(state.PathMetrics);
+            
+            state.pathWorld = std::move(result.path);
+            state.treeRRTStar   = std::move(result.tree);
+             
+            if (state.PathMetrics.pathFound) {
+                statisticsManager.computePathLength(state.PathMetrics, 
+                                                    state.pathWorld);
+                                                    
+                statisticsManager.computeMaxTerrainAngles(state.PathMetrics, 
+                                                          state.pathWorld, 
+                                                          state.gaussi, 
+                                                          params.vehicleRadiusWorld, 
+                                                          params.interpEdge);
+                                                          
+                statisticsManager.computeMinObstacleDistance(state.PathMetrics, 
+                                                             state.pathWorld, 
+                                                             state.gaussi, 
+                                                             params.fieldWidth, 
+                                                             params.fieldHeight, 
+                                                             params.heightThresholdWorld,
+                                                             params.interpEdge,
+                                                             params.interpCollision,
+                                                             params.interpAngle);
+            
+                logOperation(
+                    core::LogLevel::Info,
+                    "rrt_star",
+                    Control::formatPathMetricsLog(state.PathMetrics, state.startWorld, state.goalWorld)
+                );
+            } else {
+                logger.logMessage(core::LogLevel::Warning,
+                                  "[rrt_star] Path not found");
            }
         }
         

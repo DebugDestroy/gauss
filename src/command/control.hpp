@@ -58,6 +58,9 @@
 // algorithms::path::rrt
 #include "algorithms/path/rrt/rrt.hpp"
 
+// algorithms::path::rrt_star
+#include "algorithms/path/rrt_star/rrt_star.hpp"
+
 namespace command {
 
 class Control {
@@ -148,6 +151,9 @@ public:
     
      // algorithms::path::rrt
     algorithms::path::rrt::PathFinder rrt;
+    
+    // algorithms::path::rrt_star
+    algorithms::path::rrt_star::PathFinder rrtStar;
     
     // Конструктор
     Control(core::Logger& log, const std::string seedMode, uint32_t seed);

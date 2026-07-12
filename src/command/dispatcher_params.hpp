@@ -8,7 +8,7 @@ namespace command {
 struct DispatcherParams {
     std::string command;                                      // Команда для выполнения (help, init, g, generate и т.д.)
     
-    int fieldWidth, fieldHeight;                      // Размеры поля (ширина × высота в пикселях)
+    int fieldWidth, fieldHeight;                              // Размеры поля (ширина × высота в пикселях)
     
     // ----- addgauss -----
     double height;                                            // Высота гауссова распределения (в условных единицах)
@@ -28,7 +28,7 @@ struct DispatcherParams {
     io::BmpWriteMode bmpWriteMode;                            // Режим записи BMP (Full/Binary)
     
     // ----- binary -----
-    int heightThresholdPixel;                              // Бинаризиция на уровне отклонения от равнины  
+    int heightThresholdPixel;                                 // Бинаризиция на уровне отклонения от равнины  
     
     // ----- wave -----
     std::size_t waveNoisy;                                    // Максимальный размер шумовых компонент (в пикселях)
@@ -56,7 +56,7 @@ struct DispatcherParams {
     double vehicleRadiusWorld;                                // Радиус тележки
     
      // ----- rrt -----
-    std::size_t maxIterations;                                     // Предел числа итераций
+    std::size_t maxIterations;                                // Предел числа итераций
     double heightThresholdWorld;                              // Допустимый уровень отклонения высоты от core::MID_GRAY = 127
     double interpEdge;                                        // С каким шагом проверять углы колес на ребре
     double interpCollision;                                   // С каким шагом проверять радиус в круге
@@ -64,5 +64,9 @@ struct DispatcherParams {
     double step;                                              // Шаг
     double goalRadius;                                        // Как близко нужно подойти к цели чтобы попробовать к ней присоединиться
     double goalBias;                                          // Вероятность генерации точки у цели
+    
+    // ----- rrt_star -----
+    double maxFindRadius;                                     // Максимальный радиус для присоединения соседей к новой вершине
+    double gammaConstant;                                     // Константа RRT* для пересчета радиуса подключения к соседям
 };
 }

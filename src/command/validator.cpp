@@ -318,22 +318,22 @@ void Validator::validateRRT(
 
     validateRange(params.startWorldX,
                         0.0,
-                        static_cast<double>(params.fieldWidth),
+                        static_cast<double>(params.fieldWidth) - 1,
                         "startWorldX");   
                       
     validateRange(params.startWorldY,
                         0.0,
-                        static_cast<double>(params.fieldHeight),
+                        static_cast<double>(params.fieldHeight) - 1,
                         "startWorldY");                     
 
     validateRange(params.goalWorldX,
                         0.0,
-                        static_cast<double>(params.fieldWidth),
+                        static_cast<double>(params.fieldWidth) - 1,
                         "goalWorldX");
                            
     validateRange(params.goalWorldY,
                         0.0,
-                        static_cast<double>(params.fieldHeight),
+                        static_cast<double>(params.fieldHeight) - 1,
                         "goalWorldY");
                         
     validateRange(params.vehicleRadiusWorld,
@@ -387,6 +387,22 @@ void Validator::validateRRT(
                         "goalBias");
 
    
+}
+
+void Validator::validateRRTStar(
+    const DispatcherParams& params)
+{
+    validateRRT(params);
+    
+    validateRange(params.maxFindRadius,
+                        static_cast<double>(core::EPSILON),
+                        static_cast<double>(std::max(params.fieldWidth, params.fieldHeight)),
+                        "maxFindRadius");
+
+    validateRange(params.gammaConstant,
+                        static_cast<double>(core::EPSILON),
+                        static_cast<double>(std::max(params.fieldWidth, params.fieldHeight)),
+                        "gammaConstant");
 }
 
 } // namespace command

@@ -58,6 +58,7 @@ chmod +x run.sh
 | PlotGridPath         | string *filename.png*                                                                              | Визуализирует путь на сетке                                              |
 | PlotPath             | string *filename.png*                                                                              | Отображает найденный путь между точками A и B                            |
 | PlotRRT              | string *filename.png*                                                                              | Делает gif изображение построения дерева и пути RRT                      |
+| PlotRRTStar          | string *filename.png*                                                                              | Делает gif изображение построения дерева и пути RRT*                     |
 | bmp_write            | string *filename.bmp [Full/Binary]*                                                                | Сохраняет поле в BMP: Full - полное, Binary - бинаризованное             |
 | bmp_read             | string *filename.bmp*                                                                              | Загружает поле из BMP файла                                              |
 | bin                  | int *slice*                                                                                        | Бинаризация с уровнем отклонения от равнины MID_GRAY                     |
@@ -82,6 +83,7 @@ chmod +x run.sh
 | plotInteractive3DPath| -                                                                                                  | Интерактвный 3D режим с путем                                            |
 | end                  | -                                                                                                  | Завершает работу программы                                               |
 |rrt|size_t *maxIterations* double *Ax Ay Bx By vehicleRadius heightThreshold maxSideAngle maxUpDownAngle interpEdge interpCollision interpAngle step goalRadius goalBias*|Строит путь соблюдая условия|
+|rrt_star|size_t *maxIterations* double *Ax Ay Bx By vehicleRadius heightThreshold maxSideAngle maxUpDownAngle interpEdge interpCollision interpAngle step maxFindRadius gammaConstant goalRadius goalBias*|Строит путь соблюдая условия|
 
 
 ## ⚙️ Параметры конфигурационного файла (config.txt)
@@ -119,6 +121,7 @@ chmod +x run.sh
 | defaultPlotGridPath          | string                                         | Путь к файлу для пути на сетке по умолчанию                                      |
 | defaultPlotPath              | string                                         | Путь к файлу для визуализации маршрута по умолчанию                              |
 | PlotRRT                      | string                                         | Путь к файлу для визуализации rrt по умолчанию                                   |
+| PlotRRTStar                  | string                                         | Путь к файлу для визуализации rrt* по умолчанию                                  |
 | defaultWrite                 | string                                         | Путь к файлу для сохранения BMP-изображения по умолчанию                         |
 | defaultWriteModeImage        | [Full/Binary]                                  | Режим сохранения BMP (Full/Binary) по умолчанию                                  |
 | defaultRead                  | string                                         | Путь к файлу для загрузки BMP-изображения по умолчанию                           |
@@ -148,6 +151,8 @@ chmod +x run.sh
 | interpCollision              | double                                         | Шаг интерполяции радиуса                                                         |
 | interpAngle                  | double                                         | Шаг интерполяции для окружности (расстояние между соседними точками окружности)  |
 | step                         | double                                         | Шаг алгоритма                                                                    |
+| maxFindRadius                | double                                         | Максимальный радиус для присоединения соседей к новой вершине по умолчанию       |
+| gammaConstant                | double                                         | Константа RRT* для пересчета радиуса подключения к соседям по умолчанию          |
 | goalRadius                   | double                                         | Радиус круга цели, внутри которого пробуем присоединить оказавшиеся там вершины  |
 | goalBias                     | double                                         | Вероятность оказаться случайной точке у цели                                     |
 | defaultsave_metrics          | string                                         | Путь к файлу по умолчанию для сохранения метрик                                  |
@@ -272,6 +277,7 @@ defaultPlotNavGrid results/visualizations/NavGrid.png
 defaultPlotGridPath results/visualizations/GridPath.png
 defaultPlotPath results/visualizations/Path.png
 PlotRRT results/visualizations/RRT.gif
+PlotRRTStar results/visualizations/RRTStar.gif
 defaultPlot3DPath results/visualizations/Plot3DPath.png
 
 defaultWrite results/visualizations/Write.bmp 
@@ -317,6 +323,8 @@ interpEdge 1.0
 interpCollision 1.0
 interpAngle 1.0
 step 1.0
+maxFindRadius 20.0
+gammaConstant 100.0
 goalRadius 2.0
 goalBias 0.2
 
@@ -380,8 +388,8 @@ seedMode Fixed 42
         
         while (true) {
             const std::string commandshow = R"(Enter the command and its parameters immediately (help, init, g, g_auto, generate, save_g, gnuplot, PlotKmeans, PlotMetedata, PlotVoronoi, PlotDelaunay,
-PlotGrid, PlotNavGrid, PlotGridPath, PlotPath, PlotRRT, bmp_write, bmp_read, bin, wave, k_means, k_means_kern, triangulate, voronoi, build_nav_graph, grid, build_nav_grid, connect_to_grid, 
-connect_to_graph, astar_graph, dekstra_graph, greedy_graph, astar_grid, dekstra_grid, greedy_grid, save_metrics, Plot3DPath, plotInteractive3DPath, end, rrt):)";
+PlotGrid, PlotNavGrid, PlotGridPath, PlotPath, PlotRRT, PlotRRTStar, bmp_write, bmp_read, bin, wave, k_means, k_means_kern, triangulate, voronoi, build_nav_graph, grid, build_nav_grid, 
+connect_to_grid, connect_to_graph, astar_graph, dekstra_graph, greedy_graph, astar_grid, dekstra_grid, greedy_grid, save_metrics, Plot3DPath, plotInteractive3DPath, end, rrt, rrt_star):)";
             std::cout << commandshow;
             std::cin >> params.command;
             std::cout << "\n";
@@ -746,6 +754,26 @@ connect_to_graph, astar_graph, dekstra_graph, greedy_graph, astar_grid, dekstra_
             Validator::validateFileName(params.filename);
  
         showInfo = std::string("Plotting rrt to: ") + params.filename;
+            
+            if (fromKeyboard) {
+            std::cout << "\n";
+            std::cout << showInfo << std::endl;
+         }
+
+        logger.info(showInfo);
+        control.Dispetcher(params);
+        logger.info("RRT plotting completed");
+    }
+    else if (params.command == "PlotRRTStar") {
+        params.filename = config.PlotRRTStar;
+        
+            std::getline(input, line);
+            std::istringstream iss(line);
+            iss >> params.filename;
+                         
+            Validator::validateFileName(params.filename);
+ 
+        showInfo = std::string("Plotting rrt_star to: ") + params.filename;
             
             if (fromKeyboard) {
             std::cout << "\n";
@@ -1167,6 +1195,66 @@ connect_to_graph, astar_graph, dekstra_graph, greedy_graph, astar_grid, dekstra_
              ", interpCollision=" + std::to_string(params.interpCollision) +
              ", interpAngle=" + std::to_string(params.interpAngle) +
              ", step=" + std::to_string(params.step) +
+             ", goalRadius=" + std::to_string(params.goalRadius) +
+             ", goalBias=" + std::to_string(params.goalBias);
+                   
+         if (fromKeyboard) {
+            std::cout << "\n";
+            std::cout << showInfo << std::endl;
+         }
+        logger.info(showInfo);
+        control.Dispetcher(params);
+    }
+    else if (params.command == "rrt_star") {
+        params.maxIterations = config.maxIterations;
+        params.startWorldX = config.startWorldX;
+        params.startWorldY = config.startWorldY;
+        params.goalWorldX = config.goalWorldX;
+        params.goalWorldY = config.goalWorldY;
+        params.vehicleRadiusWorld = config.vehicleRadiusWorld;
+        params.heightThresholdWorld = config.heightThresholdWorld;
+        params.maxSideAngle = config.maxSideAngle;
+        params.maxUpDownAngle = config.maxUpDownAngle;
+        params.interpEdge = config.interpEdge;
+        params.interpCollision = config.interpCollision;
+        params.interpAngle = config.interpAngle;
+        params.step = config.step;
+        params.maxFindRadius = config.maxFindRadius;
+        params.gammaConstant = config.gammaConstant;
+        params.goalRadius = config.goalRadius;
+        params.goalBias = config.goalBias;
+        
+            std::getline(input, line);
+            std::istringstream iss(line);
+            iss >> params.maxIterations
+            >> params.startWorldX >> params.startWorldY
+            >> params.goalWorldX >> params.goalWorldY 
+            >> params.vehicleRadiusWorld >> params.heightThresholdWorld
+            >> params.maxSideAngle >> params.maxUpDownAngle
+            >> params.interpEdge >> params.interpCollision >> params.interpAngle
+            >> params.step
+            >> params.maxFindRadius >> params.gammaConstant
+            >> params.goalRadius
+            >> params.goalBias;
+                
+      Validator::validateRRTStar(params);
+        
+         showInfo = std::string("RRT: ") +
+             "maxIterations=" + std::to_string(params.maxIterations) +
+             ", start=(" + std::to_string(params.startWorldX) + ", " +
+                   std::to_string(params.startWorldY) + ")" +
+             ", goal=(" + std::to_string(params.goalWorldX) + ", " +
+                  std::to_string(params.goalWorldY) + ")" +
+             ", vehicleRadius=" + std::to_string(params.vehicleRadiusWorld) +
+             ", heightThreshold=" + std::to_string(params.heightThresholdWorld) +
+             ", maxSideAngle=" + std::to_string(params.maxSideAngle) +
+             ", maxUpDownAngle=" + std::to_string(params.maxUpDownAngle) +
+             ", interpEdge=" + std::to_string(params.interpEdge) +
+             ", interpCollision=" + std::to_string(params.interpCollision) +
+             ", interpAngle=" + std::to_string(params.interpAngle) +
+             ", step=" + std::to_string(params.step) +
+             ", maxFindRadius=" + std::to_string(params.maxFindRadius) +
+             ", gammaConstant=" + std::to_string(params.gammaConstant) +
              ", goalRadius=" + std::to_string(params.goalRadius) +
              ", goalBias=" + std::to_string(params.goalBias);
                    
