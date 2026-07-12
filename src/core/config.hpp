@@ -44,7 +44,7 @@ public:
     
     // OUTPUT FILES
     std::string defaultGnuplot, defaultPlotMetedata, defaultPlotKmeans, defaultPlotGraph, defaultPlotVoronoi, defaultPlotDelaunay, defaultPlotGrid, defaultPlotNavGrid, defaultPlotGridPath, 
-    defaultPlotPath, PlotRRT, defaultPlot3DPath;
+    defaultPlotPath, PlotRRT, PlotRRTStar, defaultPlot3DPath;
     
     std::string defaultWrite, defaultRead, defaultWriteModeImage,
     save_g,
@@ -85,7 +85,11 @@ public:
     double step = 0;
     double goalRadius = 0;
     double goalBias = 0;
-
+    
+    // RRT*
+    double maxFindRadius = 0;
+    double gammaConstant = 0;
+    
     // LOGGER
     std::string logFileNameInterface, logFileNameControl;
     std::string FiltrationLogLevelInterface, FiltrationLogLevelControl;

@@ -1,7 +1,7 @@
 #!/bin/bash
 
-N=100
-filename="grid.cmd"
+N=10
+filename="rrt.cmd"
 
 for ((i=1; i<=N; i++))
 do

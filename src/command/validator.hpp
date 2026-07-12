@@ -82,6 +82,9 @@ public:
         
     static void validateRRT(
         const DispatcherParams& params);
+    
+    static void validateRRTStar(
+        const DispatcherParams& params);
 };
 
 }

@@ -125,6 +125,7 @@ chmod +x run.sh
 | PlotGridPath         | string *filename.png*                                                                              | Визуализирует путь на сетке                                              |
 | PlotPath             | string *filename.png*                                                                              | Отображает найденный путь между точками A и B                            |
 | PlotRRT              | string *filename.png*                                                                              | Делает gif изображение построения дерева и пути RRT                      |
+| PlotRRTStar          | string *filename.png*                                                                              | Делает gif изображение построения дерева и пути RRT*                     |
 | bmp_write            | string *filename.bmp [Full/Binary]*                                                                | Сохраняет поле в BMP: Full - полное, Binary - бинаризованное             |
 | bmp_read             | string *filename.bmp*                                                                              | Загружает поле из BMP файла                                              |
 | bin                  | int *slice*                                                                                        | Бинаризация с уровнем отклонения от равнины MID_GRAY                     |
@@ -149,13 +150,22 @@ chmod +x run.sh
 | plotInteractive3DPath| -                                                                                                  | Интерактвный 3D режим с путем                                            |
 | end                  | -                                                                                                  | Завершает работу программы                                               |
 |rrt|size_t *maxIterations* double *Ax Ay Bx By vehicleRadius heightThreshold maxSideAngle maxUpDownAngle interpEdge interpCollision interpAngle step goalRadius goalBias*|Строит путь соблюдая условия|
+|rrt_star|size_t *maxIterations* double *Ax Ay Bx By vehicleRadius heightThreshold maxSideAngle maxUpDownAngle interpEdge interpCollision interpAngle step maxFindRadius gammaConstant goalRadius goalBias*|Строит путь соблюдая условия|
 
 
 ### Замечания к командному файлу
 1. Обязательно полностью настроить конфиг файл
 2. Важно строго соблюдать последовательность команд
 ```
-init -> g несколько раз или один раз g_auto или bmp_read ->  generate -> bin -> wave -> kmeans/k_means_kern -> triangulate -> voronoi -> build_nav_graph -> connect_to_graph -> алгоритмы поиска пути
+Для графовых алгоритмов поиска пути:
+init -> g несколько раз или один раз g_auto или bmp_read ->  generate -> bin -> wave -> kmeans/k_means_kern (не влияет на работу) -> triangulate -> voronoi -> build_nav_graph -> connect_to_graph -> 
+astar_graph
+
+Для алгоритмов поиска пути на сетке:
+init -> g несколько раз или один раз g_auto или bmp_read ->  generate -> bin -> wave -> kmeans/k_means_kern (не влияет на работу) -> grid -> build_nav_grid -> connect_to_grid -> astar_grid
+
+Для RRT:
+init -> g несколько раз или один раз g_auto -> rrt (Но для визуализации нужно всю равно  сделать generate -> bin, чтобы была дискретная матрица для визуализации)
 ```
 3. Не забывайте визуализировать после алгоритмов
 4. Всегда начинайте с команды init
@@ -200,6 +210,7 @@ init -> g несколько раз или один раз g_auto или bmp_rea
 | defaultPlotGridPath          | string                                         | Путь к файлу для пути на сетке по умолчанию                                      |
 | defaultPlotPath              | string                                         | Путь к файлу для визуализации маршрута по умолчанию                              |
 | PlotRRT                      | string                                         | Путь к файлу для визуализации rrt по умолчанию                                   |
+| PlotRRTStar                  | string                                         | Путь к файлу для визуализации rrt* по умолчанию                                  |
 | defaultWrite                 | string                                         | Путь к файлу для сохранения BMP-изображения по умолчанию                         |
 | defaultWriteModeImage        | [Full/Binary]                                  | Режим сохранения BMP (Full/Binary) по умолчанию                                  |
 | defaultRead                  | string                                         | Путь к файлу для загрузки BMP-изображения по умолчанию                           |
@@ -229,6 +240,8 @@ init -> g несколько раз или один раз g_auto или bmp_rea
 | interpCollision              | double                                         | Шаг интерполяции радиуса                                                         |
 | interpAngle                  | double                                         | Шаг интерполяции для окружности (расстояние между соседними точками окружности)  |
 | step                         | double                                         | Шаг алгоритма                                                                    |
+| maxFindRadius                | double                                         | Максимальный радиус для присоединения соседей к новой вершине по умолчанию       |
+| gammaConstant                | double                                         | Константа RRT* для пересчета радиуса подключения к соседям по умолчанию          |
 | goalRadius                   | double                                         | Радиус круга цели, внутри которого пробуем присоединить оказавшиеся там вершины  |
 | goalBias                     | double                                         | Вероятность оказаться случайной точке у цели                                     |
 | defaultsave_metrics          | string                                         | Путь к файлу по умолчанию для сохранения метрик                                  |
@@ -425,6 +438,7 @@ defaultPlotNavGrid results/visualizations/NavGrid.png
 defaultPlotGridPath results/visualizations/GridPath.png
 defaultPlotPath results/visualizations/Path.png
 PlotRRT results/visualizations/RRT.gif
+PlotRRTStar results/visualizations/RRTStar.gif
 defaultPlot3DPath results/visualizations/Plot3DPath.png
 
 defaultWrite results/visualizations/Write.bmp 
@@ -470,6 +484,8 @@ interpEdge 1.0
 interpCollision 1.0
 interpAngle 1.0
 step 1.0
+maxFindRadius 20.0
+gammaConstant 100.0
 goalRadius 2.0
 goalBias 0.2
 

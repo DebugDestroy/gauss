@@ -21,6 +21,9 @@
 // algorithms::path::rrt
 #include "algorithms/path/rrt/rrt.hpp"
 
+// algorithms::path::rrt_star
+#include "algorithms/path/rrt_star/rrt_star.hpp"
+
 // utils
 #include "utils/hash.hpp" // Для навигационного графа
 
@@ -74,6 +77,9 @@ struct ApplicationState {
     
     // rrt
     std::vector<algorithms::path::rrt::RRTNode> treeRRT;
+    
+    // rrt_star
+    std::vector<algorithms::path::rrt_star::RRTStarNode> treeRRTStar;
 };
 
 } // namespace command

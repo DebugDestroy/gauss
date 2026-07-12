@@ -31,6 +31,11 @@
 - RRT
 ![RRT](results/showcase/RRT.gif)
 
+- RRT* три картинки
+![RRT*](results/showcase/RRTStar1.gif)
+![RRT*](results/showcase/RRTStar2.gif)
+![RRT*](results/showcase/RRTStar3.gif)
+
 
 ## 📚 Документация
 - 📘 [User Guide](docs/UserGuide.md) — описание всех команд и сценариев использования  
@@ -40,7 +45,7 @@
 ## 📊 Исследования
 - [Graph — Graph-based Path Planning](notebooks/graph.ipynb) — сравнение алгоритмов A*, Dijkstra и Greedy на навигационном графе, построеным на основе диаграммы Вороного
 - [Grid — Grid-based Path Planning](notebooks/grid.ipynb) — сравнение алгоритмов A*, Dijkstra и Greedy на сетке
-- [RRT — RRT-based Path Planning](notebooks/rrt.ipynb) — обзор метрик RRT
+- [RRT — RRT-based Path Planning](notebooks/rrt.ipynb) — Сравнение RRT и RRT*
 
 
 ## 📄 Лицензия

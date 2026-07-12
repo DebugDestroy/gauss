@@ -39,6 +39,7 @@ const std::unordered_set<std::string> Config::required = {
     "defaultPlotGridPath",
     "defaultPlotPath",
     "PlotRRT",
+    "PlotRRTStar",
     "defaultPlot3DPath",
 
     "defaultWrite",
@@ -88,7 +89,10 @@ const std::unordered_set<std::string> Config::required = {
     "interpAngle",
     "step",
     "goalRadius",
-    "goalBias"
+    "goalBias",
+    
+    "maxFindRadius",
+    "gammaConstant"
 };
 
 Config::Config(const std::string& filename) {
@@ -180,6 +184,8 @@ Config::Config(const std::string& filename) {
         readParameter(configFile, defaultPlotPath, "defaultPlotPath");
         else if (key == "PlotRRT")
         readParameter(configFile, PlotRRT, "PlotRRT");
+        else if (key == "PlotRRTStar")
+        readParameter(configFile, PlotRRTStar, "PlotRRTStar");
         else if (key == "defaultPlot3DPath")
         readParameter(configFile, defaultPlot3DPath, "defaultPlot3DPath");
         
@@ -287,6 +293,12 @@ Config::Config(const std::string& filename) {
         readParameter(configFile, goalRadius, "goalRadius");
         else if (key == "goalBias")
         readParameter(configFile, goalBias, "goalBias");
+        
+        // RRT*
+        else if (key == "maxFindRadius")
+        readParameter(configFile, maxFindRadius, "maxFindRadius");
+        else if (key == "gammaConstant")
+        readParameter(configFile, gammaConstant, "gammaConstant");
         
         // ELSE
         else throw std::runtime_error("Unknown configuration parameter: '" + key + "'");     
