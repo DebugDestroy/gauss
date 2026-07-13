@@ -21,13 +21,13 @@ connect_to_graph 5 5 295 295
 PlotGraph results/visualizations/ConnectedGraph.png
 
 astar_graph
-PlotPath results/visualizations/AstarPathGraph.png
+PlotPathDiscrete results/visualizations/AstarPathGraph.png
 Plot3DPath results/visualizations/AstarPlot3DPathGraph.png
 dekstra_graph
-PlotPath results/visualizations/DekstraPathGraph.png
+PlotPathDiscrete results/visualizations/DekstraPathGraph.png
 Plot3DPath results/visualizations/DekstraPlot3DPathGraph.png
 greedy_graph
-PlotPath results/visualizations/GreedyPathGraph.png
+PlotPathDiscrete results/visualizations/GreedyPathGraph.png
 Plot3DPath results/visualizations/GreedyPlot3DPathGraph.png
 
 grid

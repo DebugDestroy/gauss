@@ -136,15 +136,15 @@ PlotGraph results/visualizations/ConnectedGraph.png
 
 astar_graph
 save_metrics
-PlotPath results/visualizations/AstarPathGraph.png
+PlotPathDiscrete results/visualizations/AstarPathGraph.png
 Plot3DPath results/visualizations/AstarPlot3DPathGraph.png
 dekstra_graph
 save_metrics
-PlotPath results/visualizations/DekstraPathGraph.png
+PlotPathDiscrete results/visualizations/DekstraPathGraph.png
 Plot3DPath results/visualizations/DekstraPlot3DPathGraph.png
 greedy_graph
 save_metrics
-PlotPath results/visualizations/GreedyPathGraph.png
+PlotPathDiscrete results/visualizations/GreedyPathGraph.png
 Plot3DPath results/visualizations/GreedyPlot3DPathGraph.png
 
 grid 5
@@ -157,13 +157,13 @@ PlotNavGrid results/visualizations/ConnectedGrid.png
 astar_grid
 save_metrics
 PlotGridPath results/visualizations/AstarPathGrid.png
-PlotPath results/visualizations/AstarPathGrid2D.png
+PlotPathDiscrete results/visualizations/AstarPathGrid2D.png
 dekstra_grid
 save_metrics
 PlotGridPath results/visualizations/DekstraPathGrid.png
-PlotPath results/visualizations/DekstraPathGrid2D.png
+PlotPathDiscrete results/visualizations/DekstraPathGrid2D.png
 greedy_grid
 save_metrics
 PlotGridPath results/visualizations/GreedyPathGrid.png
-PlotPath results/visualizations/GreedyPathGrid2D.png
+PlotPathDiscrete results/visualizations/GreedyPathGrid2D.png
 end

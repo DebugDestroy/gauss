@@ -123,9 +123,10 @@ chmod +x run.sh
 | PlotGrid             | string *filename.png*                                                                              | Визуализирует сетку                                                      |
 | PlotNavGrid          | string *filename.png*                                                                              | Визуализирует навигационную сетку                                        |
 | PlotGridPath         | string *filename.png*                                                                              | Визуализирует путь на сетке                                              |
-| PlotPath             | string *filename.png*                                                                              | Отображает найденный путь между точками A и B                            |
+| PlotPathDiscrete     | string *filename.png*                                                                              | Отображает найденный путь между точками A и B для дискретного путя       |
 | PlotRRT              | string *filename.png*                                                                              | Делает gif изображение построения дерева и пути RRT                      |
 | PlotRRTStar          | string *filename.png*                                                                              | Делает gif изображение построения дерева и пути RRT*                     |
+| PlotPathContinuous   | string *filename.png*                                                                              | Отображает найденный путь между точками A и B для непрерывного путя      |
 | bmp_write            | string *filename.bmp [Full/Binary]*                                                                | Сохраняет поле в BMP: Full - полное, Binary - бинаризованное             |
 | bmp_read             | string *filename.bmp*                                                                              | Загружает поле из BMP файла                                              |
 | bin                  | int *slice*                                                                                        | Бинаризация с уровнем отклонения от равнины MID_GRAY                     |
@@ -151,6 +152,10 @@ chmod +x run.sh
 | end                  | -                                                                                                  | Завершает работу программы                                               |
 |rrt|size_t *maxIterations* double *Ax Ay Bx By vehicleRadius heightThreshold maxSideAngle maxUpDownAngle interpEdge interpCollision interpAngle step goalRadius goalBias*|Строит путь соблюдая условия|
 |rrt_star|size_t *maxIterations* double *Ax Ay Bx By vehicleRadius heightThreshold maxSideAngle maxUpDownAngle interpEdge interpCollision interpAngle step maxFindRadius gammaConstant goalRadius goalBias*|Строит путь соблюдая условия|
+| shortcut_discrete    | -                                                                                                  | Удаляет лишние вершины в дискретном пути, сокращая путь                  |
+| shortcut_continuous  | -                                                                                                  | Удаляет лишние вершины в непрерывном пути, сокращая путь                 |
+| spline_discrete      |size_t *samplesPerSegment* double *vehicleRadius heightThreshold maxSideAngle maxUpDownAngle interpEdge interpCollision interpAngle*| Делает путь плавным                      |
+| spline_continuous    |size_t *samplesPerSegment*                                                                          | Делает путь плавным                                                      |
 
 
 ### Замечания к командному файлу
@@ -208,9 +213,10 @@ init -> g несколько раз или один раз g_auto -> rrt (Но �
 | defaultPlotGrid              | string                                         | Путь к файлу для сетки по умолчанию                                              |
 | defaultPlotNavGrid           | string                                         | Путь к файлу для навигационной сетки по умолчанию                                |
 | defaultPlotGridPath          | string                                         | Путь к файлу для пути на сетке по умолчанию                                      |
-| defaultPlotPath              | string                                         | Путь к файлу для визуализации маршрута по умолчанию                              |
+| PlotPathDiscrete             | string                                         | Путь к файлу для визуализации дискретного маршрута по умолчанию                  |
 | PlotRRT                      | string                                         | Путь к файлу для визуализации rrt по умолчанию                                   |
 | PlotRRTStar                  | string                                         | Путь к файлу для визуализации rrt* по умолчанию                                  |
+| PlotPathContinuous           | string                                         | Путь к файлу для визуализации непрерывного маршрута по умолчанию                 |
 | defaultWrite                 | string                                         | Путь к файлу для сохранения BMP-изображения по умолчанию                         |
 | defaultWriteModeImage        | [Full/Binary]                                  | Режим сохранения BMP (Full/Binary) по умолчанию                                  |
 | defaultRead                  | string                                         | Путь к файлу для загрузки BMP-изображения по умолчанию                           |
@@ -244,6 +250,7 @@ init -> g несколько раз или один раз g_auto -> rrt (Но �
 | gammaConstant                | double                                         | Константа RRT* для пересчета радиуса подключения к соседям по умолчанию          |
 | goalRadius                   | double                                         | Радиус круга цели, внутри которого пробуем присоединить оказавшиеся там вершины  |
 | goalBias                     | double                                         | Вероятность оказаться случайной точке у цели                                     |
+| samplesPerSegment            | size_t                                         | На сколько маленьких кусочков разбить один участок сплайна                       |
 | defaultsave_metrics          | string                                         | Путь к файлу по умолчанию для сохранения метрик                                  |
 | logFileNameInterface         | string                                         | Путь к лог-файлу интерфейса                                                      |
 | logFileNameControl           | string                                         | Путь к лог-файлу управления                                                      |
@@ -291,7 +298,7 @@ PlotGraph results/visualizations/Graph.png
 connect_to_graph
 astar_graph
 save_metrics
-PlotPath results/visualizations/Path.png
+PlotPathDiscrete results/visualizations/Path.png
 end
 ```
 2) Если данные вводятся с помощью гаусов
@@ -321,7 +328,7 @@ PlotGraph results/visualizations/Graph.png
 connect_to_graph 60 130 150 135
 astar_graph
 save_metrics
-PlotPath results/visualizations/Path.png
+PlotPathDiscrete results/visualizations/Path.png
 Plot3DPath results/visualizations/Plot3DPath.png
 plotInteractive3DPath
 end
@@ -391,7 +398,7 @@ PlotGraph results/visualizations/Graph.png
 connect_to_graph 20 27 100 298
 astar_graph
 save_metrics
-PlotPath results/visualizations/Path.png
+PlotPathDiscrete results/visualizations/Path.png
 Plot3DPath results/visualizations/Plot3DPath.png
 plotInteractive3DPath
 end
@@ -436,7 +443,8 @@ defaultPlotDelaunay results/visualizations/Delaunay.png
 defaultPlotGrid results/visualizations/Grid.png
 defaultPlotNavGrid results/visualizations/NavGrid.png
 defaultPlotGridPath results/visualizations/GridPath.png
-defaultPlotPath results/visualizations/Path.png
+PlotPathDiscrete results/visualizations/PathDiscrete.png
+PlotPathContinuous results/visualizations/PathContinuous.png
 PlotRRT results/visualizations/RRT.gif
 PlotRRTStar results/visualizations/RRTStar.gif
 defaultPlot3DPath results/visualizations/Plot3DPath.png
@@ -488,6 +496,9 @@ maxFindRadius 20.0
 gammaConstant 100.0
 goalRadius 2.0
 goalBias 0.2
+
+
+samplesPerSegment 20
 
 
 defaultsave_metrics var/metrics/metrics.csv

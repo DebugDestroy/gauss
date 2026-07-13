@@ -37,7 +37,8 @@ const std::unordered_set<std::string> Config::required = {
     "defaultPlotGrid",
     "defaultPlotNavGrid",
     "defaultPlotGridPath",
-    "defaultPlotPath",
+    "PlotPathDiscrete",
+    "PlotPathContinuous",
     "PlotRRT",
     "PlotRRTStar",
     "defaultPlot3DPath",
@@ -92,7 +93,9 @@ const std::unordered_set<std::string> Config::required = {
     "goalBias",
     
     "maxFindRadius",
-    "gammaConstant"
+    "gammaConstant",
+    
+    "samplesPerSegment"
 };
 
 Config::Config(const std::string& filename) {
@@ -180,8 +183,10 @@ Config::Config(const std::string& filename) {
         readParameter(configFile, defaultPlotNavGrid, "defaultPlotNavGrid");
         else if (key == "defaultPlotGridPath")
         readParameter(configFile, defaultPlotGridPath, "defaultPlotGridPath");
-        else if (key == "defaultPlotPath")
-        readParameter(configFile, defaultPlotPath, "defaultPlotPath");
+        else if (key == "PlotPathDiscrete")
+        readParameter(configFile, PlotPathDiscrete, "PlotPathDiscrete");
+        else if (key == "PlotPathContinuous")
+        readParameter(configFile, PlotPathContinuous, "PlotPathContinuous");
         else if (key == "PlotRRT")
         readParameter(configFile, PlotRRT, "PlotRRT");
         else if (key == "PlotRRTStar")
@@ -299,6 +304,10 @@ Config::Config(const std::string& filename) {
         readParameter(configFile, maxFindRadius, "maxFindRadius");
         else if (key == "gammaConstant")
         readParameter(configFile, gammaConstant, "gammaConstant");
+        
+        // SPLINE
+        else if (key == "samplesPerSegment")
+        readParameter(configFile, samplesPerSegment, "samplesPerSegment");
         
         // ELSE
         else throw std::runtime_error("Unknown configuration parameter: '" + key + "'");     

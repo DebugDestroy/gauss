@@ -3,6 +3,6 @@ init 1000 1000
 g_auto 100 101 15 985 15 985 10 12 10 12 -20 20
 
 rrt_star 100000 2 2 998 998 1 5 50 50 2 2 2 40 80 700 10 0.00005
-
+PlotPathContinuous results/visualizations/RRTStar.png
 save_metrics
 end

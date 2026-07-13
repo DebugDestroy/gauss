@@ -31,16 +31,16 @@ PlotGraph results/visualizations/ConnectedGraph.png
 
 astar_graph
 save_metrics
-PlotPath results/visualizations/AstarPathGraph.png
+PlotPathDiscrete results/visualizations/AstarPathGraph.png
 Plot3DPath results/visualizations/AstarPlot3DPathGraph.png
 
 dekstra_graph
 save_metrics
-PlotPath results/visualizations/DekstraPathGraph.png
+PlotPathDiscrete results/visualizations/DekstraPathGraph.png
 Plot3DPath results/visualizations/DekstraPlot3DPathGraph.png
 greedy_graph
 save_metrics
-PlotPath results/visualizations/GreedyPathGraph.png
+PlotPathDiscrete results/visualizations/GreedyPathGraph.png
 Plot3DPath results/visualizations/GreedyPlot3DPathGraph.png
 
 grid 5
@@ -61,5 +61,6 @@ save_metrics
 PlotGridPath results/visualizations/GreedyPathGrid.png
 
 rrt 1000000 2 2 998 698 1 5 50 50 1 1 1 1 10 0.2
+PlotPathContinuous results/visualizations/RRT.png
 save_metrics
 end

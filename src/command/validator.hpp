@@ -85,6 +85,12 @@ public:
     
     static void validateRRTStar(
         const DispatcherParams& params);
+    
+    static void validateSplineDiscrete(
+        const DispatcherParams& params);
+        
+    static void validateSplineContinuous(
+        std::size_t samplesPerSegment);
 };
 
 }
