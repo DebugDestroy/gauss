@@ -42,6 +42,20 @@ PointD toPointD(const Pixel& p)
     return PointD(p.x, p.y);
 }
 
+std::vector<algorithms::geometry::PointD>
+toPointDPath(const std::vector<algorithms::geometry::Pixel>& pixelPath)
+{
+    std::vector<algorithms::geometry::PointD> result;
+    result.reserve(pixelPath.size());
+
+    for (const auto& pixel : pixelPath)
+    {
+        result.push_back(toPointD(pixel));
+    }
+
+    return result;
+}
+
     double distance(const PointD& p1, const PointD& p2) {
         return std::hypot(p1.x - p2.x, p1.y - p2.y);
 }

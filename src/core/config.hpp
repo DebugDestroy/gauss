@@ -44,7 +44,7 @@ public:
     
     // OUTPUT FILES
     std::string defaultGnuplot, defaultPlotMetedata, defaultPlotKmeans, defaultPlotGraph, defaultPlotVoronoi, defaultPlotDelaunay, defaultPlotGrid, defaultPlotNavGrid, defaultPlotGridPath, 
-    defaultPlotPath, PlotRRT, PlotRRTStar, defaultPlot3DPath;
+    PlotPathDiscrete, PlotPathContinuous, PlotRRT, PlotRRTStar, defaultPlot3DPath;
     
     std::string defaultWrite, defaultRead, defaultWriteModeImage,
     save_g,
@@ -89,6 +89,9 @@ public:
     // RRT*
     double maxFindRadius = 0;
     double gammaConstant = 0;
+    
+    // SPLINE
+    std::size_t samplesPerSegment = 0;
     
     // LOGGER
     std::string logFileNameInterface, logFileNameControl;

@@ -61,6 +61,10 @@
 // algorithms::path::rrt_star
 #include "algorithms/path/rrt_star/rrt_star.hpp"
 
+// algorithms::path::smoothing
+#include "algorithms/path/smoothing/shortcut.hpp"
+#include "algorithms/path/smoothing/spline.hpp"
+
 namespace command {
 
 class Control {

@@ -68,5 +68,8 @@ struct DispatcherParams {
     // ----- rrt_star -----
     double maxFindRadius;                                     // Максимальный радиус для присоединения соседей к новой вершине
     double gammaConstant;                                     // Константа RRT* для пересчета радиуса подключения к соседям
+    
+    // ----- spline -----
+    std::size_t samplesPerSegment;                            // На сколько маленьких кусочков разбить один участок сплайна
 };
 }

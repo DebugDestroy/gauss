@@ -70,12 +70,20 @@ public:
                      const std::vector<std::vector<double>>& binaryMap, 
                      const std::string& filename);
 
-    void plotPath(const std::vector<algorithms::geometry::Pixel>& path, 
+    void plotPathDiscrete(const std::vector<algorithms::geometry::Pixel>& path, 
                  const std::vector<std::vector<double>>& field,
                  const std::vector<std::vector<double>>& binaryMap,
                  const std::string& filename, 
                  const command::DispatcherParams& params,
                  const int Radius);
+    
+    void plotPathContinuous(
+        const std::vector<algorithms::geometry::PointD>& path,
+        const std::vector<algorithms::gauss::Gaus>& gaussi,
+        int fieldWidth,
+        int fieldHeight,
+        double heightThreshold,
+        const std::string& filename);
                  
     void plotInteractive3DPath(const std::vector<algorithms::geometry::Pixel>& path, 
                               const std::vector<std::vector<double>>& field, 

@@ -36,6 +36,9 @@
 ![RRT*](results/showcase/RRTStar2.gif)
 ![RRT*](results/showcase/RRTStar3.gif)
 
+- Shortcut + кубический сплайн на RRT
+![RRT](results/showcase/RRTSpline.png)
+
 
 ## 📚 Документация
 - 📘 [User Guide](docs/UserGuide.md) — описание всех команд и сценариев использования  

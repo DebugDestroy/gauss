@@ -405,4 +405,54 @@ void Validator::validateRRTStar(
                         "gammaConstant");
 }
 
+void Validator::validateSplineDiscrete(
+    const DispatcherParams& params)
+{
+    validateSplineContinuous(params.samplesPerSegment);
+    
+    validateRange(params.vehicleRadiusWorld,
+                        static_cast<double>(core::EPSILON),
+                        static_cast<double>(std::min(params.fieldWidth / 2.0, params.fieldHeight / 2.0)),
+                        "vehicleRadiusWorld");
+                    
+    validateRange(params.heightThresholdWorld,
+                        0.0,
+                        static_cast<double>(core::MID_GRAY),
+                        "heightThresholdWorld");
+
+    validateRange(params.maxSideAngle,
+                        0.0,
+                        90.0,
+                        "maxSideAngle");
+
+    validateRange(params.maxUpDownAngle,
+                        0.0,
+                        90.0,
+                        "maxUpDownAngle");
+
+    validateRange(params.interpEdge,
+                        static_cast<double>(core::EPSILON),
+                        static_cast<double>(std::max(params.fieldWidth, params.fieldHeight)),
+                        "interpEdge");
+                        
+    validateRange(params.interpCollision,
+                        static_cast<double>(core::EPSILON),
+                        static_cast<double>(std::max(params.fieldWidth, params.fieldHeight)),
+                        "interpCollision");
+
+    validateRange(params.interpAngle,
+                        static_cast<double>(core::EPSILON),
+                        static_cast<double>(std::max(params.fieldWidth, params.fieldHeight)),
+                        "interpAngle");
+}
+
+void Validator::validateSplineContinuous(
+        std::size_t samplesPerSegment)
+{
+    validateRange(samplesPerSegment,
+                        static_cast<std::size_t>(1),
+                        std::numeric_limits<std::size_t>::max(),
+                        "samplesPerSegment");
+}
+
 } // namespace command

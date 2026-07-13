@@ -12,6 +12,8 @@ std::vector<algorithms::geometry::Pixel> toPixelPath(const std::vector<algorithm
 
 PointD toPointD(const Pixel& p); // Из пикселя в точку
 
+std::vector<algorithms::geometry::PointD> toPointDPath(const std::vector<algorithms::geometry::Pixel>& pixelPath); // Путь пиксельный в путь PointD
+
 Pixel toPixel(const Pixel& p); // Перегрузка (выдать пиксель)
 
 double distance(const PointD& p1, const PointD& p2); // Возвращает расстояние между двумя точками

@@ -90,7 +90,7 @@ git status # Проверяем изменения
 ### 4️⃣ Фиксируем изменения
 ```
 git add .
-git commit -m "feat: добавил функционал X"
+git commit -m "Заголовок" -m "Текст"
 git push origin test
 ```
 
@@ -104,15 +104,13 @@ git pull origin main # Локальное обновление
 
 ### 7️⃣ Создаем тег (релиз)
 ```
-git tag -a v29.0.0 -m "Изменения:
-1) Улучшил визуализацию
-2) Исправил скрипт, теперь работает как задумывалось"
-git push origin v29.0.0
+git tag -a v32.0.0 -m "Заголовок" -m "Текст"
+git push origin v32.0.0
 ```
 
 ### 8️⃣ Удаляем ветку
 ```
-git branch -d test
+git branch -D test
 git push origin --delete test
 ```
 

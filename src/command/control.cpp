@@ -173,9 +173,19 @@ namespace command {
             logOperation(core::LogLevel::Info, std::string("PlotGridPath"), std::string("file: ") + params.filename);
         }
         
-        if (params.command == "PlotPath") {
-            gnuplotInterface.plotPath(state.pathPixel, state.field, state.binaryMap, params.filename, params, params.vehicleRadiusPixel);
-            logOperation(core::LogLevel::Info, std::string("PlotPath"), std::string("file: ") + params.filename);
+        if (params.command == "PlotPathDiscrete") {
+            gnuplotInterface.plotPathDiscrete(state.pathPixel, state.field, state.binaryMap, params.filename, params, params.vehicleRadiusPixel);
+            logOperation(core::LogLevel::Info, std::string("PlotPathDiscrete"), std::string("file: ") + params.filename);
+        }
+        
+        if (params.command == "PlotPathContinuous") {
+            gnuplotInterface.plotPathContinuous(state.pathWorld,
+                                                state.gaussi,
+                                                params.fieldWidth, params.fieldHeight,
+                                                params.heightThresholdWorld,
+                                                params.filename);
+                                                
+            logOperation(core::LogLevel::Info, std::string("PlotPathContinuous"), std::string("file: ") + params.filename);
         }
         
         if (params.command == "PlotRRT") {
@@ -669,6 +679,62 @@ namespace command {
                 logger.logMessage(core::LogLevel::Warning,
                                   "[rrt_star] Path not found");
            }
+        }
+        
+        if (params.command == "shortcut_discrete") {
+            algorithms::path::smoothing::Shortcut::shortcutDiscrete(
+                    state.pathPixel,
+                    state.field,
+                    state.binaryMap,
+                    conditions,
+                    params.vehicleRadiusPixel,
+                    params.maxSideAngle,
+                    params.maxUpDownAngle);     
+                                                                                   
+            logOperation(core::LogLevel::Info, std::string("shortcut_discrete"));
+        }
+        
+        if (params.command == "shortcut_continuous") {
+            algorithms::path::smoothing::Shortcut::shortcutContinuous(
+                    state.pathWorld,
+                    state.gaussi,
+                    params.fieldWidth, params.fieldHeight,
+                    params.heightThresholdWorld,
+                    params.vehicleRadiusWorld,
+                    params.maxSideAngle, params.maxUpDownAngle,
+                    params.interpEdge, params.interpCollision, params.interpAngle,
+                    conditions);       
+                                                                                 
+            logOperation(core::LogLevel::Info, std::string("shortcut_continuous"));
+        }
+        
+        if (params.command == "spline_discrete") {
+            state.pathWorld = algorithms::geometry::toPointDPath(state.pathPixel);
+            algorithms::path::smoothing::Spline::spline(
+                    state.pathWorld,
+                    state.gaussi,
+                    params.fieldWidth, params.fieldHeight,
+                    params.heightThresholdWorld,
+                    params.vehicleRadiusWorld,
+                    params.maxSideAngle, params.maxUpDownAngle,
+                    params.interpEdge, params.interpCollision, params.interpAngle,
+                    conditions,
+                    params.samplesPerSegment);                                                                       
+            logOperation(core::LogLevel::Info, std::string("spline_discrete"));
+        }
+        
+        if (params.command == "spline_continuous") {
+            algorithms::path::smoothing::Spline::spline(
+                    state.pathWorld,
+                    state.gaussi,
+                    params.fieldWidth, params.fieldHeight,
+                    params.heightThresholdWorld,
+                    params.vehicleRadiusWorld,
+                    params.maxSideAngle, params.maxUpDownAngle,
+                    params.interpEdge, params.interpCollision, params.interpAngle,
+                    conditions,
+                    params.samplesPerSegment);                                                                       
+            logOperation(core::LogLevel::Info, std::string("spline_continuous"));
         }
         
         if (params.command == "save_metrics") {

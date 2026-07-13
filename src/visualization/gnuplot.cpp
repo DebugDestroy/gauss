@@ -771,7 +771,7 @@ void GnuplotInterface::plotGridPath(
     logPlotEnd("DelaunayTriangulation");
 }
 
-void GnuplotInterface::plotPath(const std::vector<algorithms::geometry::Pixel>& path, 
+void GnuplotInterface::plotPathDiscrete(const std::vector<algorithms::geometry::Pixel>& path, 
                  const std::vector<std::vector<double>>& field,
                  const std::vector<std::vector<double>>& binaryMap,
                  const std::string& filename, 
@@ -780,7 +780,7 @@ void GnuplotInterface::plotPath(const std::vector<algorithms::geometry::Pixel>& 
         logPlotStart("PathVisualization", filename);
         
         if (field.empty() || path.empty()) {
-            logger.warning("[GnuplotInterface::plotPath] Нет данных пути для визуализации");
+            logger.warning("[GnuplotInterface::plotPathDiscrete] Нет данных пути для визуализации");
             return;
         }
 
@@ -790,7 +790,7 @@ void GnuplotInterface::plotPath(const std::vector<algorithms::geometry::Pixel>& 
 
         FILE* gnuplotPipe = popen("gnuplot -persist", "w");
         if (!gnuplotPipe) {
-            logger.error("[GnuplotInterface::plotPath] Ошибка открытия gnuplot pipe");
+            logger.error("[GnuplotInterface::plotPathDiscrete] Ошибка открытия gnuplot pipe");
             return;
         }
 
@@ -870,6 +870,198 @@ void GnuplotInterface::plotPath(const std::vector<algorithms::geometry::Pixel>& 
 
     pclose(gnuplotPipe);
     logPlotEnd("PathVisualization");
+}
+
+void GnuplotInterface::plotPathContinuous(
+    const std::vector<algorithms::geometry::PointD>& path,
+    const std::vector<algorithms::gauss::Gaus>& gaussi,
+    int fieldWidth,
+    int fieldHeight,
+    double heightThreshold,
+    const std::string& filename)
+{
+    logPlotStart("PathVisualizationContinuous", filename);
+
+    if (path.empty() || gaussi.empty())
+    {
+        logger.warning(
+            "[GnuplotInterface::plotPathContinuous] Нет данных пути или гауссов");
+        return;
+    }
+
+
+    FILE* gnuplotPipe = popen("gnuplot -persist", "w");
+
+    if (!gnuplotPipe)
+    {
+        logger.error(
+            "[GnuplotInterface::plotPathContinuous] Ошибка открытия gnuplot pipe");
+        return;
+    }
+
+
+    logger.debug(
+        std::string("Визуализация непрерывного пути: ")
+        + std::to_string(path.size())
+        + " точек");
+
+
+    applyNiceStyle(
+        gnuplotPipe,
+        "Continuous Path Visualization");
+
+
+    fprintf(
+        gnuplotPipe,
+        "set output '%s'\n",
+        filename.c_str());
+
+
+    fprintf(
+        gnuplotPipe,
+        "set size ratio -1\n");
+
+
+    fprintf(
+        gnuplotPipe,
+        "set xrange [0:%d]\n",
+        fieldWidth);
+
+
+    fprintf(
+        gnuplotPipe,
+        "set yrange [0:%d]\n",
+        fieldHeight);
+
+
+    fprintf(
+        gnuplotPipe,
+        "unset key\n");
+
+
+    // START / END подписи
+
+    fprintf(
+        gnuplotPipe,
+        "set label '{/:Bold START}' at %f,%f "
+        "tc rgb 'blue' front font 'Arial,18'\n",
+        path.front().x,
+        path.front().y);
+
+
+    fprintf(
+        gnuplotPipe,
+        "set label '{/:Bold END}' at %f,%f "
+        "tc rgb 'purple' front font 'Arial,18'\n",
+        path.back().x,
+        path.back().y);
+
+
+
+    // Фон + путь + точки
+
+    fprintf(
+        gnuplotPipe,
+        "plot '-' matrix with image, \\\n");
+
+    fprintf(
+        gnuplotPipe,
+        "'-' with lines lw 3 lc rgb '#00FF00', \\\n");
+
+    fprintf(
+        gnuplotPipe,
+        "'-' with points pt 7 ps 2 lc rgb 'blue', \\\n");
+
+    fprintf(
+        gnuplotPipe,
+        "'-' with points pt 9 ps 2 lc rgb 'purple'\n");
+
+
+
+    // 1. Бинарное поле из гауссов
+
+    for (int y = 0; y < fieldHeight; ++y)
+    {
+        for (int x = 0; x < fieldWidth; ++x)
+        {
+            double height =
+                algorithms::gauss::GaussBuilder::heightAt(
+                    static_cast<double>(x),
+                    static_cast<double>(y),
+                    gaussi);
+
+
+            double value =
+                (std::abs(height - core::MID_GRAY) >= heightThreshold)
+                    ? core::WHITE
+                    : core::BLACK;
+
+
+            fprintf(
+                gnuplotPipe,
+                "%f ",
+                value);
+        }
+
+        fprintf(
+            gnuplotPipe,
+            "\n");
+    }
+
+    fprintf(
+        gnuplotPipe,
+        "e\n");
+
+
+
+    // 2. Путь
+
+    for (const auto& point : path)
+    {
+        fprintf(
+            gnuplotPipe,
+            "%f %f\n",
+            point.x,
+            point.y);
+    }
+
+    fprintf(
+        gnuplotPipe,
+        "e\n");
+
+
+
+    // 3. START
+
+    fprintf(
+        gnuplotPipe,
+        "%f %f\n",
+        path.front().x,
+        path.front().y);
+
+    fprintf(
+        gnuplotPipe,
+        "e\n");
+
+
+
+    // 4. END
+
+    fprintf(
+        gnuplotPipe,
+        "%f %f\n",
+        path.back().x,
+        path.back().y);
+
+    fprintf(
+        gnuplotPipe,
+        "e\n");
+
+
+
+    pclose(gnuplotPipe);
+
+    logPlotEnd("PathVisualizationContinuous");
 }
 
 void GnuplotInterface::plotInteractive3DPath(const std::vector<algorithms::geometry::Pixel>& path, 
