@@ -1,7 +1,7 @@
 #!/bin/bash
 
-N=10
-filename="rrt.cmd"
+N=100
+filename="pathCommands.cmd"
 
 for ((i=1; i<=N; i++))
 do

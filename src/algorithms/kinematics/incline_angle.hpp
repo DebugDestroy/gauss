@@ -25,6 +25,7 @@ VehicleAngles calculateVehicleAngles(
     
 // Вычисляет VehicleAngles 
 VehicleAngles calculateVehicleAnglesContinuous(
+    const algorithms::gauss::GaussBuilder& gaussBuilder,
     const std::vector<algorithms::gauss::Gaus>& gaussi,
     const algorithms::geometry::PointD& center,
     const algorithms::geometry::PointD& direction, // Единичное направление

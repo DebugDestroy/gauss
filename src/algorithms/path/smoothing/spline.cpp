@@ -36,6 +36,7 @@ algorithms::geometry::PointD Spline::catmullRom(
 void
 Spline::spline(
     std::vector<algorithms::geometry::PointD>& path,
+    const algorithms::gauss::GaussBuilder& gaussBuilder,
     const std::vector<algorithms::gauss::Gaus>& gaussi,
     int fieldWidth,
     int fieldHeight,
@@ -107,6 +108,7 @@ for (std::size_t i = 0; i + 1 < path.size(); ++i)
     for (const auto& point : segment)
     {
         if (!validator.isEdgeValidContinuous(
+                gaussBuilder,
                 gaussi,
                 previous,
                 point,

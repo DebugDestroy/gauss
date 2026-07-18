@@ -1,7 +1,7 @@
 init 1000 700
 
 g_auto 100 101 15 985 15 685 10 12 10 12 -20 20
-
+g_grid 20
 generate
 
 save_g
@@ -60,7 +60,7 @@ greedy_grid
 save_metrics
 PlotGridPath results/visualizations/GreedyPathGrid.png
 
-rrt 1000000 2 2 998 698 1 5 50 50 1 1 1 1 10 0.2
+rrt 20 1000000 2 2 998 698 1 5 50 50 1 1 1 1 10 0.2
 PlotPathContinuous results/visualizations/RRT.png
 save_metrics
 end

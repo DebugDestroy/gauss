@@ -874,6 +874,7 @@ void GnuplotInterface::plotPathDiscrete(const std::vector<algorithms::geometry::
 
 void GnuplotInterface::plotPathContinuous(
     const std::vector<algorithms::geometry::PointD>& path,
+    const algorithms::gauss::GaussBuilder& gaussBuilder,
     const std::vector<algorithms::gauss::Gaus>& gaussi,
     int fieldWidth,
     int fieldHeight,
@@ -985,7 +986,7 @@ void GnuplotInterface::plotPathContinuous(
         for (int x = 0; x < fieldWidth; ++x)
         {
             double height =
-                algorithms::gauss::GaussBuilder::heightAt(
+                gaussBuilder.heightAt(
                     static_cast<double>(x),
                     static_cast<double>(y),
                     gaussi);

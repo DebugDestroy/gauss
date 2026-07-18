@@ -35,12 +35,15 @@ public:
     double defaultCenterX = 0, defaultCenterY = 0, defaultSigmaX = 0, defaultSigmaY = 0, defaultHeight = 0;
     
     // DEFAULT G_AUTO PARAMETERS
-    std::size_t count_min = 0, count_max = 0;                             // Диапазон количества генерируемых гауссов
+    std::size_t count_min = 0, count_max = 0;                     // Диапазон количества генерируемых гауссов
     double xmin = 0, xmax = 0;                                    // Диапазон X координаты центра
     double ymin = 0, ymax = 0;                                    // Диапазон Y координаты центра
     double sx_min = 0, sx_max = 0;                                // Диапазон σx
     double sy_min = 0, sy_max = 0;                                // Диапазон σy
     double h_min = 0, h_max = 0;                                  // Диапазон высоты
+    
+    // G_GRID
+    int g_cell_size = 0;
     
     // OUTPUT FILES
     std::string defaultGnuplot, defaultPlotMetedata, defaultPlotKmeans, defaultPlotGraph, defaultPlotVoronoi, defaultPlotDelaunay, defaultPlotGrid, defaultPlotNavGrid, defaultPlotGridPath, 
@@ -60,7 +63,7 @@ public:
     std::size_t defaultKlaster = 0, defaultKlasterKern = 0;
     
     // GRID
-    int defaultgridWidth = 0;
+    int grid_cell_size = 0;
     std::size_t defaultgridNoisy = 0;
     
     // PATHS
@@ -72,7 +75,8 @@ public:
     double maxSideAngle = 0, maxUpDownAngle = 0;
     
     // RRT
-    size_t maxIterations = 0;
+    std::size_t rebuildSize = 0;
+    std::size_t maxIterations = 0;
     double startWorldX = 0;
     double startWorldY = 0;
     double goalWorldX = 0;

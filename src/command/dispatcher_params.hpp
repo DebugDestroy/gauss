@@ -23,6 +23,9 @@ struct DispatcherParams {
     double sy_min, sy_max;                                    // Диапазон σy
     double h_min, h_max;                                      // Диапазон высоты
     
+    // -----  g_grid ----- 
+    int g_cell_size;                                          // Размер ячейки
+    
     // ----- Ввод / вывод -----
     std::string filename;                                     // Имя файла для операций ввода/вывода
     io::BmpWriteMode bmpWriteMode;                            // Режим записи BMP (Full/Binary)
@@ -38,7 +41,7 @@ struct DispatcherParams {
     std::size_t kernelSize;                                   // Размер ядра для кластеризации
     
     // ----- grid -----
-    int gridWidth;                                            // Размер ячейки gridWidht x gridWidht
+    int grid_cell_size;                                       // Размер ячейки grid_cell_size x grid_cell_size
     std::size_t gridNoisy;                                    // Число допустимого шума в ячейке
     
     // ----- Путь дискретный-----
@@ -55,7 +58,8 @@ struct DispatcherParams {
     double goalWorldX, goalWorldY;                            // Координаты конечной точки маршрута (Bx, By)
     double vehicleRadiusWorld;                                // Радиус тележки
     
-     // ----- rrt -----
+    // ----- rrt -----
+    std::size_t rebuildSize;                                  // Частота перестройки kd-tree
     std::size_t maxIterations;                                // Предел числа итераций
     double heightThresholdWorld;                              // Допустимый уровень отклонения высоты от core::MID_GRAY = 127
     double interpEdge;                                        // С каким шагом проверять углы колес на ребре

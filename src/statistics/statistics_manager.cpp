@@ -96,6 +96,7 @@ void StatisticsManager::computeMinObstacleDistance(
     void StatisticsManager::computeMaxTerrainAngles(
         algorithms::path::PathMetrics& metrics,
         const std::vector<algorithms::geometry::PointD>& path,
+        const algorithms::gauss::GaussBuilder& gaussBuilder,
         const std::vector<algorithms::gauss::Gaus>& gaussi,
         double vehicleRadius,
         double interpEdge)
@@ -147,6 +148,7 @@ void StatisticsManager::computeMinObstacleDistance(
 
                 auto angles =
                     algorithms::kinematics::calculateVehicleAnglesContinuous(
+                        gaussBuilder,
                         gaussi,
                         center,
                         direction,
@@ -167,6 +169,7 @@ void StatisticsManager::computeMinObstacleDistance(
     void StatisticsManager::computeMinObstacleDistance(
         algorithms::path::PathMetrics& metrics,
         const std::vector<algorithms::geometry::PointD>& path,
+        const algorithms::gauss::GaussBuilder& gaussBuilder,
         const std::vector<algorithms::gauss::Gaus>& gaussi,
         int fieldWidth,
         int fieldHeight,
@@ -199,7 +202,7 @@ void StatisticsManager::computeMinObstacleDistance(
             // Ребро нулевой длины
             if (length < core::EPSILON)
             {
-                auto result = algorithms::path::common::minObstacleDistance(path[segment], gaussi, fieldWidth, fieldHeight, heightThreshold, interpolationCollision, interpAngle);
+                auto result = algorithms::path::common::minObstacleDistance(path[segment], gaussBuilder, gaussi, fieldWidth, fieldHeight, heightThreshold, interpolationCollision, interpAngle);
                 minEuclid = std::min(minEuclid, result.euclidean);
                 minPixel  = std::min(minPixel, result.pixel);
                 continue;
@@ -219,7 +222,7 @@ void StatisticsManager::computeMinObstacleDistance(
                     path[segment].y + t * dir.y
                 };
                 
-                auto result = algorithms::path::common::minObstacleDistance(center, gaussi, fieldWidth, fieldHeight, heightThreshold, interpolationCollision, interpAngle);
+                auto result = algorithms::path::common::minObstacleDistance(center, gaussBuilder, gaussi, fieldWidth, fieldHeight, heightThreshold, interpolationCollision, interpAngle);
 
                 minEuclid = std::min(minEuclid, result.euclidean);
                 minPixel  = std::min(minPixel, result.pixel);

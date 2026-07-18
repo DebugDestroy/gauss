@@ -57,6 +57,7 @@ public:
     void computeMaxTerrainAngles(
         algorithms::path::PathMetrics& metrics,
         const std::vector<algorithms::geometry::PointD>& path,
+        const algorithms::gauss::GaussBuilder& gaussBuilder,
         const std::vector<algorithms::gauss::Gaus>& gaussi,
         double vehicleRadius,
         double interpEdge);    
@@ -65,6 +66,7 @@ public:
     void computeMinObstacleDistance(
         algorithms::path::PathMetrics& metrics,
         const std::vector<algorithms::geometry::PointD>& path,
+        const algorithms::gauss::GaussBuilder& gaussBuilder,
         const std::vector<algorithms::gauss::Gaus>& gaussi,
         int fieldWidth,
         int fieldHeight,

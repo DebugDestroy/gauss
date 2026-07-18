@@ -48,7 +48,8 @@
 ## 📊 Исследования
 - [Graph — Graph-based Path Planning](notebooks/graph.ipynb) — сравнение алгоритмов A*, Dijkstra и Greedy на навигационном графе, построеным на основе диаграммы Вороного
 - [Grid — Grid-based Path Planning](notebooks/grid.ipynb) — сравнение алгоритмов A*, Dijkstra и Greedy на сетке
-- [RRT — RRT-based Path Planning](notebooks/rrt.ipynb) — Сравнение RRT и RRT*
+- [Sampling — Sampling-based Path Planning](notebooks/rrt.ipynb) — сравнение алгоритмов RRT и RRT*
+- [Comparison — Path Planning Environments](notebooks/pathCommands.ipynb) — сравнение Graph, Grid, RRT и RRT*
 
 
 ## 📄 Лицензия

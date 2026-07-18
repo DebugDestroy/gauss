@@ -42,30 +42,6 @@ algorithms::geometry::PointD PathFinder::randomPoint(const algorithms::geometry:
     return {xDist(gen), yDist(gen)};
 }
 
-int PathFinder::nearestNode(
-    const std::vector<RRTNode>& tree,
-    const algorithms::geometry::PointD& point) const
-{
-    int bestIndex = 0;
-    double bestDist2 = std::numeric_limits<double>::max();
-
-    for (std::size_t i = 0; i < tree.size(); ++i)
-    {
-        const double dx = tree[i].point.x - point.x;
-        const double dy = tree[i].point.y - point.y;
-
-        const double dist2 = dx * dx + dy * dy;
-
-        if (dist2 < bestDist2)
-        {
-            bestDist2 = dist2;
-            bestIndex = static_cast<int>(i);
-        }
-    }
-
-    return bestIndex;
-}
-
 std::vector<algorithms::geometry::PointD>
 PathFinder::restorePath(
     const std::vector<RRTNode>& tree,
@@ -92,6 +68,7 @@ PathFinder::restorePath(
 RRTResult PathFinder::findPathRRT(
     const algorithms::geometry::PointD& start,
     const algorithms::geometry::PointD& goal,
+    const algorithms::gauss::GaussBuilder& gaussBuilder,
     const std::vector<algorithms::gauss::Gaus>& gaussi,
     int fieldWidth,
     int fieldHeight,
@@ -106,10 +83,12 @@ RRTResult PathFinder::findPathRRT(
     double step,
     double goalRadius,
     double goalBias,
+    std::size_t rebuildSize,
     const algorithms::path::common::PathValidator& conds,
     PathMetrics& metrics)
 {
     std::vector<RRTNode> tree;
+    algorithms::geometry::spatial::KDTreeIndex<RRTNode> kdTree(rebuildSize);
     RRTResult result;
     
     logger.debug("[RRT] Starting search");
@@ -120,6 +99,7 @@ RRTResult PathFinder::findPathRRT(
     logger.debug("Goal radius = " + std::to_string(goalRadius));
     
     if (!algorithms::path::common::checkPointContinuous(
+            gaussBuilder,
             gaussi,
             start,
             fieldWidth,
@@ -135,6 +115,7 @@ RRTResult PathFinder::findPathRRT(
     }
 
     if (!algorithms::path::common::checkPointContinuous(
+            gaussBuilder,
             gaussi,
             goal,
             fieldWidth,
@@ -164,14 +145,18 @@ RRTResult PathFinder::findPathRRT(
     );
     
     tree.push_back({start, -1});
-
+    
+    kdTree.insert(
+        tree,
+        0);
+        
     for (size_t iter = 0; iter < maxIterations; ++iter)
     {
         // 1. Генерируем случайную цель
         algorithms::geometry::PointD qRand = randomPoint(goal, goalBias);
 
         // 2. Ищем ближайшую вершину дерева
-        int nearest = nearestNode(tree, qRand);
+        int nearest = kdTree.nearest(qRand);
 
         // 3. Делаем шаг в сторону случайной точки
         algorithms::geometry::PointD qNew =
@@ -181,6 +166,7 @@ RRTResult PathFinder::findPathRRT(
                   
         // 4. Проверяем новое ребро
         if (!conds.isEdgeValidContinuous(
+                gaussBuilder,
                 gaussi,
                 tree[static_cast<std::size_t>(nearest)].point,
                 qNew,
@@ -202,11 +188,17 @@ RRTResult PathFinder::findPathRRT(
         metrics.expandedNodes++; 
         
         int newIndex = static_cast<int>(tree.size()) - 1;
-
+        
+        kdTree.insert(
+            tree,
+            newIndex
+        );
+        
         // 6. Проверяем достижение цели
         if (distance(qNew, goal) <= goalRadius)
         {
             if (conds.isEdgeValidContinuous(
+                gaussBuilder,
                 gaussi,
                 qNew,
                 goal,

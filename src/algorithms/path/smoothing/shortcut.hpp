@@ -26,6 +26,7 @@ public:
     static void
     shortcutContinuous(
         std::vector<algorithms::geometry::PointD>& path,
+        const algorithms::gauss::GaussBuilder& gaussBuilder,
         const std::vector<algorithms::gauss::Gaus>& gaussi,
         int fieldWidth,
         int fieldHeight,

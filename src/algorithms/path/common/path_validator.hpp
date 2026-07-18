@@ -33,6 +33,7 @@ public:
     
     // Проверка, проходимо ли ребро (уклоны, крены, коллизии) в непр случае
     bool isEdgeValidContinuous(
+    const algorithms::gauss::GaussBuilder& gaussBuilder,
     const std::vector<algorithms::gauss::Gaus>& gaussi,
     const algorithms::geometry::PointD& A,
     const algorithms::geometry::PointD& B,

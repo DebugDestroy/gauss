@@ -27,6 +27,8 @@ const std::unordered_set<std::string> Config::required = {
     "sy_max",
     "h_min",
     "h_max",
+    
+    "g_cell_size",
 
     "defaultGnuplot",
     "defaultPlotMetedata",
@@ -57,7 +59,7 @@ const std::unordered_set<std::string> Config::required = {
     "defaultKlaster",
     "defaultKlasterKern",
 
-    "defaultgridWidth",
+    "grid_cell_size",
     "defaultgridNoisy",
 
     "startPixelX",
@@ -77,7 +79,8 @@ const std::unordered_set<std::string> Config::required = {
     "FiltrationLogLevelControl",
 
     "seedMode",
-
+    
+    "rebuildSize",
     "maxIterations",
     "startWorldX",
     "startWorldY",
@@ -164,6 +167,10 @@ Config::Config(const std::string& filename) {
         else if (key == "h_max")
         readParameter(configFile, h_max, "h_max");
         
+         // G_GRID
+        else if (key == "g_cell_size")
+        readParameter(configFile, g_cell_size, "g_cell_size");
+        
         // OUTPUT FILES
         else if (key == "defaultGnuplot")
         readParameter(configFile, defaultGnuplot, "defaultGnuplot");
@@ -222,8 +229,8 @@ Config::Config(const std::string& filename) {
         readParameter(configFile, defaultKlasterKern, "defaultKlasterKern");
         
         // GRID
-        else if (key == "defaultgridWidth")
-        readParameter(configFile, defaultgridWidth, "defaultgridWidth");
+        else if (key == "grid_cell_size")
+        readParameter(configFile, grid_cell_size, "grid_cell_size");
         else if (key == "defaultgridNoisy")
         readParameter(configFile, defaultgridNoisy, "defaultgridNoisy");
         
@@ -272,6 +279,8 @@ Config::Config(const std::string& filename) {
         }
         
         // RRT
+        else if (key == "rebuildSize")
+        readParameter(configFile, rebuildSize, "rebuildSize");
         else if (key == "maxIterations")
         readParameter(configFile, maxIterations, "maxIterations");
         else if (key == "startWorldX")

@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <utility>
+#include <chrono>
 
 namespace algorithms::path::rrt_star {
 
@@ -58,64 +59,11 @@ algorithms::geometry::PointD PathFinder::randomPoint(const algorithms::geometry:
     return {xDist(gen), yDist(gen)};
 }
 
-int PathFinder::nearestNode(
-    const std::vector<RRTStarNode>& tree,
-    const algorithms::geometry::PointD& point) const
-{
-    int bestIndex = 0;
-    double bestDist2 = std::numeric_limits<double>::max();
-
-    for (std::size_t i = 0; i < tree.size(); ++i)
-    {
-        const double dx = tree[i].point.x - point.x;
-        const double dy = tree[i].point.y - point.y;
-
-        const double dist2 = dx * dx + dy * dy;
-
-        if (dist2 < bestDist2)
-        {
-            bestDist2 = dist2;
-            bestIndex = static_cast<int>(i);
-        }
-    }
-
-    return bestIndex;
-}
-
-std::vector<int> PathFinder::nearNodes(
-    const std::vector<RRTStarNode>& tree,
-    const algorithms::geometry::PointD& point,
-    double radius) const
-{
-    std::vector<int> result;
-    int nearest = nearestNode(tree, point);
-    result.push_back(nearest);
-    
-    const double radiusSquared = radius * radius;
-
-    for (std::size_t i = 0; i < tree.size(); ++i)
-    {
-        if (static_cast<int>(i) == nearest)
-            continue;
-            
-        const double dx = tree[i].point.x - point.x;
-        const double dy = tree[i].point.y - point.y;
-
-        const double distSquared = dx * dx + dy * dy;
-
-        if (distSquared <= radiusSquared)
-        {
-            result.push_back(static_cast<int>(i));
-        }
-    }
-
-    return result;
-}
-
 int PathFinder::chooseParent(
     const std::vector<RRTStarNode>& tree,
     const std::vector<int>& neighbors,
     const algorithms::geometry::PointD& newPoint,
+    const algorithms::gauss::GaussBuilder& gaussBuilder,
     const std::vector<algorithms::gauss::Gaus>& gaussi,
     int fieldWidth,
     int fieldHeight,
@@ -141,6 +89,7 @@ int PathFinder::chooseParent(
 
 
         if (!conds.isEdgeValidContinuous(
+                gaussBuilder,
                 gaussi,
                 node.point,
                 newPoint,
@@ -176,34 +125,18 @@ void PathFinder::updateChildrenCost(
     std::vector<RRTStarNode>& tree,
     int parentIndex)
 {
-    const auto& parent =
-        tree[static_cast<std::size_t>(parentIndex)];
+    const auto& parent = tree[static_cast<std::size_t>(parentIndex)];
 
-
-    for (std::size_t i = 0; i < tree.size(); ++i)
+    for (int childIndex : parent.children)
     {
-        if (static_cast<int>(i) == parentIndex)
-            continue;
-
-
-        auto& child = tree[i];
-
-
-        if (child.parent != parentIndex)
-            continue;
-
-
-        const double distance = algorithms::geometry::distance(child.point, parent.point);
-
+        auto& child = tree[static_cast<std::size_t>(childIndex)];
 
         child.cost =
-            parent.cost + distance;
+            parent.cost +
+            algorithms::geometry::distance(parent.point,
+                                           child.point);
 
-
-        updateChildrenCost(
-            tree,
-            static_cast<int>(i)
-        );
+        updateChildrenCost(tree, childIndex);
     }
 }
 
@@ -211,6 +144,7 @@ void PathFinder::rewire(
     std::vector<RRTStarNode>& tree,
     const std::vector<int>& neighbors,
     int newIndex,
+    const algorithms::gauss::GaussBuilder& gaussBuilder,
     const std::vector<algorithms::gauss::Gaus>& gaussi,
     int fieldWidth,
     int fieldHeight,
@@ -223,7 +157,7 @@ void PathFinder::rewire(
     double interpolationAngle,
     const algorithms::path::common::PathValidator& conds)
 {
-    const auto newNode =
+    const auto& newNode =
         tree[static_cast<std::size_t>(newIndex)];
 
 
@@ -250,6 +184,7 @@ void PathFinder::rewire(
 
         // Проверяем новое ребро
         if (!conds.isEdgeValidContinuous(
+                gaussBuilder,
                 gaussi,
                 newNode.point,
                 node.point,
@@ -266,10 +201,25 @@ void PathFinder::rewire(
             continue;
         }
 
+        int oldParent = node.parent;
 
+        if (oldParent != -1)
+        {
+            auto& siblings =
+                tree[static_cast<std::size_t>(oldParent)].children;
+
+            siblings.erase(
+                std::remove(
+                    siblings.begin(),
+                    siblings.end(),
+                    index),
+                siblings.end());
+        }
         // Улучшили путь
         node.parent = newIndex;
         node.cost = newCost;
+
+        tree[static_cast<std::size_t>(newIndex)].children.push_back(index);
         
         // Обновили стоимость детишек
         updateChildrenCost(
@@ -305,6 +255,7 @@ PathFinder::restorePath(
 RRTStarResult PathFinder::findPathRRTStar(
     const algorithms::geometry::PointD& start,
     const algorithms::geometry::PointD& goal,
+    const algorithms::gauss::GaussBuilder& gaussBuilder,
     const std::vector<algorithms::gauss::Gaus>& gaussi,
     int fieldWidth,
     int fieldHeight,
@@ -321,10 +272,23 @@ RRTStarResult PathFinder::findPathRRTStar(
     double gammaConstant,
     double goalRadius,
     double goalBias,
+    std::size_t rebuildSize,
     const algorithms::path::common::PathValidator& conds,
     PathMetrics& metrics)
 {
+    double timeNearest = 0;
+    double timeNear = 0;
+    double timeChooseParent = 0;
+    double timeRewire = 0;
+    double timeCheckPoint = 0;
+    size_t nearestCalls = 0;
+    size_t nearCalls = 0;
+    size_t chooseParentCalls = 0;
+    size_t rewireCalls = 0;
+    size_t checkPointCalls = 0;
+    
     std::vector<RRTStarNode> tree;
+    algorithms::geometry::spatial::KDTreeIndex<RRTStarNode> kdTree(rebuildSize);
     RRTStarResult result;
     int bestGoalParent = -1;
     double bestGoalCost = std::numeric_limits<double>::infinity();
@@ -339,6 +303,7 @@ RRTStarResult PathFinder::findPathRRTStar(
     logger.debug("Goal radius = " + std::to_string(goalRadius));
     
     if (!algorithms::path::common::checkPointContinuous(
+            gaussBuilder,
             gaussi,
             start,
             fieldWidth,
@@ -354,6 +319,7 @@ RRTStarResult PathFinder::findPathRRTStar(
     }
 
     if (!algorithms::path::common::checkPointContinuous(
+            gaussBuilder,
             gaussi,
             goal,
             fieldWidth,
@@ -382,8 +348,19 @@ RRTStarResult PathFinder::findPathRRTStar(
         )
     );
     
-    tree.push_back({start, -1, 0.0});
-
+    tree.push_back({start, -1, {}, 0.0});
+    kdTree.insert(
+        tree,
+        0);
+    
+    auto t0 = std::chrono::high_resolution_clock::now();
+    auto t1 = std::chrono::high_resolution_clock::now();
+    
+    auto ms = [](auto begin, auto end)
+    {
+        return std::chrono::duration<double, std::milli>(end - begin).count();
+    };
+    
     for (size_t iter = 0; iter < maxIterations; ++iter)
     {
         if (iter % 10000 == 0)
@@ -393,7 +370,14 @@ RRTStarResult PathFinder::findPathRRTStar(
         algorithms::geometry::PointD qRand = randomPoint(goal, goalBias);
 
         // 2. Ищем ближайшую вершину дерева
-        int nearest = nearestNode(tree, qRand);
+         t0 = std::chrono::high_resolution_clock::now();
+
+        int nearest = kdTree.nearest(qRand);
+
+        t1 = std::chrono::high_resolution_clock::now();
+
+        timeNearest += ms(t0,t1);
+        nearestCalls++;
 
         // 3. Делаем шаг в сторону случайной точки
         algorithms::geometry::PointD qNew =
@@ -402,43 +386,73 @@ RRTStarResult PathFinder::findPathRRTStar(
                   step);
         
         // Если точка недостижима, то ищем другую
-        if (!algorithms::path::common::checkPointContinuous(
-                gaussi,
-                qNew,
-                fieldWidth,
-                fieldHeight,
-                heightThreshold,
-                vehicleRadius,
-                interpolationCollision,
-                interpolationAngle))
+        t0 = std::chrono::high_resolution_clock::now();
+
+        bool valid = algorithms::path::common::checkPointContinuous(
+            gaussBuilder,
+            gaussi,
+            qNew,
+            fieldWidth,
+            fieldHeight,
+            heightThreshold,
+            vehicleRadius,
+            interpolationCollision,
+            interpolationAngle
+        );
+
+        t1 = std::chrono::high_resolution_clock::now();
+
+        timeCheckPoint += 
+        ms(t0,t1);
+
+        checkPointCalls++;
+
+        if(!valid)
             continue;
     
         // 4. Пересчитываем find radius
         double radius = calculateRadius(tree.size(), gammaConstant, maxFindRadius);
         
         // 5. Ищем соседей в круге радиуса radius (и всегда добавляем ближнего)
-        auto neighbors = nearNodes(
-            tree,
-            qNew,           
-            radius
+        t0 = std::chrono::high_resolution_clock::now();
+
+        std::vector<int> neighbors;
+
+        kdTree.radiusSearch(
+            qNew,
+            radius,
+            neighbors
         );
+
+        t1 = std::chrono::high_resolution_clock::now();
+
+        timeNear += ms(t0,t1);
+        nearCalls++;
                 
         // 6. Ищем лучшего соседа
-       int parent = chooseParent(
-                        tree,
-                        neighbors,
-                        qNew,
-                        gaussi,
-                        fieldWidth,
-                        fieldHeight,
-                        heightThreshold,
-                        vehicleRadius,
-                        maxSideAngle,
-                        maxUpDownAngle,
-                        interpolationEdge,
-                        interpolationCollision,
-                        interpolationAngle,
-                        conds);
+        t0 = std::chrono::high_resolution_clock::now();
+
+        int parent = chooseParent(
+                                tree,
+                                neighbors,
+                                qNew,
+                                gaussBuilder,
+                                gaussi,
+                                fieldWidth,
+                                fieldHeight,
+                                heightThreshold,
+                                vehicleRadius,
+                                maxSideAngle,
+                                maxUpDownAngle,
+                                interpolationEdge,
+                                interpolationCollision,
+                                interpolationAngle,
+                                conds);
+
+        t1 = std::chrono::high_resolution_clock::now();
+
+        timeChooseParent += ms(t0,t1);
+        chooseParentCalls++;
                      
          // Если нет соседей то ищем новую точку
          if (parent == -1)
@@ -453,27 +467,41 @@ RRTStarResult PathFinder::findPathRRTStar(
                 qNew
             );
             
-        tree.push_back({qNew, parent, cost});
-        metrics.expandedNodes++; 
+        tree.push_back({qNew, parent, {}, cost});
         
         int newIndex = static_cast<int>(tree.size()) - 1;
         
-        // 8. Обновляем дерево
-        rewire(
+        tree[static_cast<std::size_t>(parent)].children.push_back(newIndex);
+        metrics.expandedNodes++;
+        
+        kdTree.insert(
             tree,
-            neighbors,
-            newIndex,
-            gaussi,
-            fieldWidth,
-            fieldHeight,
-            heightThreshold,
-            vehicleRadius,
-            maxSideAngle,
-            maxUpDownAngle,
-            interpolationEdge,
-            interpolationCollision,
-            interpolationAngle,
-            conds);
+            newIndex
+        );
+
+        // 8. Обновляем дерево
+        t0 = std::chrono::high_resolution_clock::now();
+
+        rewire(tree,
+               neighbors,
+               newIndex,
+               gaussBuilder,
+               gaussi,
+               fieldWidth,
+               fieldHeight,
+               heightThreshold,
+               vehicleRadius,
+               maxSideAngle,
+               maxUpDownAngle,
+               interpolationEdge,
+               interpolationCollision,
+               interpolationAngle,
+               conds);
+
+        t1 = std::chrono::high_resolution_clock::now();
+
+        timeRewire += ms(t0,t1);
+        rewireCalls++;
         
         double distGoal = algorithms::geometry::distance(qNew, goal);
         
@@ -481,6 +509,7 @@ RRTStarResult PathFinder::findPathRRTStar(
         if (distGoal <= goalRadius)
         {
             if (conds.isEdgeValidContinuous(
+                gaussBuilder,
                 gaussi,
                 qNew,
                 goal,
@@ -513,8 +542,9 @@ RRTStarResult PathFinder::findPathRRTStar(
     
     if(bestGoalParent != -1)
     {
-        tree.push_back({goal, bestGoalParent, bestGoalCost});
+        tree.push_back({goal, bestGoalParent, {}, bestGoalCost});
         int goalIndex = static_cast<int>(tree.size()) - 1;
+        tree[static_cast<std::size_t>(bestGoalParent)].children.push_back(goalIndex);
         result.path = restorePath(tree, goalIndex);
         metrics.pathFound = true;
     }
@@ -522,6 +552,24 @@ RRTStarResult PathFinder::findPathRRTStar(
     {
         metrics.pathFound = false;
     }
+    
+    logger.debug(
+        "[RRT* profiling]\n"
+        "nearest: " + std::to_string(timeNearest) +
+        " ms calls=" + std::to_string(nearestCalls) + "\n" +
+
+        "near: " + std::to_string(timeNear) +
+        " ms calls=" + std::to_string(nearCalls) + "\n" +
+
+        "chooseParent: " + std::to_string(timeChooseParent) +
+        " ms calls=" + std::to_string(chooseParentCalls) + "\n" +
+
+        "rewire: " + std::to_string(timeRewire) +
+        " ms calls=" + std::to_string(rewireCalls) + "\n" +
+
+        "checkPoint: " + std::to_string(timeCheckPoint) +
+        " ms calls=" + std::to_string(checkPointCalls)
+    );
     
     result.tree = std::move(tree);
     return result;
