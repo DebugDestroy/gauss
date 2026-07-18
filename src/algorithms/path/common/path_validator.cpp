@@ -118,6 +118,7 @@ bool PathValidator::isEdgeNavigable(
 
 // -----------------------------------------------------Непрерывно-----------------------------------------------------
 bool PathValidator::isEdgeValidContinuous(
+    const algorithms::gauss::GaussBuilder& gaussBuilder,
     const std::vector<algorithms::gauss::Gaus>& gaussi,
     const algorithms::geometry::PointD& A,
     const algorithms::geometry::PointD& B,
@@ -143,6 +144,7 @@ bool PathValidator::isEdgeValidContinuous(
     // Ребро нулевой длины
     if (length < core::EPSILON) {
         return algorithms::path::common::checkPointContinuous(
+            gaussBuilder,
             gaussi,
             A,
             fieldWidth,
@@ -176,6 +178,7 @@ bool PathValidator::isEdgeValidContinuous(
 
         // Проверяем столкновение
         if (!algorithms::path::common::checkPointContinuous(
+                gaussBuilder,
                 gaussi,
                 center,
                 fieldWidth,
@@ -191,6 +194,7 @@ bool PathValidator::isEdgeValidContinuous(
         // Проверяем наклон тележки
         auto angles =
             algorithms::kinematics::calculateVehicleAnglesContinuous(
+                gaussBuilder,
                 gaussi,
                 center,
                 direction,

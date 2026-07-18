@@ -1,6 +1,7 @@
 init 1000 1000
 
 g_auto 900 901 10 990 10 990 3 6 3 6 -20 20
+g_grid 10
 
 generate
 
@@ -16,18 +17,15 @@ connect_to_graph 2 2 998 998 All
 astar_graph
 shortcut_discrete
 spline_discrete 20 1 5 50 50 2 2 2
-save_metrics var/metrics/pathMetrics.csv
-PlotPathContinuous results/visualizations/AstarPathGraphSpline.png
+save_metrics var/metrics/pathCommands.csv
 dekstra_graph
 shortcut_discrete
 spline_discrete 20 1 5 50 50 2 2 2
-save_metrics var/metrics/pathMetrics.csv
-PlotPathContinuous results/visualizations/DekstraPathGraphSpline.png
+save_metrics var/metrics/pathCommands.csv
 greedy_graph
 shortcut_discrete
 spline_discrete 20 1 5 50 50 2 2 2
-save_metrics var/metrics/pathMetrics.csv
-PlotPathContinuous results/visualizations/GreedyPathGraphSpline.png
+save_metrics var/metrics/pathCommands.csv
 
 
 grid 5
@@ -37,32 +35,23 @@ connect_to_grid 2 2 998 998
 astar_grid
 shortcut_discrete
 spline_discrete 20 1 5 50 50 2 2 2
-save_metrics var/metrics/pathMetrics.csv
-PlotPathContinuous results/visualizations/AstarPathGridSpline.png
+save_metrics var/metrics/pathCommands.csv
 dekstra_grid
 shortcut_discrete
 spline_discrete 20 1 5 50 50 2 2 2
-save_metrics var/metrics/pathMetrics.csv
-PlotPathContinuous results/visualizations/DekstraPathGridSpline.png
+save_metrics var/metrics/pathCommands.csv
 greedy_grid
 shortcut_discrete
 spline_discrete 20 1 5 50 50 2 2 2
-save_metrics var/metrics/pathMetrics.csv
-PlotPathContinuous results/visualizations/GreedyPathGridSpline.png
+save_metrics var/metrics/pathCommands.csv
 
 
-rrt 20000 2 2 998 998 1 5 50 50 2 2 2 40 10 0.2
-PlotPathContinuous results/visualizations/RRT.png
+rrt 64 20000 2 2 998 998 1 5 50 50 2 2 2 40 10 0.2
 shortcut_continuous
-PlotPathContinuous results/visualizations/RRTShortcut.png
 spline_continuous 20
-PlotPathContinuous results/visualizations/RRTSpline.png
-save_metrics var/metrics/pathMetrics.csv
-rrt_star 20000 2 2 998 998 1 5 50 50 2 2 2 40 80 700 10 0.00005
-PlotPathContinuous results/visualizations/RRT*.png
+save_metrics var/metrics/pathCommands.csv
+rrt_star 512 20000 2 2 998 998 1 5 50 50 2 2 2 40 80 700 10 0.00005
 shortcut_continuous
-PlotPathContinuous results/visualizations/RRTStarShortcut.png
 spline_continuous 20
-PlotPathContinuous results/visualizations/RRTStarSpline.png
-save_metrics var/metrics/pathMetrics.csv
+save_metrics var/metrics/pathCommands.csv
 end

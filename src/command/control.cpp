@@ -114,6 +114,11 @@ namespace command {
                "count=[" + std::to_string(params.count_min) + ", " + std::to_string(params.count_max) + "]"));
         }
         
+        if (params.command == "g_grid") {
+            gaussBuilder.buildGaussGrid(params.fieldWidth, params.fieldHeight, params.g_cell_size, state.gaussi);
+            logOperation(core::LogLevel::Info, std::string("g_grid"));
+        }
+        
         if (params.command == "generate") {
             gaussBuilder.generate(state.field, state.gaussi);
             logOperation(core::LogLevel::Info, std::string("generate"));
@@ -180,6 +185,7 @@ namespace command {
         
         if (params.command == "PlotPathContinuous") {
             gnuplotInterface.plotPathContinuous(state.pathWorld,
+                                                gaussBuilder,
                                                 state.gaussi,
                                                 params.fieldWidth, params.fieldHeight,
                                                 params.heightThresholdWorld,
@@ -305,7 +311,7 @@ namespace command {
         }
         
         if (params.command == "grid") {
-            grid.buildGrid(state.grid, params.fieldWidth, params.fieldHeight, params.gridWidth);
+            grid.buildGrid(state.grid, params.fieldWidth, params.fieldHeight, params.grid_cell_size);
             logOperation(core::LogLevel::Info, std::string("grid"));
         }
         
@@ -467,7 +473,7 @@ namespace command {
             
             statisticsManager.finishTimer(state.PathMetrics);
             
-            state.pathPixel = algorithms::geometry::toPixelPath(state.gridPath, params.gridWidth);
+            state.pathPixel = algorithms::geometry::toPixelPath(state.gridPath, params.grid_cell_size);
              
             if (state.PathMetrics.pathFound) {
                 statisticsManager.computePathLength(state.PathMetrics, state.pathPixel);
@@ -500,7 +506,7 @@ namespace command {
             
             statisticsManager.finishTimer(state.PathMetrics);
             
-            state.pathPixel = algorithms::geometry::toPixelPath(state.gridPath, params.gridWidth);
+            state.pathPixel = algorithms::geometry::toPixelPath(state.gridPath, params.grid_cell_size);
              
             if (state.PathMetrics.pathFound) {
                 statisticsManager.computePathLength(state.PathMetrics, state.pathPixel);
@@ -533,7 +539,7 @@ namespace command {
             
             statisticsManager.finishTimer(state.PathMetrics);
             
-            state.pathPixel = algorithms::geometry::toPixelPath(state.gridPath, params.gridWidth);
+            state.pathPixel = algorithms::geometry::toPixelPath(state.gridPath, params.grid_cell_size);
              
             if (state.PathMetrics.pathFound) {
                 statisticsManager.computePathLength(state.PathMetrics, state.pathPixel);
@@ -565,7 +571,8 @@ namespace command {
             state.PathMetrics.algorithmName = "RRT";
             statisticsManager.startTimer();       
             
-            auto result = rrt.findPathRRT(state.startWorld, state.goalWorld, 
+            auto result = rrt.findPathRRT(state.startWorld, state.goalWorld,
+                                          gaussBuilder,
                                           state.gaussi,
                                           params.fieldWidth, params.fieldHeight,
                                           params.heightThresholdWorld,
@@ -576,6 +583,7 @@ namespace command {
                                           params.step,
                                           params.goalRadius,
                                           params.goalBias,
+                                          params.rebuildSize,
                                           conditions,
                                           state.PathMetrics);
             
@@ -589,13 +597,15 @@ namespace command {
                                                     state.pathWorld);
                                                     
                 statisticsManager.computeMaxTerrainAngles(state.PathMetrics, 
-                                                          state.pathWorld, 
+                                                          state.pathWorld,
+                                                          gaussBuilder,
                                                           state.gaussi, 
                                                           params.vehicleRadiusWorld, 
                                                           params.interpEdge);
                                                           
                 statisticsManager.computeMinObstacleDistance(state.PathMetrics, 
-                                                             state.pathWorld, 
+                                                             state.pathWorld,
+                                                             gaussBuilder,
                                                              state.gaussi, 
                                                              params.fieldWidth, 
                                                              params.fieldHeight, 
@@ -629,7 +639,8 @@ namespace command {
             state.PathMetrics.algorithmName = "RRT*";
             statisticsManager.startTimer();
             
-            auto result = rrtStar.findPathRRTStar(state.startWorld, state.goalWorld, 
+            auto result = rrtStar.findPathRRTStar(state.startWorld, state.goalWorld,
+                                                  gaussBuilder,
                                                   state.gaussi,
                                                   params.fieldWidth, params.fieldHeight,
                                                   params.heightThresholdWorld,
@@ -642,6 +653,7 @@ namespace command {
                                                   params.gammaConstant,
                                                   params.goalRadius,
                                                   params.goalBias,
+                                                  params.rebuildSize,
                                                   conditions,
                                                   state.PathMetrics);
             
@@ -655,13 +667,15 @@ namespace command {
                                                     state.pathWorld);
                                                     
                 statisticsManager.computeMaxTerrainAngles(state.PathMetrics, 
-                                                          state.pathWorld, 
+                                                          state.pathWorld,
+                                                          gaussBuilder,
                                                           state.gaussi, 
                                                           params.vehicleRadiusWorld, 
                                                           params.interpEdge);
                                                           
                 statisticsManager.computeMinObstacleDistance(state.PathMetrics, 
-                                                             state.pathWorld, 
+                                                             state.pathWorld,
+                                                             gaussBuilder,
                                                              state.gaussi, 
                                                              params.fieldWidth, 
                                                              params.fieldHeight, 
@@ -697,6 +711,7 @@ namespace command {
         if (params.command == "shortcut_continuous") {
             algorithms::path::smoothing::Shortcut::shortcutContinuous(
                     state.pathWorld,
+                    gaussBuilder,
                     state.gaussi,
                     params.fieldWidth, params.fieldHeight,
                     params.heightThresholdWorld,
@@ -712,6 +727,7 @@ namespace command {
             state.pathWorld = algorithms::geometry::toPointDPath(state.pathPixel);
             algorithms::path::smoothing::Spline::spline(
                     state.pathWorld,
+                    gaussBuilder,
                     state.gaussi,
                     params.fieldWidth, params.fieldHeight,
                     params.heightThresholdWorld,
@@ -726,6 +742,7 @@ namespace command {
         if (params.command == "spline_continuous") {
             algorithms::path::smoothing::Spline::spline(
                     state.pathWorld,
+                    gaussBuilder,
                     state.gaussi,
                     params.fieldWidth, params.fieldHeight,
                     params.heightThresholdWorld,

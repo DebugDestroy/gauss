@@ -106,6 +106,7 @@ ObstacleDistance minObstacleDistance(
 // Расстояние до препятсвия от центра для непрерывных
 ObstacleDistance minObstacleDistance(
     const algorithms::geometry::PointD& center,
+    const algorithms::gauss::GaussBuilder& gaussBuilder,
     const std::vector<algorithms::gauss::Gaus>& gaussi,
     int fieldWidth,
     int fieldHeight,
@@ -126,7 +127,7 @@ ObstacleDistance minObstacleDistance(
         }
 
         const double h =
-            algorithms::gauss::GaussBuilder::heightAt(
+            gaussBuilder.heightAt(
                 p,
                 gaussi);
 
@@ -182,6 +183,7 @@ ObstacleDistance minObstacleDistance(
 
 // Проверка на столкновения в непрерывном случае
 bool checkPointContinuous(
+    const algorithms::gauss::GaussBuilder& gaussBuilder,
     const std::vector<algorithms::gauss::Gaus>& gaussi,
     const algorithms::geometry::PointD& center,
     int fieldWidth,
@@ -201,7 +203,7 @@ bool checkPointContinuous(
         }
 
         const double h =
-            algorithms::gauss::GaussBuilder::heightAt(
+            gaussBuilder.heightAt(
                 p,
                 gaussi);
 

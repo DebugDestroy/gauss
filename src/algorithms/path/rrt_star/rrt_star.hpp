@@ -8,14 +8,16 @@
 #include "algorithms/path/common/path_metrics.hpp"
 #include "algorithms/path/common/path_validator.hpp"
 #include "algorithms/gauss/gauss_builder.hpp"
+#include "algorithms/geometry/spatial/kd_tree_index.hpp"
 
 namespace algorithms::path::rrt_star {
 
 struct RRTStarNode
 {
     algorithms::geometry::PointD point;
-    int parent;          // индекс родителя
-    double cost;         // Стоимость
+    int parent;                // индекс родителя
+    std::vector<int> children; // Детишки
+    double cost;               // Стоимость
 };
 
 struct RRTStarResult
@@ -44,19 +46,11 @@ private:
     algorithms::geometry::PointD randomPoint(const algorithms::geometry::PointD& goal,
                    double goalBias);
     
-    int nearestNode(
-        const std::vector<RRTStarNode>& tree,
-        const algorithms::geometry::PointD& point) const;
-        
-    std::vector<int> nearNodes(
-        const std::vector<RRTStarNode>& tree,
-        const algorithms::geometry::PointD& point,
-        double radius) const;
-    
     int chooseParent(
         const std::vector<RRTStarNode>& tree,
         const std::vector<int>& neighbors,
         const algorithms::geometry::PointD& newPoint,
+        const algorithms::gauss::GaussBuilder& gaussBuilder,
         const std::vector<algorithms::gauss::Gaus>& gaussi,
         int fieldWidth,
         int fieldHeight,
@@ -77,6 +71,7 @@ private:
         std::vector<RRTStarNode>& tree,
         const std::vector<int>& neighbors,
         int newIndex,
+        const algorithms::gauss::GaussBuilder& gaussBuilder,
         const std::vector<algorithms::gauss::Gaus>& gaussi,
         int fieldWidth,
         int fieldHeight,
@@ -99,6 +94,7 @@ public:
     RRTStarResult findPathRRTStar(
         const algorithms::geometry::PointD& start,
         const algorithms::geometry::PointD& goal,
+        const algorithms::gauss::GaussBuilder& gaussBuilder,
         const std::vector<algorithms::gauss::Gaus>& gaussi,
         int fieldWidth,
         int fieldHeight,
@@ -115,6 +111,7 @@ public:
         double gammaConstant,
         double goalRadius,
         double goalBias,
+        std::size_t rebuildSize,
         const algorithms::path::common::PathValidator& conds,
         algorithms::path::PathMetrics& metrics);
 };

@@ -159,6 +159,20 @@ void Validator::validateAutoGaussian(
    
 }
 
+void Validator::validateGaussGrid(
+    int width,
+    int height,
+    int cellSize)
+{
+    validateRange(cellSize, 1,
+                        std::min(width, height),
+                        "gaussCellSize");
+                        
+    if (width % cellSize != 0 || height % cellSize != 0) {
+        throw std::runtime_error("Gauss cellSize must evenly divide both field width and field height.");
+    }
+}
+
 void Validator::validateBinaryParameters(
     int threshold)
 {
@@ -218,14 +232,14 @@ void Validator::validateKernelSize(
 void Validator::validateGrid(
     int width,
     int height,
-    int gridWidth)
+    int cellSize)
 {
-    validateRange(gridWidth, 1,
+    validateRange(cellSize, 1,
                         std::min(width, height),
-                        "gridWidth");
+                        "cellSize");
                         
-    if (width % gridWidth != 0 || height % gridWidth != 0) {
-        throw std::runtime_error("Grid width must evenly divide both field width and field height.");
+    if (width % cellSize != 0 || height % cellSize != 0) {
+        throw std::runtime_error("Grid cellSize must evenly divide both field width and field height.");
     }
 }
 
@@ -311,6 +325,11 @@ void Validator::validateConnectParameters(
 void Validator::validateRRT(
     const DispatcherParams& params)
 {
+    validateRange(params.rebuildSize,
+                        static_cast<std::size_t>(0),
+                        std::numeric_limits<std::size_t>::max(),
+                        "rebuildSize");
+                        
     validateRange(params.maxIterations,
                         static_cast<std::size_t>(1),
                         std::numeric_limits<std::size_t>::max(),

@@ -58,10 +58,21 @@ toPointDPath(const std::vector<algorithms::geometry::Pixel>& pixelPath)
 
     double distance(const PointD& p1, const PointD& p2) {
         return std::hypot(p1.x - p2.x, p1.y - p2.y);
+    }
+
+double distanceSquared(
+    const PointD& a,
+    const PointD& b)
+{
+    const double dx = a.x - b.x;
+    const double dy = a.y - b.y;
+
+    return dx * dx + dy * dy;
 }
+
      double length(const Edge& e) {
-    return distance(e.a, e.b);
-}
+        return distance(e.a, e.b);
+    }
 
 Pixel toPixel(const Pixel& p) // Перегрузка (выдать пиксель)
 {

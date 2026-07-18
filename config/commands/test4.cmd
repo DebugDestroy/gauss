@@ -56,7 +56,7 @@ greedy_grid
 save_metrics
 PlotGridPath results/visualizations/GreedyPathGrid.png
 
-rrt 1000000 48 48 48 1 1 1 50 50 1 1 1 4 10 0.2
+rrt 20 1000000 48 48 48 1 1 1 50 50 1 1 1 4 10 0.2
 PlotPathContinuous results/visualizations/RRT.png
 save_metrics
 end

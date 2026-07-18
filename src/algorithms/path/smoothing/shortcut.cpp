@@ -74,6 +74,7 @@ Shortcut::shortcutDiscrete(
 void
 Shortcut::shortcutContinuous(
     std::vector<algorithms::geometry::PointD>& path,
+    const algorithms::gauss::GaussBuilder& gaussBuilder,
     const std::vector<algorithms::gauss::Gaus>& gaussi,
     int fieldWidth,
     int fieldHeight,
@@ -101,6 +102,7 @@ Shortcut::shortcutContinuous(
         for (std::size_t j = path.size() - 1; j > i; --j)
         {
             if (!validator.isEdgeValidContinuous(
+                    gaussBuilder,
                     gaussi,
                     path[i],
                     path[j],

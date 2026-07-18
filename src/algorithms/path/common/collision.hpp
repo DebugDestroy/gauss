@@ -26,6 +26,7 @@ ObstacleDistance minObstacleDistance(
 // Расстояние до препятсвия от центра для непрерывных
 ObstacleDistance minObstacleDistance(
         const algorithms::geometry::PointD& center,
+        const algorithms::gauss::GaussBuilder& gaussBuilder,
         const std::vector<algorithms::gauss::Gaus>& gaussi,
         int fieldWidth,
         int fieldHeight,
@@ -35,6 +36,7 @@ ObstacleDistance minObstacleDistance(
 
 // Проверка на столкновения в непр случае
 bool checkPointContinuous(
+    const algorithms::gauss::GaussBuilder& gaussBuilder,
     const std::vector<algorithms::gauss::Gaus>& gaussi,
     const algorithms::geometry::PointD& center,
     int fieldWidth,

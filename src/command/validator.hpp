@@ -42,6 +42,11 @@ public:
     static void validateAutoGaussian(
         const DispatcherParams& params);
     
+    static void validateGaussGrid(
+        int width,
+        int height,
+        int cellSize);
+        
     static void validateBinaryParameters(
         int threshold);
     
@@ -63,7 +68,7 @@ public:
     static void validateGrid(
         int width,
         int height,
-        int gridWidth);
+        int cellSize);
         
     static void validateGridNoiseSize(
         std::size_t noisy);

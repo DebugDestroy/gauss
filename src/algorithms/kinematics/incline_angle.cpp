@@ -91,6 +91,7 @@ return {sideAngle, upDownAngle};
 }
 
 VehicleAngles calculateVehicleAnglesContinuous(
+    const algorithms::gauss::GaussBuilder& gaussBuilder,
     const std::vector<algorithms::gauss::Gaus>& gaussi,
     const algorithms::geometry::PointD& center,
     const algorithms::geometry::PointD& direction, // единичное направление
@@ -124,10 +125,10 @@ VehicleAngles calculateVehicleAnglesContinuous(
     };
     
     // высоты через гауссы
-    auto hFL = algorithms::gauss::GaussBuilder::heightAt(frontLeft, gaussi);
-    auto hFR = algorithms::gauss::GaussBuilder::heightAt(frontRight, gaussi);
-    auto hRL = algorithms::gauss::GaussBuilder::heightAt(rearLeft, gaussi);
-    auto hRR = algorithms::gauss::GaussBuilder::heightAt(rearRight, gaussi);
+    auto hFL = gaussBuilder.heightAt(frontLeft, gaussi);
+    auto hFR = gaussBuilder.heightAt(frontRight, gaussi);
+    auto hRL = gaussBuilder.heightAt(rearLeft, gaussi);
+    auto hRR = gaussBuilder.heightAt(rearRight, gaussi);
 
     double hFront = (hFL + hFR) / 2.0;
     double hRear  = (hRL + hRR) / 2.0;

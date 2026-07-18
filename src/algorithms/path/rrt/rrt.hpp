@@ -8,6 +8,7 @@
 #include "algorithms/path/common/path_metrics.hpp"
 #include "algorithms/path/common/path_validator.hpp"
 #include "algorithms/gauss/gauss_builder.hpp"
+#include "algorithms/geometry/spatial/kd_tree_index.hpp"
 
 namespace algorithms::path::rrt {
 
@@ -39,10 +40,6 @@ private:
     algorithms::geometry::PointD randomPoint(const algorithms::geometry::PointD& goal,
                    double goalBias);
     
-    int nearestNode(
-        const std::vector<RRTNode>& tree,
-        const algorithms::geometry::PointD& point) const;
-    
     std::vector<algorithms::geometry::PointD> restorePath(
         const std::vector<RRTNode>& tree,
         int goalIndex) const;
@@ -53,6 +50,7 @@ public:
     RRTResult findPathRRT(
         const algorithms::geometry::PointD& start,
         const algorithms::geometry::PointD& goal,
+        const algorithms::gauss::GaussBuilder& gaussBuilder,
         const std::vector<algorithms::gauss::Gaus>& gaussi,
         int fieldWidth,
         int fieldHeight,
@@ -67,6 +65,7 @@ public:
         double step,
         double goalRadius,
         double goalBias,
+        std::size_t rebuildSize,
         const algorithms::path::common::PathValidator& conds,
         algorithms::path::PathMetrics& metrics);
 };

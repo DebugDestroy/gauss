@@ -45,6 +45,7 @@ chmod +x run.sh
 | init                 | int *fieldWidth fieldHeight*                                                                 | Инициализация поля с заданой шириной и длиной. field[y][x] X-(width) Y-(height)|
 | g                    | double *x y sx sy h*                                                                               | Создает гаусс с центром (x,y), размерами (sx,sy) и высотой h             |
 | g_auto               | int *count_min count_max* double *xmin xmax ymin ymax ... h_min h_max*                             | Создает случайные гаусы с параметрами в промежутках                      |
+| g_grid               | int *g_cell_size*                                                                                  |Строит пространственную сетку для ускорения вычислений высот в непр случае|
 | generate             | -                                                                                                  | Складывает все добавленные гауссы в итоговое поле                        |
 | save_g               | string *filename.txt*                                                                              | Сохраняет параметры g в txt файл                                         |
 | gnuplot              | string *filename.png*                                                                              | Сохраняет 3D-визуализацию поля в PNG файл                                |
@@ -69,7 +70,7 @@ chmod +x run.sh
 | triangulate          | -                                                                                                  | Строит триангуляцию Делоне по центрам компонент                          |
 | voronoi              | -                                                                                                  | Строит диаграмму Вороного                                                |
 | build_nav_graph      | int *vehicleRadius* double *maxSideAngle maxUpDownAngle*                                           | Строит граф проходимости по диаграмме Вороного                           |
-| grid                 | int *width*                                                                                        | Строит квадратную сетку на поле (ячейка размера width x width)           |
+| grid                 | int *grid_cell_size*                                                                        | Строит квадратную сетку на поле (ячейка размера grid_cell_size x grid_cell_size)|
 | build_nav_grid       | int *noisy*                                                                                        | Удаляет ячейки с числом опасных пикселей >= noisy                        |
 | connect_to_grid      | int *Ax Ay Bx By*                                                                                  | Подключает стартовую и финишную ячейку к сетке                           |
 | connect_to_graph     | int *Ax Ay Bx By* string *[Nearest/NearestK/All]* int *k (только для NearestK)*                    | Подключает старт и финиш к графу с разными режимами                      |
@@ -83,8 +84,8 @@ chmod +x run.sh
 | Plot3DPath           | string *filename.png*                                                                              | Сохраняет 3D-визуализацию пути в PNG файл                                |
 | plotInteractive3DPath| -                                                                                                  | Интерактвный 3D режим с путем                                            |
 | end                  | -                                                                                                  | Завершает работу программы                                               |
-|rrt|size_t *maxIterations* double *Ax Ay Bx By vehicleRadius heightThreshold maxSideAngle maxUpDownAngle interpEdge interpCollision interpAngle step goalRadius goalBias*|Строит путь соблюдая условия|
-|rrt_star|size_t *maxIterations* double *Ax Ay Bx By vehicleRadius heightThreshold maxSideAngle maxUpDownAngle interpEdge interpCollision interpAngle step maxFindRadius gammaConstant goalRadius goalBias*|Строит путь соблюдая условия|
+|rrt|size_t *rebuildSize maxIterations* double *Ax Ay Bx By vehicleRadius heightThreshold maxSideAngle maxUpDownAngle interpEdge interpCollision interpAngle step goalRadius goalBias*|Строит путь соблюдая условия|
+|rrt_star|size_t *rebuildSize maxIterations* double *Ax Ay Bx By vehicleRadius heightThreshold maxSideAngle maxUpDownAngle interpEdge interpCollision interpAngle step maxFindRadius gammaConstant goalRadius goalBias*|Строит путь соблюдая условия|
 | shortcut_discrete    | -                                                                                                  | Удаляет лишние вершины в дискретном пути, сокращая путь                  |
 | shortcut_continuous  | -                                                                                                  | Удаляет лишние вершины в непрерывном пути, сокращая путь                 |
 | spline_discrete      |size_t *samplesPerSegment* double *vehicleRadius heightThreshold maxSideAngle maxUpDownAngle interpEdge interpCollision interpAngle*| Делает путь плавным                      |
@@ -113,6 +114,7 @@ chmod +x run.sh
 | sy_max                       | double                                         | Максимальное отклонение по оси Y при g_auto                                      |
 | h_min                        | double                                         | Минимальная высота гаусса при g_auto                                             |
 | h_max                        | double                                         | Максимальная высота гаусса при g_auto                                            |
+| g_cell_size                  | int                                            | Размер сетки по умолчанию                                                        |
 | save_g                       | string                                         | Путь к файлу для сохранения параметров g                                         |
 | defaultGnuplot               | string                                         | Путь к файлу для сохранения 3D-визуализации по умолчанию                         |
 | defaultPlotMetedata          | string                                         | Путь к файлу для визуализации метаданных компонент по умолчанию                  |
@@ -134,7 +136,7 @@ chmod +x run.sh
 | defaultWaveNoisy             | int                                            | Порог для удаления шумовых компонент по умолчанию                                |
 | defaultKlaster               | int                                            | Количество кластеров для k-mean по умолчанию                                     |
 | defaultKlasterKern           | int                                            | Размер ядра для кластеризации по умолчанию                                       |
-| defaultgridWidth             | int                                            | Размер ячейки для сетки по умолчанию                                             |
+| grid_cell_size               | int                                            | Размер ячейки для сетки по умолчанию                                             |
 | defaultgridNoisy             | int                                            | Шум для опасных пикселей в ячейки по умолчанию                                   |
 | startPixelX                  | int                                            | X-координата точки A для поиска пути по умолчанию                                |
 | startPixelY                  | int                                            | Y-координата точки A для поиска пути по умолчанию                                |
@@ -145,6 +147,7 @@ chmod +x run.sh
 | vehicleRadiusPixel           | int                                            | Радиус транспортного средства                                                    |
 | maxSideAngle                 | double                                         | Максимальный угол поворота вбок (градусы)                                        |
 | maxUpDownAngle               | double                                         | Максимальный угол наклона вверх/вниз (градусы)                                   |
+| rebuildSize                  | size_t                                         | Частота обновления kd-tree                                                       |
 | maxIterations                | size_t                                         | Максимальное число итераций по умолчанию                                         |
 | startWorldX                  | double                                         | X-координата точки A для поиска пути по умолчанию                                |
 | startWorldY                  | double                                         | Y-координата точки A для поиска пути по умолчанию                                |
@@ -272,6 +275,9 @@ h_min -120
 h_max 120
 
 
+g_cell_size 10
+
+
 defaultGnuplot results/visualizations/Gnuplot.png
 defaultPlotMetedata results/visualizations/Metadata.png
 defaultPlotKmeans results/visualizations/kmeans.png
@@ -304,7 +310,7 @@ defaultKlaster 5
 defaultKlasterKern 5
 
 
-defaultgridWidth 1
+grid_cell_size 1
 defaultgridNoisy 0
 
 
@@ -319,6 +325,7 @@ maxSideAngle 90.0
 maxUpDownAngle 90.0
 
 
+rebuildSize 20
 maxIterations 10000
 startWorldX 1.0
 startWorldY 1.0
@@ -397,10 +404,10 @@ seedMode Fixed 42
     void Interface::processKeyboardCommands() {
         
         while (true) {
-            const std::string commandshow = R"(Enter the command and its parameters immediately (help, init, g, g_auto, generate, save_g, gnuplot, PlotKmeans, PlotMetedata, PlotVoronoi, PlotDelaunay,
-PlotGrid, PlotNavGrid, PlotGridPath, PlotPathDiscrete, PlotPathContinuous, PlotRRT, PlotRRTStar, bmp_write, bmp_read, bin, wave, k_means, k_means_kern, triangulate, voronoi, build_nav_graph, grid, 
-build_nav_grid, connect_to_grid, connect_to_graph, astar_graph, dekstra_graph, greedy_graph, astar_grid, dekstra_grid, greedy_grid, save_metrics, Plot3DPath, plotInteractive3DPath, end, rrt, rrt_star, 
-shortcut_discrete, shortcut_continuous, spline_discrete, spline_continuous):)";
+            const std::string commandshow = R"(Enter the command and its parameters immediately (help, init, g, g_auto, g_grid, generate, save_g, gnuplot, PlotKmeans, PlotMetedata, PlotVoronoi, 
+PlotDelaunay, PlotGrid, PlotNavGrid, PlotGridPath, PlotPathDiscrete, PlotPathContinuous, PlotRRT, PlotRRTStar, bmp_write, bmp_read, bin, wave, k_means, k_means_kern, triangulate, voronoi, 
+build_nav_graph, grid, build_nav_grid, connect_to_grid, connect_to_graph, astar_graph, dekstra_graph, greedy_graph, astar_grid, dekstra_grid, greedy_grid, save_metrics, Plot3DPath, 
+plotInteractive3DPath, end, rrt, rrt_star, shortcut_discrete, shortcut_continuous, spline_discrete, spline_continuous):)";
             std::cout << commandshow;
             std::cin >> params.command;
             std::cout << "\n";
@@ -520,6 +527,24 @@ shortcut_discrete, shortcut_continuous, spline_discrete, spline_continuous):)";
                "h=[" + std::to_string(params.h_min) + ", " + std::to_string(params.h_max) + "], " +
                "count=[" + std::to_string(params.count_min) + ", " + std::to_string(params.count_max) + "]";
                    
+         if (fromKeyboard) {
+            std::cout << "\n";
+            std::cout << showInfo << std::endl;
+         }
+        logger.info(showInfo);
+        control.Dispetcher(params);
+    }
+    else if (params.command == "g_grid") {
+        params.g_cell_size = config.g_cell_size;
+
+            std::getline(input, line);
+            std::istringstream iss(line);
+            iss >> params.g_cell_size;
+            
+        Validator::validateGaussGrid(params.fieldWidth, params.fieldHeight, params.g_cell_size);
+         
+        showInfo = std::string("g_cell_size = ") + std::to_string(params.g_cell_size);
+                  
          if (fromKeyboard) {
             std::cout << "\n";
             std::cout << showInfo << std::endl;
@@ -995,15 +1020,15 @@ shortcut_discrete, shortcut_continuous, spline_discrete, spline_continuous):)";
         logger.info("Navigation graph construction completed");
     }
     else if (params.command == "grid") {
-        params.gridWidth = config.defaultgridWidth;
+        params.grid_cell_size = config.grid_cell_size;
         
             std::getline(input, line);
             std::istringstream iss(line);
-            iss >> params.gridWidth;
+            iss >> params.grid_cell_size;
                                          
-            Validator::validateGrid(params.fieldWidth, params.fieldHeight, params.gridWidth);
+            Validator::validateGrid(params.fieldWidth, params.fieldHeight, params.grid_cell_size);
           
-        showInfo = std::string("Building grid with cell widht = ") + std::to_string(params.gridWidth);
+        showInfo = std::string("Building grid with cell size = ") + std::to_string(params.grid_cell_size);
             
             if (fromKeyboard) {
             std::cout << "\n";
@@ -1182,6 +1207,7 @@ shortcut_discrete, shortcut_continuous, spline_discrete, spline_continuous):)";
         logger.info("Greedy grid path search completed");
     }
     else if (params.command == "rrt") {
+        params.rebuildSize = config.rebuildSize;
         params.maxIterations = config.maxIterations;
         params.startWorldX = config.startWorldX;
         params.startWorldY = config.startWorldY;
@@ -1200,7 +1226,7 @@ shortcut_discrete, shortcut_continuous, spline_discrete, spline_continuous):)";
         
             std::getline(input, line);
             std::istringstream iss(line);
-            iss >> params.maxIterations
+            iss >> params.rebuildSize >> params.maxIterations
             >> params.startWorldX >> params.startWorldY
             >> params.goalWorldX >> params.goalWorldY 
             >> params.vehicleRadiusWorld >> params.heightThresholdWorld
@@ -1213,6 +1239,7 @@ shortcut_discrete, shortcut_continuous, spline_discrete, spline_continuous):)";
       Validator::validateRRT(params);
         
          showInfo = std::string("RRT: ") +
+             "rebuildSize=" + std::to_string(params.rebuildSize) +
              "maxIterations=" + std::to_string(params.maxIterations) +
              ", start=(" + std::to_string(params.startWorldX) + ", " +
                    std::to_string(params.startWorldY) + ")" +
@@ -1237,6 +1264,7 @@ shortcut_discrete, shortcut_continuous, spline_discrete, spline_continuous):)";
         control.Dispetcher(params);
     }
     else if (params.command == "rrt_star") {
+        params.rebuildSize = config.rebuildSize;
         params.maxIterations = config.maxIterations;
         params.startWorldX = config.startWorldX;
         params.startWorldY = config.startWorldY;
@@ -1257,7 +1285,7 @@ shortcut_discrete, shortcut_continuous, spline_discrete, spline_continuous):)";
         
             std::getline(input, line);
             std::istringstream iss(line);
-            iss >> params.maxIterations
+            iss >> params.rebuildSize >> params.maxIterations
             >> params.startWorldX >> params.startWorldY
             >> params.goalWorldX >> params.goalWorldY 
             >> params.vehicleRadiusWorld >> params.heightThresholdWorld
@@ -1270,7 +1298,8 @@ shortcut_discrete, shortcut_continuous, spline_discrete, spline_continuous):)";
                 
       Validator::validateRRTStar(params);
         
-         showInfo = std::string("RRT: ") +
+         showInfo = std::string("RRT*: ") +
+             "rebuildSize=" + std::to_string(params.rebuildSize) +
              "maxIterations=" + std::to_string(params.maxIterations) +
              ", start=(" + std::to_string(params.startWorldX) + ", " +
                    std::to_string(params.startWorldY) + ")" +
